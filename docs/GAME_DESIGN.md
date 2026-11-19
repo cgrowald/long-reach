@@ -55,6 +55,15 @@ Every feature has to serve at least one of these. If it doesn't, it gets cut.
 ```
 
 ### 4.1 World layer
+**Feel target: a dynamic campaign map in the spirit of Gates of Hell's conquest mode** (user's reference), adapted to a global covert war. The parts we want:
+- The map is split into **regions/sectors**. You move your teams and assets between them; the enemy network has a presence in each.
+- **Persistent forces:** the same squads go from battle to battle, carrying their wounds, losses, equipment and experience.
+- **You choose which fights to take**, and each one is played out on a tactical map built from that sector.
+- **Resources** (funding, political capital, intel) buy reinforcements, recruits and equipment between battles.
+- **The enemy moves too:** cells spread into new sectors, reinforce, and strike back where you're weak.
+- Our own twist: no fixed front line. The enemy is everywhere at once, and the carrier is your mobile HQ.
+
+Further details:
 - A globe or world map with regions, countries and cities.
 - Time passes in hours and days. You can pause or speed it up. Nothing forces you to act right now, but the network acts if you leave it alone.
 - You see: known network nodes, intel leads (with confidence %), your assets (carrier, teams, safehouses), world events and the news ticker.
@@ -98,6 +107,21 @@ See section 6.
 - **Unit count:** 1–30 operators.
   - 1–8: individual control.
   - 8–30: grouped into **teams** (fireteams or squads) with team-level orders. You can drill down to individuals at any time.
+
+### 6.1a Control philosophy (user decision)
+- **Only seeing and shooting are automatic.** Soldiers spot enemies in their vision cone, turn onto them and fire on their own.
+- **Everything else is the player's choice:** opening or kicking doors, breaching, throwing grenades, stance, pace, where to look. Nothing happens unless you ordered it. A soldier who walks into a closed door stops and waits.
+- **Action wheel:** right-click a door or one of your soldiers to open a radial menu of the actions available. Right-click the ground to move.
+- **Classes decide the options.** What you bring determines what you can do:
+
+| Class | Weapon | Kit | Wheel options |
+|---|---|---|---|
+| Assaulter | Rifle | Flashbangs, frag | Open, kick, stack up, flash in, frag in |
+| Breacher | Shotgun | Breach charges, flashbang | Open, kick, **breach charge**, stack up, flash in |
+| Marksman | Marksman rifle (long range, narrower view) | Frag | Open, stack up, frag in |
+| *Later:* Shield, Medic, Pointman, Tech (sensors, drones), Covert | | | |
+
+- Loud objectives mean you bring loud classes; covert jobs bring covert specialists. Picking the team for a mission is part of the planning (M4).
 
 ### 6.2 Planning phase
 - Before the mission starts, while paused or with time frozen:
@@ -176,6 +200,17 @@ Operators are pulled from **source agencies**. Each agency has a different start
 - Marksmanship, CQB, Movement/stealth, Composure (resistance to suppression), Endurance, Medical, Explosives, Tradecraft (covert), Languages, Leadership.
 - Traits: earned through experience, e.g. "Steady under fire," "Hesitates on civilians," "Breacher."
 
+### 7.5 Characters you care about (core feeling)
+The goal: you **don't want them to die**. Losing someone should hurt because you know them.
+- **Every operator is a person:** name, callsign, age, agency they came from, hometown, short bio, pixel portrait.
+- **Service record, written automatically:** missions, kills, rescues, wounds, medals, and notable moments, e.g. "Dragged ALPHA-2 out under fire, Aleppo, 2031."
+- **Bonds:** operators who serve together build trust, which means better coordination. Losing a close teammate affects morale and can add a "shaken" trait.
+- **Injuries persist:** scars, permanent limps (slower), lost confidence. Recovery takes real in-game time.
+- **Fatigue and stress:** sending the same people on too many missions leads to mistakes.
+- **Death is permanent:** memorial wall with their full service record. A letter to the family.
+- **The game rewards bringing everyone home:** medics, carrying wounded, retreat and extraction orders, a mission bonus for zero losses.
+- Veterans retire into instructors (7.3), so your best people live on in the next generation.
+
 ---
 
 ## 8. Theaters & Rules of Engagement
@@ -214,9 +249,32 @@ Breaking ROE costs opinion, funding and host-nation access. It may also trigger 
 
 ---
 
+## 10A. Research & Equipment (the long war)
+
+You run this secret organization for **years and years**, and you can feel it getting better. Research works like XCOM's: projects that take time and money, unlocking gear that changes how you fight.
+
+- **Real jumps, not +5%.** Each breakthrough opens a new way to play.
+- **Projects cost** money, time (weeks to months) and specialists (engineers, scientists, recovered enemy intel).
+- **Sources:** your own R&D, partner agencies, captured enemy tech, reverse engineering.
+- **Prototype, then production:** new gear arrives as limited, sometimes unreliable prototypes before it's mass-produced.
+- **Arms race:** the enemy network adapts too (counter-drone, encrypted comms, couriers).
+
+**Example tech branches (grounded in real and near-future gear):**
+| Branch | Progression examples | What it changes |
+|---|---|---|
+| Sensing | Through-wall **heartbeat/motion sensor** (short range, shows heartbeats behind walls) → handheld radar → **long-range heartbeat signature tracking**, inspired by the recent CIA story about finding someone in Iran that the user mentioned. Also thermal, night vision (gen 1 → panoramic), acoustic gunshot locators | Tactical: see enemies through walls before breaching. Strategic: locate high-value targets from the world map |
+| Entry & mobility | **Grappling hook** and rope (enter from roofs and upper floors), breaching shotgun, frame charges, thermal lance, ladders, fast-rope from helicopters, high-altitude parachute jumps | New ways into a building beyond the front door |
+| Drones | Micro drone to scout rooms → armed drones → persistent surveillance overhead | Intel before contact; overwatch |
+| Weapons & protection | Suppressors, better optics, higher-rated plate carriers, ballistic shields, less-lethal weapons for captures | Survivability; capture missions |
+| Comms & intel | Encrypted radios, signals intercepts, **device exploitation** (needed for supply-chain sabotage ops), facial recognition | Unlocks operation types |
+| Medical | Better trauma kits, field surgery, faster recovery, fewer permanent injuries | Keeps your people alive |
+| Covert | Disguise kits, forged credentials, device-tampering lab | Covert missions |
+
+---
+
 ## 11. Art & Audio Direction
 
-- **Clean low-poly.** Flat or lightly textured colors, readable silhouettes, strong lighting. Think stylized, not realistic.
+- **Low-poly with a pixel-art look.** 3D rendered at low resolution and upscaled with hard pixel edges, with a limited color palette and flat colors. Charming and readable, not realistic. UI text stays crisp.
 - **Readability first:** Friendly vs. enemy vs. civilian must be clear at a glance. Cover and material types should be visually distinct, e.g. drywall looks thin and concrete looks heavy.
 - Placeholder "gray box" art until the gameplay is fun. Art is swapped in later without code changes.
 - Audio: Punchy weapons, muffled sound through walls, radio chatter for team callouts.
@@ -257,26 +315,26 @@ Each milestone ends with something **playable**. Don't move on until it's fun.
 
 | # | Milestone | Done when |
 |---|---|---|
-| M0 | **Setup** | Godot + git installed, project runs, free camera moves around a gray-box room |
-| M1 | **Room clear** | 4 operators, click to move, enemies shoot back, pause works, lock-on camera |
-| M2 | **Eyes & angles** | Vision cones + fog of war, turn speed, firing arc, facing orders (drag to set where a soldier looks), automatic corner-slicing at doorways, walk/run, hold fire, enemies turn toward gunfire |
-| M3 | **Doors & breaching** | Real doors (closed/locked), open / kick / breach charge, flashbangs + frags through doors, go-codes (A/B/C) on waypoints, stack-up, synchronized two-door breach |
-| M3b | **Cover & ballistics** | Stances (auto-crouch at low cover), exposure-based hit chance, penetration by material, suppression, leaning. Debug overlay. *It feels like cover matters.* |
-| M3c | **Enemy AI** | Patrols, investigating noise, taking cover, flanking, surrendering; civilians and hostages |
-| M4 | **Scale & variety** | Teams of up to 30, a larger compound map, civilians, hostages, ROE scoring, after-action report |
-| M5 | **Covert mode** | Disguises, suspicion, plant/swap items: the "janitor" mission is playable |
-| M6 | **Persistence** | Roster, permadeath, injuries, recruitment by agency, save/load |
-| M7 | **World map** | Globe, regions, carrier positioning, deploy to missions from the map, time passes |
-| M8 | **Enemy network** | Node graph, intel leads, growth, adaptation, retaliation |
-| M9 | **Operations** | Multi-step operation templates (supply-chain op, HVT capture, etc.) |
-| M10 | **Training & aging** | Facilities, courses, aging, instructors |
-| M11 | **World sim & news** | Nations, opinion, funding, other conflicts, generated news feed |
-| M12 | **Art & polish** | Low-poly models, animations, sound, UI pass |
+| M0 | **Setup** ✅ | Godot + git installed, project runs, free camera moves around a gray-box room |
+| M1 | **Room clear** ✅ | Click to move, enemies shoot back, pause, lock-on camera |
+| M2 | **Eyes & angles** ✅ | Vision cones + fog of war, turn speed, firing arc, facing orders, corner-slicing at doorways, walk/run, hold fire |
+| M3 | **CQB bare bones** ✅ | Doors, go-code, flashbangs + frags, crouch with exposure-based hits, slower pace + game speed control, pixel-art look |
+| M3.5 | **Classes & action wheel** | Only seeing/shooting automatic; doors block until ordered; right-click radial action wheel on doors and soldiers; Assaulter / Breacher / Marksman with different weapons, kit and options; breach charges |
+| M4 | **Characters you care about** | Persistent roster with names, bios, portraits, stats, traits, service records, lasting injuries, permadeath + memorial wall; pick your squad before a mission; after-action report; save/load |
+| M5 | **Research & equipment** | Tech tree over in-game years; projects take time, money and specialists; loadouts; first techs: heartbeat sensor, grappling hook, night vision, suppressors, scout drone |
+| M6 | **Campaign map** | Sector-based dynamic campaign (Gates of Hell conquest feel): move teams between sectors, choose battles, persistent forces, resources for reinforcements, enemy moves too; carrier as mobile HQ; in-game calendar |
+| M7 | **Enemy network** | Node graph, intel leads, growth, adaptation, retaliation |
+| M8 | **Operations** | Multi-step operation templates (supply-chain op, HVT capture, etc.) |
+| M9 | **Training & aging** | Recruitment by agency, facilities, courses, aging, instructors |
+| M10 | **Scale & variety** | Teams of up to 30, compounds, civilians, hostages, ROE scoring, generated maps |
+| M11 | **Covert mode** | Disguises, suspicion, plant/swap items: the "janitor" mission is playable |
+| M12 | **World sim & news** | Nations, opinion, funding, other conflicts, generated news feed |
+| M13 | **Art & polish** | Pixel-art low-poly models, animations, sound, UI pass |
+| Later | **CQB depth** | Bullet penetration by material, suppression, leaning, smarter enemy AI (patrols, flanking, surrender), breach charges, multiple go-codes |
 
-M1–M3c is the **close-quarters core** (the realistic CQB toolkit: angles, doors, cover, smart enemies). If clearing rooms isn't fun there, everything else gets reconsidered.
+The tactical layer only needs to be **good enough** (user feedback after M2: the long war, the people and the research are what make this game, not out-doing dedicated CQB games). Prioritize M4–M6.
 
 ---
-
 ## 14. Open Questions
 
 - [ ] **Real-world news:** fictional generated world (recommended), or a world inspired by real regions and events? Pulling live real news is not planned.
@@ -303,4 +361,6 @@ M1–M3c is the **close-quarters core** (the realistic CQB toolkit: angles, door
 | 2026-11-19 | Build tactical vertical slice (M1–M3) before the world layer |
 | 2026-11-19 | "Open world" = go anywhere in the world, but a place becomes a playable 3D map only when you send a team there |
 | 2026-11-19 | M0 playtested and approved; M1 built |
-| 2026-11-19 | M1 playtested and approved. Priority: get realistic CQB mechanics fully right first (facing, pieing corners, doors, breaching, go-codes, cover). Personal project, not for release |
+| 2026-11-19 | M1 playtested and approved. Personal project, not for release |
+| 2026-11-19 | After M3: only seeing and shooting are automatic; every other action is chosen through a right-click action wheel; classes define weapons, kit and wheel options. Campaign map should feel like Gates of Hell's dynamic conquest mode |
+| 2026-11-19 | After M2: tactical layer only needs to be good enough. Focus moves to characters you care about, XCOM-style research over years, and the world. Pixel-art low-poly look. Combat pace was too fast: slow it down and add game speed control |

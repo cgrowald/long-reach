@@ -10,6 +10,8 @@ const DOOR_WIDTH := 1.2
 const DOOR_HEIGHT := 2.1
 const EXTERIOR_T := 0.3
 const INTERIOR_T := 0.15
+const LOW_COVER_MIN := 0.5
+const LOW_COVER_MAX := 1.35
 
 ## Friendly insertion point, south of the building behind the sandbags.
 var operator_spawns: Array[Vector3] = [
@@ -25,8 +27,10 @@ var tango_spawns: Array[Dictionary] = [
 	{"pos": Vector3(6.5, 0.0, 3.4), "yaw": PI},
 ]
 
-## Doorway centers (y = 0), filled while building walls.
-var doors: Array[Vector3] = []
+## Doorways filled while building walls: {"pos": Vector3 (y = 0), "along_x": bool}.
+var doors: Array[Dictionary] = []
+## Low cover a soldier can crouch behind (sandbags, barriers, desks...).
+var low_cover: Array[AABB] = []
 
 var _mat_cache: Dictionary = {}
 
@@ -139,6 +143,8 @@ func _add_box(box_name: String, size: Vector3, pos: Vector3, mat_key: String, co
 	mesh.mesh = box
 	mesh.material_override = _material(mat_key)
 	body.add_child(mesh)
+	if collide and size.y >= LOW_COVER_MIN and size.y <= LOW_COVER_MAX:
+		low_cover.append(AABB(pos - size * 0.5, size))
 	if collide:
 		var col := CollisionShape3D.new()
 		var shape := BoxShape3D.new()
@@ -169,7 +175,7 @@ func _wall_along_x(z: float, x0: float, x1: float, door_centers: Array, t: float
 		_add_box("Wall", Vector3(seg.y - seg.x, WALL_HEIGHT, t), Vector3((seg.x + seg.y) * 0.5, WALL_HEIGHT * 0.5, z), mat_key)
 	for d in door_centers:
 		_add_lintel(Vector3(float(d), 0.0, z), Vector3(DOOR_WIDTH, 0.0, t), mat_key)
-		doors.append(Vector3(float(d), 0.0, z))
+		doors.append({"pos": Vector3(float(d), 0.0, z), "along_x": true})
 
 
 func _wall_along_z(x: float, z0: float, z1: float, door_centers: Array, t: float, mat_key: String) -> void:
@@ -177,7 +183,7 @@ func _wall_along_z(x: float, z0: float, z1: float, door_centers: Array, t: float
 		_add_box("Wall", Vector3(t, WALL_HEIGHT, seg.y - seg.x), Vector3(x, WALL_HEIGHT * 0.5, (seg.x + seg.y) * 0.5), mat_key)
 	for d in door_centers:
 		_add_lintel(Vector3(x, 0.0, float(d)), Vector3(t, 0.0, DOOR_WIDTH), mat_key)
-		doors.append(Vector3(x, 0.0, float(d)))
+		doors.append({"pos": Vector3(x, 0.0, float(d)), "along_x": false})
 
 
 func _add_lintel(center: Vector3, footprint: Vector3, mat_key: String) -> void:

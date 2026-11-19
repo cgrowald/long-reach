@@ -1,0 +1,22 @@
+{
+	"assaulter": {
+		"name": "Assaulter",
+		"weapon": "m4a1",
+		"items": { "flashbang": 2, "frag": 1 },
+		"actions": ["open", "kick", "stack", "flashbang", "frag"]
+	},
+	"breacher": {
+		"name": "Breacher",
+		"weapon": "m870",
+		"items": { "flashbang": 1, "breach_charge": 2 },
+		"actions": ["open", "kick", "breach", "stack", "flashbang"]
+	},
+	"marksman": {
+		"name": "Marksman",
+		"weapon": "mk14",
+		"items": { "frag": 1 },
+		"actions": ["open", "stack", "frag"],
+		"fov_deg": 80,
+		"vision_range": 60
+	}
+}

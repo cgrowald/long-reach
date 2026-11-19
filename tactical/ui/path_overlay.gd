@@ -9,6 +9,8 @@ const END_MARK := 0.25
 const COLOR_FACE := Color(1.0, 0.85, 0.3, 0.95)
 const COLOR_FACE_DIM := Color(1.0, 0.85, 0.3, 0.35)
 const FACE_LEN := 1.4
+const COLOR_HOLD := Color(1.0, 0.4, 0.3, 0.95)
+const HOLD_MARK := 0.4
 
 var _units: Array = []
 var _selection
@@ -41,7 +43,7 @@ func _process(_delta: float) -> void:
 		if u.is_dead:
 			continue
 		var pts: Array[Vector3] = u.get_planned_points()
-		if pts.size() < 2:
+		if pts.size() < 2 and not u.is_holding():
 			continue
 		var color: Color = COLOR_SELECTED if _selection.is_selected(u) else COLOR_OTHER
 		for i in pts.size() - 1:
@@ -55,6 +57,17 @@ func _process(_delta: float) -> void:
 			verts.append(end + d)
 			cols.append(color)
 			cols.append(color)
+		# Go-code hold points: a box around the spot.
+		for h in u.get_planned_holds():
+			var c: Vector3 = h + LIFT
+			var corners: Array[Vector3] = [
+				c + Vector3(-HOLD_MARK, 0, -HOLD_MARK), c + Vector3(HOLD_MARK, 0, -HOLD_MARK),
+				c + Vector3(HOLD_MARK, 0, HOLD_MARK), c + Vector3(-HOLD_MARK, 0, HOLD_MARK)]
+			for k in 4:
+				verts.append(corners[k])
+				verts.append(corners[(k + 1) % 4])
+				cols.append(COLOR_HOLD)
+				cols.append(COLOR_HOLD)
 		# Facing arrows where a leg ends with a "look this way" order.
 		var face_color: Color = COLOR_FACE if _selection.is_selected(u) else COLOR_FACE_DIM
 		for f in u.get_planned_facings():

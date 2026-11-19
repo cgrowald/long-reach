@@ -1,0 +1,39 @@
+{
+	"flashbang": {
+		"name": "Flashbang",
+		"throw_range": 12,
+		"flight_time": 0.6,
+		"fuse": 0.9,
+		"radius": 6,
+		"stun_seconds": 4.0,
+		"facing_away_factor": 0.5,
+		"noise_range": 30
+	},
+	"frag": {
+		"name": "Frag grenade",
+		"throw_range": 12,
+		"flight_time": 0.7,
+		"fuse": 1.6,
+		"radius": 5,
+		"damage": 140,
+		"noise_range": 35
+	},
+	"breach_charge": {
+		"name": "Breach charge",
+		"place_time": 2.0,
+		"detonate_delay": 0.6,
+		"radius": 4.5,
+		"stun_seconds": 3.5,
+		"damage": 60,
+		"damage_radius": 2.0,
+		"noise_range": 35
+	},
+	"open_door": {
+		"time": 1.0
+	},
+	"kick_door": {
+		"time": 0.5,
+		"success_chance": 0.7,
+		"noise_range": 15
+	}
+}

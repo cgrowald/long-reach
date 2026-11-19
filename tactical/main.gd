@@ -1,5 +1,5 @@
 extends Node3D
-## M1 tactical mission: builds the map, bakes navigation, spawns both sides,
+## Tactical mission: builds the map, bakes navigation, places doors, spawns both sides,
 ## wires up camera / selection / HUD, and decides win or loss.
 
 const CameraRig := preload("res://tactical/camera/camera_rig.gd")
@@ -12,11 +12,15 @@ const SquadPanel := preload("res://tactical/ui/squad_panel.gd")
 const PathOverlay := preload("res://tactical/ui/path_overlay.gd")
 const VisionOverlay := preload("res://tactical/ui/vision_overlay.gd")
 const Fx := preload("res://tactical/fx/fx.gd")
+const Door := preload("res://tactical/level/door.gd")
+const PixelFilter := preload("res://tactical/fx/pixel_filter.gd")
+const UnitLabels := preload("res://tactical/ui/unit_labels.gd")
 
 const NAV_BOUNDS := AABB(Vector3(-35.0, -2.0, -35.0), Vector3(70.0, 6.0, 70.0))
 const TRACER_BLUE := Color(1.0, 0.92, 0.55)
 const TRACER_RED := Color(1.0, 0.45, 0.25)
 const FOG_INTERVAL := 3  # physics frames between fog-of-war updates
+const SPEEDS: Array[float] = [0.25, 0.5, 1.0, 2.0]
 
 var friendlies: Array = []
 var hostiles: Array = []
@@ -28,6 +32,7 @@ var _selection
 var _status_label: Label
 var _banner: Label
 var _fog_tick: int = 0
+var _speed_idx: int = 2
 
 
 func _ready() -> void:
@@ -37,8 +42,10 @@ func _ready() -> void:
 	_map.name = "Level"
 	_map.process_mode = Node.PROCESS_MODE_PAUSABLE
 	add_child(_map)
-	NavBuilder.bake(_map, NAV_BOUNDS)
-	Unit.doors = _map.doors
+	Engine.time_scale = SPEEDS[_speed_idx]
+	NavBuilder.bake(_map, NAV_BOUNDS)  # before doors, so paths go through doorways
+	_spawn_doors()
+	Unit.low_cover = _map.low_cover
 	_spawn_units()
 
 	_rig = CameraRig.new()
@@ -46,8 +53,13 @@ func _ready() -> void:
 	add_child(_rig)
 	_rig.position = Vector3(0.0, 0.0, 10.0)
 
+	add_child(PixelFilter.new())
 	var hud := CanvasLayer.new()
+	hud.layer = 1
 	add_child(hud)
+	var labels := UnitLabels.new()
+	labels.setup(_rig, friendlies + hostiles)
+	hud.add_child(labels)
 	var box := SelectionBox.new()
 	hud.add_child(box)
 
@@ -69,6 +81,19 @@ func _ready() -> void:
 	hud.add_child(panel)
 
 	_build_hud_text(hud)
+
+
+func _spawn_doors() -> void:
+	var centers: Array[Vector3] = []
+	var nodes: Array = []
+	for d in _map.doors:
+		var door: Node3D = Door.new()
+		door.setup(d["pos"], d["along_x"])
+		_map.add_child(door)
+		centers.append(d["pos"])
+		nodes.append(door)
+	Unit.doors = centers
+	Unit.door_nodes = nodes
 
 
 func _spawn_units() -> void:
@@ -114,6 +139,18 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif key.physical_keycode == KEY_R:
 		get_tree().paused = false
 		get_tree().reload_current_scene()
+	elif key.physical_keycode == KEY_ENTER or key.physical_keycode == KEY_KP_ENTER:
+		for f in friendlies:
+			f.go()
+	elif key.physical_keycode == KEY_MINUS or key.physical_keycode == KEY_KP_SUBTRACT:
+		_set_speed(_speed_idx - 1)
+	elif key.physical_keycode == KEY_EQUAL or key.physical_keycode == KEY_KP_ADD:
+		_set_speed(_speed_idx + 1)
+
+
+func _set_speed(idx: int) -> void:
+	_speed_idx = clampi(idx, 0, SPEEDS.size() - 1)
+	Engine.time_scale = SPEEDS[_speed_idx]
 
 
 # ---------------------------------------------------------------- HUD / mission state
@@ -122,9 +159,9 @@ func _build_hud_text(hud: CanvasLayer) -> void:
 	var help := Label.new()
 	help.text = "\n".join([
 		"Left click / drag  select (Shift adds)    Right click  move (Shift queues)    Right DRAG  move + face that way",
-		"Alt + right click  look toward point    V  walk / run    H  hold fire    Space  pause (plan while paused)",
-		"WASD  pan    Q/E  rotate    Middle-drag  orbit    Wheel  zoom    Double-click / F  follow    Tab  cycle",
-		"1-4  select    Esc  clear    R  restart",
+		"Ctrl + right click  move and WAIT    Enter  GO (waiting units continue)    Alt + right click  look at point",
+		"G  flashbang at cursor    T  frag at cursor    K  kick doors on/off    V  walk / run    H  hold fire",
+		"Space  pause    - / =  game speed    P  pixel look on/off    R  restart    WASD Q/E wheel  camera    F / Tab  follow",
 	])
 	help.position = Vector2(16.0, 12.0)
 	_style_label(help, 15)
@@ -172,7 +209,7 @@ func _process(_delta: float) -> void:
 	var red_alive: int = _count_alive(hostiles)
 
 	var lines: Array[String] = []
-	lines.append("PAUSED" if get_tree().paused else "LIVE")
+	lines.append(("PAUSED" if get_tree().paused else "LIVE") + "   speed %sx" % str(SPEEDS[_speed_idx]))
 	lines.append("Hostiles remaining: %d / %d" % [red_alive, hostiles.size()])
 	lines.append("FPS %d" % Engine.get_frames_per_second())
 	_status_label.text = "\n".join(lines)

@@ -8,6 +8,9 @@ extends Node
 ##   Right click ground    move selected (Shift = queue waypoint)
 ##   Right drag            move, then face the drag direction on arrival
 ##   Alt + right click     look toward that point (no move; end of route if moving)
+##   Ctrl + right click    move there and WAIT for the go-code (Enter)
+##   G / T                 throw flashbang / frag at the cursor
+##   K                     toggle kicking doors (fast, loud) vs opening quietly
 ##   V                     toggle walk / run          H  toggle hold fire
 ##   1-9                   select unit by number (Shift = add)
 ##   F                     follow selected     Tab  cycle follow     Esc  clear
@@ -22,6 +25,8 @@ const PICK_RADIUS_PX := 40.0
 const FORMATION_SPACING := 1.1
 const MARKER_COLOR := Color(0.4, 0.85, 1.0)
 const FACE_MARKER_COLOR := Color(1.0, 0.85, 0.3)
+const THROW_MARKER_COLOR := Color(1.0, 1.0, 1.0)
+const NO_THROW_COLOR := Color(1.0, 0.2, 0.2)
 
 var selected: Array = []
 
@@ -142,7 +147,7 @@ func _handle_right(mb: InputEventMouseButton) -> void:
 		if end != null:
 			var dir: Vector3 = (end as Vector3) - (start as Vector3)
 			face_yaw = atan2(-dir.x, -dir.z)
-	_issue_move(start, mb.shift_pressed, face_yaw)
+	_issue_move(start, mb.shift_pressed, face_yaw, mb.ctrl_pressed)
 
 
 func _handle_key(key: InputEventKey) -> void:
@@ -168,6 +173,12 @@ func _handle_key(key: InputEventKey) -> void:
 		_toggle_pace()
 	elif code == KEY_H:
 		_toggle_hold_fire()
+	elif code == KEY_K:
+		_toggle_kick()
+	elif code == KEY_G:
+		_throw("flashbang")
+	elif code == KEY_T:
+		_throw("frag")
 
 
 func _set_selection(units: Array) -> void:
@@ -197,6 +208,26 @@ func _toggle_hold_fire() -> void:
 		u.hold_fire = any_free
 
 
+func _toggle_kick() -> void:
+	if selected.is_empty():
+		return
+	var any_quiet: bool = selected.any(func(u): return not u.kick_doors)
+	for u in selected:
+		u.kick_doors = any_quiet
+
+
+## The first selected soldier who can make the throw (has one, in range, clear line) throws.
+func _throw(kind: String) -> void:
+	var point: Variant = _ground_point(get_viewport().get_mouse_position())
+	if point == null or selected.is_empty():
+		return
+	for u in selected:
+		if u.throw_grenade(kind, point):
+			Fx.move_marker(_world, point, THROW_MARKER_COLOR)
+			return
+	Fx.move_marker(_world, point, NO_THROW_COLOR)
+
+
 func _cycle_follow() -> void:
 	var alive: Array = _units.filter(func(u): return not u.is_dead)
 	if alive.is_empty():
@@ -207,7 +238,7 @@ func _cycle_follow() -> void:
 	follow(next)
 
 
-func _issue_move(point: Vector3, queue: bool, face_yaw: float = NAN) -> void:
+func _issue_move(point: Vector3, queue: bool, face_yaw: float = NAN, hold: bool = false) -> void:
 	var map: RID = _world.get_world_3d().navigation_map
 	var n: int = selected.size()
 	var cols: int = ceili(sqrt(float(n)))
@@ -219,7 +250,7 @@ func _issue_move(point: Vector3, queue: bool, face_yaw: float = NAN) -> void:
 			0.0,
 			float(i / cols) * FORMATION_SPACING).rotated(Vector3.UP, basis_yaw)
 		var dest: Vector3 = NavigationServer3D.map_get_closest_point(map, point + offset)
-		selected[i].order_move(dest, queue, face_yaw)
+		selected[i].order_move(dest, queue, face_yaw, hold)
 	Fx.move_marker(_world, point, MARKER_COLOR)
 
 

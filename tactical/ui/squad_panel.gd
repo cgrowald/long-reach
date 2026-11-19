@@ -85,7 +85,8 @@ func _process(_delta: float) -> void:
 		bar.value = u.hp
 		var fill: StyleBoxFlat = c["fill"]
 		fill.bg_color = Color(0.9, 0.25, 0.2).lerp(Color(0.3, 0.85, 0.4), clampf(u.hp / u.max_hp, 0.0, 1.0))
-		(c["status"] as Label).text = u.get_status_text()
+		(c["status"] as Label).text = "%s\nFlash %d   Frag %d" % [
+			u.get_status_text(), int(u.grenades.get("flashbang", 0)), int(u.grenades.get("frag", 0))]
 		(c["style"] as StyleBoxFlat).set_border_width_all(2 if _selection.is_selected(u) else 0)
 		(c["card"] as Control).modulate = Color(0.55, 0.55, 0.55) if u.is_dead else Color.WHITE
 	position = Vector2(16.0, get_viewport_rect().size.y - size.y - 16.0)

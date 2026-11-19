@@ -4,6 +4,7 @@ extends RefCounted
 const MATERIALS_PATH := "res://data/materials.json"
 const WEAPONS_PATH := "res://data/weapons.json"
 const UNIT_TYPES_PATH := "res://data/unit_types.json"
+const EQUIPMENT_PATH := "res://data/equipment.json"
 
 static var _cache: Dictionary = {}
 
@@ -31,6 +32,10 @@ static func weapon(id: String) -> Dictionary:
 
 static func unit_type(id: String) -> Dictionary:
 	return _entry(UNIT_TYPES_PATH, id)
+
+
+static func equipment(id: String) -> Dictionary:
+	return _entry(EQUIPMENT_PATH, id)
 
 
 static func _entry(path: String, id: String) -> Dictionary:

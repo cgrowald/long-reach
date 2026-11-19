@@ -49,7 +49,9 @@ func release() -> void:
 	follow_target = null
 
 
-func _process(delta: float) -> void:
+func _process(scaled_delta: float) -> void:
+	# Camera runs on real time so game speed (slow-mo / fast-forward) never changes how it handles.
+	var delta: float = scaled_delta / maxf(Engine.time_scale, 0.001)
 	var input := Vector2.ZERO
 	if Input.is_physical_key_pressed(KEY_W) or Input.is_physical_key_pressed(KEY_UP):
 		input.y -= 1.0
