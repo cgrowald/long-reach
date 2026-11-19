@@ -1,7 +1,14 @@
 extends Node3D
 ## A soldier on the tactical map (friendly or hostile).
-## Follows navmesh paths, spots hostiles (range + vision cone + line of sight),
-## and fights automatically. Stats come from data/unit_types.json + data/weapons.json.
+##
+## Eyes & angles model:
+## - Sees hostiles inside its field-of-view cone (fov_deg, vision_range) or anywhere
+##   within peripheral_range, if line of sight is clear.
+## - Turns at a limited rate and can only fire when the target is inside a narrow
+##   firing arc, so where a soldier is looking decides who shoots first.
+## - While walking it slices the pie: it aims at doorways ahead instead of along its path.
+## - Each move leg can carry a facing (where to look on arrival).
+## Stats come from data/unit_types.json + data/weapons.json.
 
 signal fired(from_pos: Vector3, to_pos: Vector3, hit: bool)
 signal died(unit: Node3D)
@@ -10,16 +17,23 @@ const GameData := preload("res://sim/game_data.gd")
 const CombatRules := preload("res://sim/combat_rules.gd")
 
 enum Team { BLUE, RED }
+enum Pace { WALK, RUN }
 
 const EYE_HEIGHT := 1.55
 const CHEST_HEIGHT := 1.2
 const LOS_MASK := 1
 const ARRIVE_DIST := 0.12
-const TURN_RATE := 12.0
-const SCAN_INTERVAL := 0.2
+const SCAN_INTERVAL := 0.15
 const HEARING_RANGE := 20.0
 const WOUNDED_FRACTION := 0.4
 const PERSONAL_SPACE := 0.7
+const FIRE_ARC_DEG := 12.0
+const PIE_RANGE := 5.5
+const PIE_MIN_DIST := 0.9
+const RUN_TURN_FACTOR := 0.6
+
+## Doorway centers on the current map (set by main). Used for slicing the pie.
+static var doors: Array[Vector3] = []
 
 var callsign: String = "UNIT"
 var type_id: String = ""
@@ -27,21 +41,30 @@ var team: int = Team.BLUE
 var max_hp: float = 100.0
 var hp: float = 100.0
 var weapon: Dictionary = {}
-var speed: float = 3.0
+var walk_speed: float = 2.2
+var run_speed: float = 4.5
+var turn_rate: float = deg_to_rad(360.0)
 var reaction_time: float = 0.5
 var vision_range: float = 40.0
-var vision_cone_deg: float = 360.0
+var fov_deg: float = 100.0
+var peripheral_range: float = 4.0
 var team_color: Color = Color.WHITE
 
+var pace: int = Pace.WALK
+var hold_fire: bool = false
 var alerted: bool = false
 var is_dead: bool = false
+var revealed: bool = true
+var ever_seen: bool = false
 var target = null  # another unit (untyped: same script)
 
 var _path: PackedVector3Array = PackedVector3Array()
 var _path_index: int = 0
-var _waypoints: Array[Vector3] = []
+var _leg: Dictionary = {}  # {"pos": Vector3, "face": float (NAN = none)}
+var _waypoints: Array[Dictionary] = []
 var _moving: bool = false
-var _desired_yaw: float = 0.0
+var _move_yaw: float = 0.0
+var _idle_yaw: float = 0.0
 
 var _scan_timer: float = 0.0
 var _reaction_timer: float = 0.0
@@ -63,37 +86,64 @@ func setup(p_callsign: String, p_type_id: String, p_team: int) -> void:
 	max_hp = float(t.get("hp", 100))
 	hp = max_hp
 	weapon = GameData.weapon(str(t.get("weapon", "")))
-	speed = float(t.get("speed", 3.0))
+	walk_speed = float(t.get("walk_speed", 2.2))
+	run_speed = float(t.get("run_speed", 4.5))
+	turn_rate = deg_to_rad(float(t.get("turn_rate_deg", 360.0)))
 	reaction_time = float(t.get("reaction_time", 0.5))
 	vision_range = float(t.get("vision_range", 40.0))
-	vision_cone_deg = float(t.get("vision_cone_deg", 360.0))
+	fov_deg = float(t.get("fov_deg", 100.0))
+	peripheral_range = float(t.get("peripheral_range", 4.0))
 	team_color = GameData.color_from(t)
 
 
 func _ready() -> void:
 	add_to_group("units")
 	process_mode = Node.PROCESS_MODE_PAUSABLE
-	_desired_yaw = rotation.y
+	_idle_yaw = rotation.y
+	_move_yaw = rotation.y
 	_scan_timer = randf() * SCAN_INTERVAL
 	_build_visuals()
 
 
-# ---------------------------------------------------------------- orders & queries
+# ---------------------------------------------------------------- orders
 
-func order_move(destination: Vector3, queue: bool) -> void:
+## Move to destination. face_yaw (radians) = where to look on arrival; NAN = keep travel direction.
+func order_move(destination: Vector3, queue: bool, face_yaw: float = NAN) -> void:
 	if is_dead:
 		return
+	var leg: Dictionary = {"pos": destination, "face": face_yaw}
 	if queue and (_moving or not _waypoints.is_empty()):
-		_waypoints.append(destination)
+		_waypoints.append(leg)
 		return
 	_waypoints.clear()
-	_start_path_to(destination)
+	_start_leg(leg)
+
+
+## Look toward a point. If moving, applies to the end of the planned route.
+func order_face(point: Vector3) -> void:
+	if is_dead:
+		return
+	var yaw: float = _yaw_toward(point - global_position)
+	if not _waypoints.is_empty():
+		_waypoints[_waypoints.size() - 1]["face"] = _yaw_toward(point - _waypoints[_waypoints.size() - 1]["pos"])
+	elif _moving:
+		_leg["face"] = _yaw_toward(point - _leg["pos"])
+	else:
+		_idle_yaw = yaw
 
 
 func stop() -> void:
 	_waypoints.clear()
 	_moving = false
+	_leg = {}
+	_idle_yaw = rotation.y
 
+
+func set_pace(p: int) -> void:
+	pace = p
+
+
+# ---------------------------------------------------------------- queries
 
 func is_moving() -> bool:
 	return _moving
@@ -111,9 +161,14 @@ func get_status_text() -> String:
 		s = "ENGAGING"
 	elif _moving:
 		s = "MOVING"
+	var flags: Array[String] = [s]
+	if pace == Pace.RUN:
+		flags.append("RUN")
+	if hold_fire:
+		flags.append("HOLD FIRE")
 	if is_wounded():
-		s += " / WOUNDED"
-	return s
+		flags.append("WOUNDED")
+	return " · ".join(flags)
 
 
 ## Current position, remaining path, then queued waypoints (for the path overlay).
@@ -123,32 +178,71 @@ func get_planned_points() -> Array[Vector3]:
 		for i in range(_path_index, _path.size()):
 			pts.append(_path[i])
 	for w in _waypoints:
-		pts.append(w)
+		pts.append(w["pos"])
 	return pts
+
+
+## [position, yaw] pairs for every planned leg that ends with a facing order.
+func get_planned_facings() -> Array:
+	var out: Array = []
+	if _moving and not is_nan(float(_leg.get("face", NAN))):
+		out.append([_leg["pos"], _leg["face"]])
+	for w in _waypoints:
+		if not is_nan(float(w["face"])):
+			out.append([w["pos"], w["face"]])
+	return out
 
 
 func set_selected(value: bool) -> void:
 	_ring.visible = value and not is_dead
 
 
+## Fog of war: hidden hostiles are not drawn.
+func set_revealed(value: bool) -> void:
+	revealed = value
+	if value:
+		ever_seen = true
+	var show: bool = value or (is_dead and ever_seen)
+	_visual.visible = show
+	_tag.visible = show
+
+
 func can_see(other) -> bool:
 	if other == null or other.is_dead:
 		return false
 	var to_other: Vector3 = other.global_position - global_position
-	if to_other.length() > vision_range:
+	var dist: float = to_other.length()
+	if dist > vision_range:
 		return false
-	if not _in_vision_cone(to_other):
+	if dist > peripheral_range and not in_fov(to_other):
 		return false
 	return has_line_of_sight(other)
 
 
+func in_fov(to_other: Vector3) -> bool:
+	var flat := Vector3(to_other.x, 0.0, to_other.z)
+	if flat.length_squared() < 0.0001:
+		return true
+	var forward: Vector3 = -global_transform.basis.z
+	forward.y = 0.0
+	return rad_to_deg(forward.normalized().angle_to(flat.normalized())) <= fov_deg * 0.5
+
+
 func has_line_of_sight(other) -> bool:
-	var space := get_world_3d().direct_space_state
-	var query := PhysicsRayQueryParameters3D.create(
+	return _clear_line(
 		global_position + Vector3(0.0, EYE_HEIGHT, 0.0),
-		other.global_position + Vector3(0.0, CHEST_HEIGHT, 0.0),
-		LOS_MASK)
-	return space.intersect_ray(query).is_empty()
+		other.global_position + Vector3(0.0, CHEST_HEIGHT, 0.0))
+
+
+# ---------------------------------------------------------------- reactions
+
+func hear_noise(source_pos: Vector3) -> void:
+	if is_dead:
+		return
+	alerted = true
+	# Hostiles turn toward gunfire they hear (roughly). Friendlies keep their assigned angles.
+	if team == Team.RED and target == null and not _moving:
+		_idle_yaw = _yaw_toward(source_pos - global_position) + randf_range(-0.35, 0.35)
 
 
 func take_damage(amount: float, source) -> void:
@@ -158,7 +252,7 @@ func take_damage(amount: float, source) -> void:
 	alerted = true
 	_scan_timer = 0.0
 	if source != null and target == null and not source.is_dead:
-		_desired_yaw = _yaw_toward(source.global_position - global_position)
+		_idle_yaw = _yaw_toward(source.global_position - global_position)
 	_flash()
 	if hp <= 0.0:
 		_die()
@@ -172,23 +266,33 @@ func _physics_process(delta: float) -> void:
 	_update_movement(delta)
 	_separate_from_others()
 	_update_combat(delta)
-	rotation.y = lerp_angle(rotation.y, _desired_yaw, 1.0 - exp(-TURN_RATE * delta))
+	_update_facing(delta)
 
 
-func _start_path_to(destination: Vector3) -> void:
+func _start_leg(leg: Dictionary) -> void:
+	_leg = leg
 	var map: RID = get_world_3d().navigation_map
-	_path = NavigationServer3D.map_get_path(map, global_position, destination, true)
+	_path = NavigationServer3D.map_get_path(map, global_position, leg["pos"], true)
 	_path_index = 0
 	_moving = not _path.is_empty()
+	if not _moving:
+		_arrive()
+
+
+func _arrive() -> void:
+	_moving = false
+	var face: float = float(_leg.get("face", NAN))
+	_idle_yaw = rotation.y if is_nan(face) else face
+	_leg = {}
+	if not _waypoints.is_empty():
+		_start_leg(_waypoints.pop_front())
 
 
 func _update_movement(delta: float) -> void:
 	if not _moving:
 		return
 	if _path_index >= _path.size():
-		_moving = false
-		if not _waypoints.is_empty():
-			_start_path_to(_waypoints.pop_front())
+		_arrive()
 		return
 	var point: Vector3 = _path[_path_index]
 	var to_point: Vector3 = point - global_position
@@ -197,17 +301,50 @@ func _update_movement(delta: float) -> void:
 	if dist < ARRIVE_DIST:
 		_path_index += 1
 		return
-	var move_speed: float = speed
+	var move_speed: float = run_speed if pace == Pace.RUN else walk_speed
 	if is_wounded():
 		move_speed *= 0.6
-	if target != null:
-		move_speed *= 0.75
 	var step: float = minf(move_speed * delta, dist)
 	var pos: Vector3 = global_position + to_point / dist * step
 	pos.y = 0.0
 	global_position = pos
-	if target == null:
-		_desired_yaw = _yaw_toward(to_point)
+	_move_yaw = _yaw_toward(to_point)
+
+
+func _update_facing(delta: float) -> void:
+	var desired: float = _idle_yaw
+	if target != null:
+		desired = _yaw_toward(target.global_position - global_position)
+	elif _moving:
+		var pie: Variant = _pie_point()
+		desired = _move_yaw if pie == null else _yaw_toward((pie as Vector3) - global_position)
+	var rate: float = turn_rate
+	if _moving and pace == Pace.RUN:
+		rate *= RUN_TURN_FACTOR
+	rotation.y = rotate_toward(rotation.y, desired, rate * delta)
+
+
+## Slicing the pie: while walking, aim at the nearest doorway ahead that is in view.
+func _pie_point() -> Variant:
+	if pace == Pace.RUN:
+		return null
+	var forward := Vector3(-sin(_move_yaw), 0.0, -cos(_move_yaw))
+	var eye: Vector3 = global_position + Vector3(0.0, EYE_HEIGHT, 0.0)
+	var best: Variant = null
+	var best_dist: float = PIE_RANGE
+	for d in doors:
+		var to_door: Vector3 = d - global_position
+		to_door.y = 0.0
+		var dist: float = to_door.length()
+		if dist < PIE_MIN_DIST or dist > best_dist:
+			continue
+		if forward.dot(to_door / dist) < 0.2:
+			continue
+		if not _clear_line(eye, d + Vector3(0.0, EYE_HEIGHT, 0.0)):
+			continue
+		best = d
+		best_dist = dist
+	return best
 
 
 ## Keeps living units from standing inside each other, then snaps back onto the navmesh.
@@ -247,13 +384,14 @@ func _update_combat(delta: float) -> void:
 			if target != null:
 				_reaction_timer = reaction_time * (0.5 if alerted else 1.0)
 
-	if target == null:
+	if target == null or hold_fire:
 		return
-	_desired_yaw = _yaw_toward(target.global_position - global_position)
-
 	if _reaction_timer > 0.0:
 		_reaction_timer -= delta
 		return
+	var aim_yaw: float = _yaw_toward(target.global_position - global_position)
+	if absf(angle_difference(rotation.y, aim_yaw)) > deg_to_rad(FIRE_ARC_DEG):
+		return  # still turning onto target
 	_shot_timer -= delta
 	if _shot_timer > 0.0:
 		return
@@ -287,7 +425,10 @@ func _find_target():
 func _fire_at(t) -> void:
 	_alert_nearby()
 	var distance: float = global_position.distance_to(t.global_position)
-	var chance: float = CombatRules.hit_chance(weapon, distance, _moving, t.is_moving())
+	var move_factor: float = 1.0
+	if _moving:
+		move_factor = CombatRules.RUN_ACCURACY if pace == Pace.RUN else CombatRules.WALK_ACCURACY
+	var chance: float = CombatRules.hit_chance(weapon, distance, move_factor, t.is_moving())
 	var hit: bool = randf() < chance
 
 	var forward: Vector3 = -global_transform.basis.z
@@ -307,24 +448,18 @@ func _fire_at(t) -> void:
 
 func _alert_nearby() -> void:
 	for u in get_tree().get_nodes_in_group("units"):
-		if not u.is_dead and u.global_position.distance_to(global_position) <= HEARING_RANGE:
-			u.alerted = true
+		if u != self and u.global_position.distance_to(global_position) <= HEARING_RANGE:
+			u.hear_noise(global_position)
 
 
-func _in_vision_cone(to_other: Vector3) -> bool:
-	if alerted or vision_cone_deg >= 359.0:
-		return true
-	var flat := Vector3(to_other.x, 0.0, to_other.z)
-	if flat.length_squared() < 0.0001:
-		return true
-	var forward: Vector3 = -global_transform.basis.z
-	forward.y = 0.0
-	return rad_to_deg(forward.normalized().angle_to(flat.normalized())) <= vision_cone_deg * 0.5
+func _clear_line(from: Vector3, to: Vector3) -> bool:
+	var query := PhysicsRayQueryParameters3D.create(from, to, LOS_MASK)
+	return get_world_3d().direct_space_state.intersect_ray(query).is_empty()
 
 
 func _yaw_toward(dir: Vector3) -> float:
 	if Vector2(dir.x, dir.z).length_squared() < 0.0001:
-		return _desired_yaw
+		return rotation.y
 	return atan2(-dir.x, -dir.z)
 
 
@@ -341,6 +476,7 @@ func _die() -> void:
 	_visual.position.y = 0.3
 	_ring.visible = false
 	_tag.modulate = Color(0.6, 0.6, 0.6, 0.7)
+	set_revealed(revealed)
 	died.emit(self)
 
 

@@ -6,6 +6,9 @@ const LIFT := Vector3(0.0, 0.08, 0.0)
 const COLOR_SELECTED := Color(0.4, 0.85, 1.0, 0.95)
 const COLOR_OTHER := Color(0.4, 0.85, 1.0, 0.3)
 const END_MARK := 0.25
+const COLOR_FACE := Color(1.0, 0.85, 0.3, 0.95)
+const COLOR_FACE_DIM := Color(1.0, 0.85, 0.3, 0.35)
+const FACE_LEN := 1.4
 
 var _units: Array = []
 var _selection
@@ -52,6 +55,19 @@ func _process(_delta: float) -> void:
 			verts.append(end + d)
 			cols.append(color)
 			cols.append(color)
+		# Facing arrows where a leg ends with a "look this way" order.
+		var face_color: Color = COLOR_FACE if _selection.is_selected(u) else COLOR_FACE_DIM
+		for f in u.get_planned_facings():
+			var p: Vector3 = (f[0] as Vector3) + LIFT
+			var yaw: float = f[1]
+			var dir := Vector3(-sin(yaw), 0.0, -cos(yaw))
+			var tip: Vector3 = p + dir * FACE_LEN
+			var side: Vector3 = dir.cross(Vector3.UP) * 0.3
+			for seg in [[p, tip], [tip, tip - dir * 0.4 + side], [tip, tip - dir * 0.4 - side]]:
+				verts.append(seg[0])
+				verts.append(seg[1])
+				cols.append(face_color)
+				cols.append(face_color)
 	if verts.is_empty():
 		return
 	_imesh.surface_begin(Mesh.PRIMITIVE_LINES, _mat)

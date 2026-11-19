@@ -259,8 +259,10 @@ Each milestone ends with something **playable**. Don't move on until it's fun.
 |---|---|---|
 | M0 | **Setup** | Godot + git installed, project runs, free camera moves around a gray-box room |
 | M1 | **Room clear** | 4 operators, click to move, enemies shoot back, pause works, lock-on camera |
-| M2 | **Cover & ballistics** | Materials, penetration, exposure-based hit chance, suppression, stances, lean. Debug overlay. *It feels like cover matters.* |
-| M3 | **Planning** | Paths, go-codes, door actions (kick/breach/flash), synchronized breach on two doors |
+| M2 | **Eyes & angles** | Vision cones + fog of war, turn speed, firing arc, facing orders (drag to set where a soldier looks), automatic corner-slicing at doorways, walk/run, hold fire, enemies turn toward gunfire |
+| M3 | **Doors & breaching** | Real doors (closed/locked), open / kick / breach charge, flashbangs + frags through doors, go-codes (A/B/C) on waypoints, stack-up, synchronized two-door breach |
+| M3b | **Cover & ballistics** | Stances (auto-crouch at low cover), exposure-based hit chance, penetration by material, suppression, leaning. Debug overlay. *It feels like cover matters.* |
+| M3c | **Enemy AI** | Patrols, investigating noise, taking cover, flanking, surrendering; civilians and hostages |
 | M4 | **Scale & variety** | Teams of up to 30, a larger compound map, civilians, hostages, ROE scoring, after-action report |
 | M5 | **Covert mode** | Disguises, suspicion, plant/swap items: the "janitor" mission is playable |
 | M6 | **Persistence** | Roster, permadeath, injuries, recruitment by agency, save/load |
@@ -271,7 +273,7 @@ Each milestone ends with something **playable**. Don't move on until it's fun.
 | M11 | **World sim & news** | Nations, opinion, funding, other conflicts, generated news feed |
 | M12 | **Art & polish** | Low-poly models, animations, sound, UI pass |
 
-M1–M3 is the **vertical slice**. If clearing rooms isn't fun there, everything else gets reconsidered.
+M1–M3c is the **close-quarters core** (the realistic CQB toolkit: angles, doors, cover, smart enemies). If clearing rooms isn't fun there, everything else gets reconsidered.
 
 ---
 
@@ -301,3 +303,4 @@ M1–M3 is the **vertical slice**. If clearing rooms isn't fun there, everything
 | 2026-11-19 | Build tactical vertical slice (M1–M3) before the world layer |
 | 2026-11-19 | "Open world" = go anywhere in the world, but a place becomes a playable 3D map only when you send a team there |
 | 2026-11-19 | M0 playtested and approved; M1 built |
+| 2026-11-19 | M1 playtested and approved. Priority: get realistic CQB mechanics fully right first (facing, pieing corners, doors, breaching, go-codes, cover). Personal project, not for release |

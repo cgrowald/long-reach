@@ -60,4 +60,7 @@ world/ people/        (later milestones)
 
 ## Status
 - M0 done (user playtested 2026-11-19, all working).
-- M1 (move orders, pathfinding, auto-combat, squad panel, win/lose, restart) - built, battle-tested headless, awaiting user playtest.
+- M1 done (user playtested 2026-11-19).
+- User wants realistic CQB mechanics fully right before anything else (see design doc M2-M3c).
+- M2 Eyes & angles (vision cones + fog, turn rate + firing arc, facing orders, pie corners, walk/run, hold fire) - built, battle-tested (careless single-file rush wins ~10/12 with casualties), awaiting user playtest.
+- Next: M3 Doors & breaching.

@@ -25,6 +25,9 @@ var tango_spawns: Array[Dictionary] = [
 	{"pos": Vector3(6.5, 0.0, 3.4), "yaw": PI},
 ]
 
+## Doorway centers (y = 0), filled while building walls.
+var doors: Array[Vector3] = []
+
 var _mat_cache: Dictionary = {}
 
 
@@ -146,9 +149,9 @@ func _add_box(box_name: String, size: Vector3, pos: Vector3, mat_key: String, co
 	return body
 
 
-func _wall_segments(start: float, end: float, doors: Array) -> Array[Vector2]:
+func _wall_segments(start: float, end: float, gaps: Array) -> Array[Vector2]:
 	var segs: Array[Vector2] = []
-	var sorted_doors: Array = doors.duplicate()
+	var sorted_doors: Array = gaps.duplicate()
 	sorted_doors.sort()
 	var cursor: float = start
 	for d in sorted_doors:
@@ -161,18 +164,20 @@ func _wall_segments(start: float, end: float, doors: Array) -> Array[Vector2]:
 	return segs
 
 
-func _wall_along_x(z: float, x0: float, x1: float, doors: Array, t: float, mat_key: String) -> void:
-	for seg in _wall_segments(x0 - t * 0.5, x1 + t * 0.5, doors):
+func _wall_along_x(z: float, x0: float, x1: float, door_centers: Array, t: float, mat_key: String) -> void:
+	for seg in _wall_segments(x0 - t * 0.5, x1 + t * 0.5, door_centers):
 		_add_box("Wall", Vector3(seg.y - seg.x, WALL_HEIGHT, t), Vector3((seg.x + seg.y) * 0.5, WALL_HEIGHT * 0.5, z), mat_key)
-	for d in doors:
+	for d in door_centers:
 		_add_lintel(Vector3(float(d), 0.0, z), Vector3(DOOR_WIDTH, 0.0, t), mat_key)
+		doors.append(Vector3(float(d), 0.0, z))
 
 
-func _wall_along_z(x: float, z0: float, z1: float, doors: Array, t: float, mat_key: String) -> void:
-	for seg in _wall_segments(z0, z1, doors):
+func _wall_along_z(x: float, z0: float, z1: float, door_centers: Array, t: float, mat_key: String) -> void:
+	for seg in _wall_segments(z0, z1, door_centers):
 		_add_box("Wall", Vector3(t, WALL_HEIGHT, seg.y - seg.x), Vector3(x, WALL_HEIGHT * 0.5, (seg.x + seg.y) * 0.5), mat_key)
-	for d in doors:
+	for d in door_centers:
 		_add_lintel(Vector3(x, 0.0, float(d)), Vector3(t, 0.0, DOOR_WIDTH), mat_key)
+		doors.append(Vector3(x, 0.0, float(d)))
 
 
 func _add_lintel(center: Vector3, footprint: Vector3, mat_key: String) -> void:

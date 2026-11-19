@@ -6,16 +6,22 @@ extends Node
 ##   Left drag             box select (Shift = add)
 ##   Double-click          select + camera follow
 ##   Right click ground    move selected (Shift = queue waypoint)
+##   Right drag            move, then face the drag direction on arrival
+##   Alt + right click     look toward that point (no move; end of route if moving)
+##   V                     toggle walk / run          H  toggle hold fire
 ##   1-9                   select unit by number (Shift = add)
 ##   F                     follow selected     Tab  cycle follow     Esc  clear
 
 signal selection_changed
 
 const Fx := preload("res://tactical/fx/fx.gd")
+const Unit := preload("res://tactical/units/unit.gd")
 const BOX_THRESHOLD := 6.0
+const FACE_DRAG_THRESHOLD := 14.0
 const PICK_RADIUS_PX := 40.0
 const FORMATION_SPACING := 1.1
 const MARKER_COLOR := Color(0.4, 0.85, 1.0)
+const FACE_MARKER_COLOR := Color(1.0, 0.85, 0.3)
 
 var selected: Array = []
 
@@ -25,6 +31,8 @@ var _box  # selection_box.gd Control
 var _world: Node3D
 var _drag_start: Vector2 = Vector2.ZERO
 var _dragging: bool = false
+var _right_start: Vector2 = Vector2.ZERO
+var _right_down: bool = false
 
 
 func setup(rig, friendly_units: Array, box, world: Node3D) -> void:
@@ -61,7 +69,6 @@ func follow(u) -> void:
 
 
 func _process(_delta: float) -> void:
-	# Drop units that died while selected.
 	var alive: Array = selected.filter(func(u): return not u.is_dead)
 	if alive.size() != selected.size():
 		_set_selection(alive)
@@ -70,40 +77,72 @@ func _process(_delta: float) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
 		_handle_mouse_button(event as InputEventMouseButton)
-	elif event is InputEventMouseMotion and _dragging:
-		_box.show_rect(_drag_start, (event as InputEventMouseMotion).position)
+	elif event is InputEventMouseMotion:
+		var pos: Vector2 = (event as InputEventMouseMotion).position
+		if _dragging:
+			_box.show_rect(_drag_start, pos)
+		elif _right_down and pos.distance_to(_right_start) > FACE_DRAG_THRESHOLD:
+			_box.show_arrow(_right_start, pos)
 	elif event is InputEventKey:
 		_handle_key(event as InputEventKey)
 
 
 func _handle_mouse_button(mb: InputEventMouseButton) -> void:
 	if mb.button_index == MOUSE_BUTTON_LEFT:
-		if mb.pressed:
-			if mb.double_click:
-				var picked = _pick_unit(mb.position)
-				if picked != null:
-					select_only(picked)
-					follow(picked)
-				_dragging = false
-				return
-			_drag_start = mb.position
-			_dragging = true
-		elif _dragging:
+		_handle_left(mb)
+	elif mb.button_index == MOUSE_BUTTON_RIGHT:
+		_handle_right(mb)
+
+
+func _handle_left(mb: InputEventMouseButton) -> void:
+	if mb.pressed:
+		if mb.double_click:
+			var picked = _pick_unit(mb.position)
+			if picked != null:
+				select_only(picked)
+				follow(picked)
 			_dragging = false
-			_box.hide_rect()
-			if mb.position.distance_to(_drag_start) > BOX_THRESHOLD:
-				_box_select(Rect2(_drag_start, mb.position - _drag_start).abs(), mb.shift_pressed)
+			return
+		_drag_start = mb.position
+		_dragging = true
+	elif _dragging:
+		_dragging = false
+		_box.hide_rect()
+		if mb.position.distance_to(_drag_start) > BOX_THRESHOLD:
+			_box_select(Rect2(_drag_start, mb.position - _drag_start).abs(), mb.shift_pressed)
+		else:
+			var picked = _pick_unit(mb.position)
+			if mb.shift_pressed:
+				if picked != null:
+					toggle(picked)
 			else:
-				var picked = _pick_unit(mb.position)
-				if mb.shift_pressed:
-					if picked != null:
-						toggle(picked)
-				else:
-					select_only(picked)
-	elif mb.button_index == MOUSE_BUTTON_RIGHT and mb.pressed:
-		var point: Variant = _ground_point(mb.position)
-		if point != null and not selected.is_empty():
-			_issue_move(point, mb.shift_pressed)
+				select_only(picked)
+
+
+func _handle_right(mb: InputEventMouseButton) -> void:
+	if mb.pressed:
+		_right_start = mb.position
+		_right_down = true
+		return
+	if not _right_down:
+		return
+	_right_down = false
+	_box.hide_arrow()
+	if selected.is_empty():
+		return
+	var start: Variant = _ground_point(_right_start)
+	if start == null:
+		return
+	if mb.alt_pressed:
+		_issue_face(start)
+		return
+	var face_yaw: float = NAN
+	if mb.position.distance_to(_right_start) > FACE_DRAG_THRESHOLD:
+		var end: Variant = _ground_point(mb.position)
+		if end != null:
+			var dir: Vector3 = (end as Vector3) - (start as Vector3)
+			face_yaw = atan2(-dir.x, -dir.z)
+	_issue_move(start, mb.shift_pressed, face_yaw)
 
 
 func _handle_key(key: InputEventKey) -> void:
@@ -125,6 +164,10 @@ func _handle_key(key: InputEventKey) -> void:
 	elif code == KEY_ESCAPE:
 		_rig.release()
 		select_only(null)
+	elif code == KEY_V:
+		_toggle_pace()
+	elif code == KEY_H:
+		_toggle_hold_fire()
 
 
 func _set_selection(units: Array) -> void:
@@ -137,6 +180,23 @@ func _set_selection(units: Array) -> void:
 	selection_changed.emit()
 
 
+func _toggle_pace() -> void:
+	if selected.is_empty():
+		return
+	# If any selected unit walks, everyone runs; otherwise everyone walks.
+	var any_walk: bool = selected.any(func(u): return u.pace == Unit.Pace.WALK)
+	for u in selected:
+		u.set_pace(Unit.Pace.RUN if any_walk else Unit.Pace.WALK)
+
+
+func _toggle_hold_fire() -> void:
+	if selected.is_empty():
+		return
+	var any_free: bool = selected.any(func(u): return not u.hold_fire)
+	for u in selected:
+		u.hold_fire = any_free
+
+
 func _cycle_follow() -> void:
 	var alive: Array = _units.filter(func(u): return not u.is_dead)
 	if alive.is_empty():
@@ -147,18 +207,26 @@ func _cycle_follow() -> void:
 	follow(next)
 
 
-func _issue_move(point: Vector3, queue: bool) -> void:
+func _issue_move(point: Vector3, queue: bool, face_yaw: float = NAN) -> void:
 	var map: RID = _world.get_world_3d().navigation_map
 	var n: int = selected.size()
 	var cols: int = ceili(sqrt(float(n)))
+	# Spread the group sideways relative to the facing (or the camera) so the line faces forward.
+	var basis_yaw: float = face_yaw if not is_nan(face_yaw) else _rig.rotation.y
 	for i in n:
 		var offset := Vector3(
 			(float(i % cols) - float(cols - 1) * 0.5) * FORMATION_SPACING,
 			0.0,
-			float(i / cols) * FORMATION_SPACING)
+			float(i / cols) * FORMATION_SPACING).rotated(Vector3.UP, basis_yaw)
 		var dest: Vector3 = NavigationServer3D.map_get_closest_point(map, point + offset)
-		selected[i].order_move(dest, queue)
+		selected[i].order_move(dest, queue, face_yaw)
 	Fx.move_marker(_world, point, MARKER_COLOR)
+
+
+func _issue_face(point: Vector3) -> void:
+	for u in selected:
+		u.order_face(point)
+	Fx.move_marker(_world, point, FACE_MARKER_COLOR)
 
 
 func _box_select(rect: Rect2, additive: bool) -> void:

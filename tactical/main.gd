@@ -10,11 +10,13 @@ const SelectionController := preload("res://tactical/control/selection_controlle
 const SelectionBox := preload("res://tactical/ui/selection_box.gd")
 const SquadPanel := preload("res://tactical/ui/squad_panel.gd")
 const PathOverlay := preload("res://tactical/ui/path_overlay.gd")
+const VisionOverlay := preload("res://tactical/ui/vision_overlay.gd")
 const Fx := preload("res://tactical/fx/fx.gd")
 
 const NAV_BOUNDS := AABB(Vector3(-35.0, -2.0, -35.0), Vector3(70.0, 6.0, 70.0))
 const TRACER_BLUE := Color(1.0, 0.92, 0.55)
 const TRACER_RED := Color(1.0, 0.45, 0.25)
+const FOG_INTERVAL := 3  # physics frames between fog-of-war updates
 
 var friendlies: Array = []
 var hostiles: Array = []
@@ -25,6 +27,7 @@ var _rig
 var _selection
 var _status_label: Label
 var _banner: Label
+var _fog_tick: int = 0
 
 
 func _ready() -> void:
@@ -35,6 +38,7 @@ func _ready() -> void:
 	_map.process_mode = Node.PROCESS_MODE_PAUSABLE
 	add_child(_map)
 	NavBuilder.bake(_map, NAV_BOUNDS)
+	Unit.doors = _map.doors
 	_spawn_units()
 
 	_rig = CameraRig.new()
@@ -51,6 +55,10 @@ func _ready() -> void:
 	_selection.name = "Selection"
 	_selection.setup(_rig, friendlies, box, _map)
 	add_child(_selection)
+
+	var vision := VisionOverlay.new()
+	vision.setup(friendlies, _selection)
+	add_child(vision)
 
 	var overlay := PathOverlay.new()
 	overlay.setup(friendlies, _selection)
@@ -84,6 +92,7 @@ func _spawn_units() -> void:
 		t.rotation.y = tangos[i]["yaw"]
 		map.add_child(t)
 		t.fired.connect(_on_unit_fired.bind(t))
+		t.set_revealed(false)
 		hostiles.append(t)
 
 
@@ -112,10 +121,10 @@ func _unhandled_input(event: InputEvent) -> void:
 func _build_hud_text(hud: CanvasLayer) -> void:
 	var help := Label.new()
 	help.text = "\n".join([
-		"Left click / drag  select (Shift adds)      Right click  move (Shift queues waypoint)",
-		"WASD  pan    Q/E  rotate    Middle-drag  orbit    Wheel  zoom",
-		"Double-click / F  follow    Tab  cycle follow    1-4  select    Esc  clear",
-		"Space  pause (you can give orders while paused)    R  restart",
+		"Left click / drag  select (Shift adds)    Right click  move (Shift queues)    Right DRAG  move + face that way",
+		"Alt + right click  look toward point    V  walk / run    H  hold fire    Space  pause (plan while paused)",
+		"WASD  pan    Q/E  rotate    Middle-drag  orbit    Wheel  zoom    Double-click / F  follow    Tab  cycle",
+		"1-4  select    Esc  clear    R  restart",
 	])
 	help.position = Vector2(16.0, 12.0)
 	_style_label(help, 15)
@@ -141,6 +150,21 @@ func _style_label(label: Label, font_size: int) -> void:
 	label.add_theme_color_override("font_outline_color", Color.BLACK)
 	label.add_theme_constant_override("outline_size", 5)
 	label.add_theme_font_size_override("font_size", font_size)
+
+
+## Fog of war: a hostile is drawn only while some living friendly can see it.
+func _physics_process(_delta: float) -> void:
+	_fog_tick += 1
+	if _fog_tick % FOG_INTERVAL != 0:
+		return
+	for h in hostiles:
+		var seen: bool = false
+		for f in friendlies:
+			if not f.is_dead and f.can_see(h):
+				seen = true
+				break
+		if seen != h.revealed:
+			h.set_revealed(seen)
 
 
 func _process(_delta: float) -> void:
