@@ -299,3 +299,5 @@ M1–M3 is the **vertical slice**. If clearing rooms isn't fun there, everything
 | 2026-11-19 | Clean low-poly art |
 | 2026-11-19 | Living world is simulated on a strategic map, not a walkable GTA-style open world |
 | 2026-11-19 | Build tactical vertical slice (M1–M3) before the world layer |
+| 2026-11-19 | "Open world" = go anywhere in the world, but a place becomes a playable 3D map only when you send a team there |
+| 2026-11-19 | M0 playtested and approved; M1 built |

@@ -37,14 +37,27 @@ Covert counter-terror tactics + strategy game. **Read `docs/GAME_DESIGN.md` firs
 
 ## Layout
 ```
-data/       game data (materials.json, ...)
-docs/       design doc
-tactical/   3D mission layer (main scene, camera/, units/)
-sim/        (M2+) pure rules
-world/      (M7+) strategic layer
-people/     (M6+) roster, training
-ui/         shared UI
+data/                 game data: materials, weapons, unit_types (JSON)
+docs/                 design doc
+sim/                  pure rules: game_data.gd (JSON loader), combat_rules.gd
+tactical/main.gd      mission orchestration, HUD, win/lose
+tactical/level/       test_map.gd (gray-box map + spawns), nav_builder.gd (runtime navmesh bake)
+tactical/units/       unit.gd (both teams: pathing, spotting, shooting, damage)
+tactical/control/     selection_controller.gd (select, box select, move orders)
+tactical/camera/      camera_rig.gd
+tactical/ui/          squad_panel, path_overlay, selection_box
+tactical/fx/          tracers, move markers
+world/ people/        (later milestones)
 ```
 
+## Testing
+- Commit Godot's `*.gd.uid` files alongside scripts.
+- Units are not physics bodies; LOS raycasts use collision layer 1 (walls/cover only).
+- Battle regression: script that instantiates main.tscn, selects all friendlies, issues moves via
+  `_selection._issue_move(...)`, runs at `Engine.time_scale = 4`, reports `mission_over` / survivors.
+- Screenshots: run Godot *without* `--headless` plus `--resolution 1600x900`, save
+  `root.get_viewport().get_texture().get_image()` to the scratchpad, then view it.
+
 ## Status
-- M0 (setup, gray-box map, free cam + lock-on, pause) - built, passes headless smoke test, awaiting user playtest.
+- M0 done (user playtested 2026-11-19, all working).
+- M1 (move orders, pathfinding, auto-combat, squad panel, win/lose, restart) - built, battle-tested headless, awaiting user playtest.

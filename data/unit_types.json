@@ -1,0 +1,20 @@
+{
+	"operator": {
+		"hp": 100,
+		"weapon": "m4a1",
+		"speed": 3.2,
+		"reaction_time": 0.35,
+		"vision_range": 45,
+		"vision_cone_deg": 360,
+		"color": [0.25, 0.5, 0.95]
+	},
+	"tango": {
+		"hp": 100,
+		"weapon": "ak47",
+		"speed": 2.8,
+		"reaction_time": 0.8,
+		"vision_range": 35,
+		"vision_cone_deg": 140,
+		"color": [0.85, 0.2, 0.2]
+	}
+}
