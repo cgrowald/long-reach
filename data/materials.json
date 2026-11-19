@@ -1,0 +1,10 @@
+{
+	"glass":    { "color": [0.70, 0.85, 0.92], "penetration_resistance": 0.5, "notes": "Stops nothing. Breaks." },
+	"drywall":  { "color": [0.86, 0.84, 0.79], "penetration_resistance": 1.0, "notes": "Concealment, not cover." },
+	"wood":     { "color": [0.55, 0.40, 0.22], "penetration_resistance": 2.0, "notes": "Doors, crates." },
+	"car_body": { "color": [0.30, 0.42, 0.55], "penetration_resistance": 3.0, "notes": "Engine block is better than doors." },
+	"sandbag":  { "color": [0.70, 0.62, 0.42], "penetration_resistance": 6.0, "notes": "Low wall, good cover prone/crouched." },
+	"brick":    { "color": [0.62, 0.33, 0.25], "penetration_resistance": 7.0, "notes": "Stops rifles for a while." },
+	"concrete": { "color": [0.60, 0.60, 0.60], "penetration_resistance": 9.0, "notes": "Real cover." },
+	"steel":    { "color": [0.35, 0.38, 0.42], "penetration_resistance": 10.0, "notes": "Real cover." }
+}
