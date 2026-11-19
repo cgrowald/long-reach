@@ -14,6 +14,9 @@ Covert counter-terror tactics + strategy game. **Read `docs/GAME_DESIGN.md` firs
   `C:\Users\Chandler\Tools\Godot\Godot_v4.7.2-stable_win64_console.exe`
 - Smoke test: `<godot> --headless --path . --quit-after 120` and check output for `ERROR` / `SCRIPT ERROR`.
   For behaviour checks, write a throwaway `extends SceneTree` script and run it with `--script <path>`.
+- Blender 5.3 (scriptable, for generating/converting low-poly models; export `.glb` into `art/`):
+  `C:\Program Files\Blender Foundation\Blender 5.3\blender.exe --background --factory-startup --python <script.py>`
+  Blender 5.2 LTS is also installed (the user's own); use 5.3.
 - PowerShell 5.1 gotcha: `Get-Content`/`Set-Content` mangle UTF-8. Use the Write/Edit tools or `[IO.File]` APIs for file edits.
 
 ## Architecture rules (from the design doc - don't break these)
