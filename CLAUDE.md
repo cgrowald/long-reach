@@ -1,6 +1,6 @@
 # Uprising (working title; repo "long-reach") - notes for Claude
 
-Underground resistance game: a reluctant parent in a generated country builds a movement from nothing (laptop, workbench, cells) into an army that storms the capital. **Read `docs/GAME_DESIGN.md` first** (source of truth; update its Decisions Log on every user decision). Also: `docs/FIRST_WEEK.md` (paper playtest of the opening), `docs/TERMINAL.md` (the laptop OS). The old counter-terror game (M0-M7) is archived in `docs/archive/`; its code stays and gets reused.
+Underground resistance game: a reluctant parent in a generated country builds a movement from nothing (laptop, workbench, cells) into an army that storms the capital. **Read `docs/GAME_DESIGN.md` first** (source of truth; update its Decisions Log on every user decision). Also: `docs/STORY_PREMISE.md` (cast, arc, scenes the user writes), `docs/FIRST_WEEK.md` (paper playtest of the opening), `docs/TERMINAL.md` (the laptop OS). The old counter-terror game (M0-M7) is archived in `docs/archive/`; its code stays and gets reused.
 
 ## Working with the user
 - The user does not write code. They direct, playtest, and make design calls. Claude writes all code.

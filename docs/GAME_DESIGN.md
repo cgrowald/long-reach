@@ -47,6 +47,33 @@ The regime hunts you the whole way. Everything you do leaves a trace. Get traced
 
 ---
 
+## 2A. The feel of the world (decided 2026-11-20)
+
+**Orwell's *1984*, rebuilt with new-age tech, and built badly.** Not a Nazi feel, not old Russia, not present-day China.
+
+- **Advanced on the surface.**
+  - It's the 2040s (the game starts **Monday 14 October 2041**).
+  - Smart everything: cameras with face matching, a citizen app, digital ID, smart doorbells that report.
+  - Feeds, state influencers, slogans on every screen.
+  - Reporting your neighbors is a game with points.
+- **The surveillance is everywhere, and it's full of holes.**
+  - The tech isn't as good at tracking as people fear.
+  - The country's education is poor, so there aren't enough people to maintain it: systems go unpatched, default passwords never get changed, contractors cut corners, databases don't talk to each other, and outages are routine.
+- **The AI is dumb.**
+  - Not LLM-level: keyword filters, chatbots that loop, face matching that's fooled by a hat.
+  - The regime's "smart" systems are often only as smart as the tired clerk reading the alerts.
+- **The 1984 part:**
+  - the Party rewrites records ("there is no record");
+  - loyalty is performed in public;
+  - the Ministry of Information;
+  - fear of the neighbor, not of the machine.
+- **What this means for gameplay:**
+  - **flaws everywhere are your toolbox.** Every system has a gamified weak spot you can learn and exploit: a camera on factory settings, a filter that misses misspellings, a database that forgets you when you move districts, a guard who trusts the screen.
+  - The regime's new daily rules patch some holes, and open new ones.
+- **Tone check:** this is a regime you can laugh at (its tech is clumsy, its slogans absurd) that still kills people. Both have to be true at once.
+
+---
+
 ## 3. The core loop: one day (decided 2026-11-20)
 
 | Phase | Where | What you do |
@@ -351,6 +378,7 @@ Each milestone ends playable.
 
 | Date | Decision |
 |---|---|
+| 2026-11-20 | World feel: 1984-style control with new-age tech, but sloppy: unpatched systems, default passwords, poor education, dumb non-LLM AI; flaws everywhere are the player's toolbox. Start date Mon 14 Oct 2041; the laptop shows full date, weekday and time. Story: Claude writes the premise and beats (docs/STORY_PREMISE.md), the user writes the scenes. |
 | 2026-11-20 | The user will write some of the game text; all writing lives in data/ JSON (docs/WRITING_GUIDE.md). |
 | 2026-11-20 | Middle game = making equipment for the army + routine recruiting + small-unit attacks on infrastructure and regime logistics + building your own logistics; small-unit tactics and routine fade in the late game (delegated), leaving large-engagement command. Saves when you sleep, optional ironman. ~10 h finishable proof of concept first, ~60 h later. Torture allowed, only adults hurt, civilian deaths possible but punishing. Bleak regime/news, darkly funny own side. Free sound packs OK (user wants to learn to make sounds later). Blender art made by Claude, then the user tweaks it to remove the "AI look" (Claude teaches what to change; see docs/ART_GUIDE.md); user will share reference screenshots for the look. Delete old counter-terror code once its replacement exists. |
 | 2026-11-20 | T1 built (terminal on its own, days 1-4 of FIRST_WEEK.md). Cybersecurity is fully gamified (fun angles, not real procedures). Workflow: lean CLAUDE.md + a `godot-verify` project skill; Claude asks gap questions before each milestone. |

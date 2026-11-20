@@ -277,7 +277,7 @@ func _start_item(what: String) -> void:
 		"about":
 			var l := RichTextLabel.new()
 			l.bbcode_enabled = true
-			l.text = "[b]HEARTH OS 7.2[/b]\nState-approved operating system of the Republic of Valdenmark.\n\nThis device is protected by [b]CitizenCare[/b], which keeps you safe by sharing your activity with the people who keep you safe.\n\n[color=#666]Build 7.2.1950-KS. Factory diagnostics: disabled. (Probably.)[/color]"
+			l.text = "[b]HEARTH OS 7.2[/b]\nState-approved operating system of the Republic of Valdenmark.\n\nThis device is protected by [b]CitizenCare[/b], which keeps you safe by sharing your activity with the people who keep you safe.\n\n[color=#666]Build 7.2.2030-KS. Factory diagnostics: disabled. (Probably.)[/color]"
 			l.size_flags_vertical = Control.SIZE_EXPAND_FILL
 			open_window("About", l, Vector2(420, 230))
 		"portal":
@@ -301,7 +301,7 @@ func _toggle_vpn() -> void:
 func _refresh() -> void:
 	if not is_inside_tree():
 		return
-	_clock.text = state.clock_text()
+	_clock.text = state.datetime_text()
 	_battery.text = ("+" if state.plugged else "") + "%d%%" % int(state.battery)
 	_battery.add_theme_color_override("font_color", T.DANGER if state.battery < 15 and not state.plugged else T.INK)
 	var v: String = state.vpn_installed()

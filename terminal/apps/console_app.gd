@@ -65,7 +65,7 @@ func _run(line: String) -> void:
 		"whoami":
 			_print("tomas  (citizen 0447-2219-KS)  status: IN GOOD STANDING" + ("  [watch: active]" if state.exposure_level() >= 2 else ""))
 		"date":
-			_print("%s, day %d of the new rules. %s" % [state.day_def().get("weekday", "?"), state.day, state.clock_text()])
+			_print(state.datetime_text() + "   (day %d of the new rules)" % state.day)
 		"clear":
 			_out.clear()
 		"exit":

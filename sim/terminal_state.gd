@@ -106,6 +106,7 @@ func end_night() -> bool:
 	for q in queue:
 		q["at"] = NIGHT_START + 2
 	day += 1
+	minute = NIGHT_START
 	if not plugged:
 		battery = maxf(battery - 4.0, 0.0)
 	save()
@@ -137,6 +138,24 @@ func advance(mins: int) -> bool:
 func clock_text() -> String:
 	var m := minute % (24 * 60)
 	return "%02d:%02d" % [m / 60, m % 60]
+
+
+const WEEKDAYS := ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+const MONTHS := ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+
+
+## The calendar date right now (past midnight counts as the next day).
+func date_dict() -> Dictionary:
+	var s: Dictionary = days.get("start_date", {"year": 2041, "month": 10, "day": 14})
+	var start := Time.get_unix_time_from_datetime_dict({"year": int(s["year"]), "month": int(s["month"]), "day": int(s["day"]), "hour": 12})
+	var offset_days: int = (day - 1) + minute / (24 * 60)
+	return Time.get_datetime_dict_from_unix_time(start + offset_days * 86400)
+
+
+## e.g. "Mon 14 Oct 2041  21:36"
+func datetime_text() -> String:
+	var d := date_dict()
+	return "%s %d %s %d   %s" % [WEEKDAYS[int(d["weekday"])], int(d["day"]), MONTHS[int(d["month"]) - 1], int(d["year"]), clock_text()]
 
 
 # ---------------------------------------------------------------- flags / exposure

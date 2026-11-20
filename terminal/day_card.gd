@@ -110,7 +110,9 @@ func play(st, sections: Array) -> void:
 	state = st
 	_sections = sections
 	_i = -1
-	_title.text = str(state.day_def().get("weekday", "")).to_upper()
+	var dd: Dictionary = state.date_dict()
+	var months := ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"]
+	_title.text = "%s   %d %s %d" % [str(state.day_def().get("weekday", "")).to_upper(), int(dd["day"]), months[int(dd["month"]) - 1], int(dd["year"])]
 	_next()
 
 
