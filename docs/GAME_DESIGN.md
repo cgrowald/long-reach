@@ -147,6 +147,16 @@ See section 6.
   - If you embarrass them, they retaliate, possibly on domestic soil.
 - **Domestic threat:** Sleeper cells in the US and Europe lead to the high-stakes, low-collateral-tolerance missions.
 
+**M7 first slice as built (2026-11-20):**
+- `sim/network.gd` + `data/network.json`. The network ("the Sixth Hour", placeholder name) is generated per campaign: **the Emir**, four **lieutenants** (Treasurer, Operations chief, Recruiter-in-chief, Quartermaster), each with 4-5 **cells** nearby (sleepers in the US/Europe/allies). Every person has a name, an alias, a pixel face, a cell size 1-3 and links (chain of command + a few cross-branch contacts). Region strength on the map = the sizes of the cells there.
+- **Intel** per person, 0-100: 25 = suspected (shows on the board), 60 = **located** (name and face known, can be targeted). Gains: carrier coverage each week (lieutenants slower), linked to someone already found, blind safehouse raids (+30 to everyone there), stopping a plot (+25 to whoever sent it), and above all **captures** (+25 to every contact, +5 more to his boss). Halved for 5 weeks after a financier or smuggler is captured (they switch to couriers). Intel decays slowly without coverage.
+- **The Emir** can only be found through his lieutenants: +15 intel per lieutenant captured, +6 per lieutenant killed, +3 per cell captured; once all lieutenants are gone, coverage starts to find him too.
+- **Operations** per region: KILL or CAPTURE a located person, STOP a known plot, or a blind safehouse raid. The mission spawns the target (gold, "HVT 'alias'") in the back room. Kill: he is armed. Capture: he is unarmed, our soldiers never shoot him, and a soldier must be ordered (right-click him > Restrain) to flex-cuff him; frags and breaches can still kill him.
+- **Network behaviour each week:** cells grow (finance bosses feed growth), logistics/recruitment/propaganda open new cells nearby, bomb-makers and sleepers plot attacks (bomb-makers sometimes against the West), a branch whose lieutenant is gone grows and plots at 40% until someone is promoted (22%/week). After a raid, other cells in that region may **go dark** for 2 weeks (cannot be targeted, lose intel). A failed raid makes the target stronger and he goes to ground. Taking down a lieutenant triggers a **revenge plot** in the West (announced, 3 weeks).
+- **End:** victory screen when the Emir is down; defeat when threat is 90+ for 4 weeks in a row (warnings in the briefing). `world/campaign_end.tscn`, new campaign from there.
+- **Network board** (`world/network_board.tscn`, NETWORK button on the map): org chart with faces, intel bars, LOCATED / GONE DARK / KIA / CAPTURED stamps, links, a detail panel and a jump to the map.
+- Balance (headless, 8 seeds): idle player loses around week 18-58 (avg ~34); a bot that raids every week with 80% success wins in weeks 19-38 and sometimes still loses.
+
 ---
 
 ## 6. Tactical Missions
@@ -380,7 +390,7 @@ Each milestone ends with something **playable**. Don't move on until it's fun.
 | M4 | **Characters you care about** ✅ (first slice) | Persistent roster with names, bios, portraits, stats, traits, service records, lasting injuries, permadeath + memorial wall; pick your squad before a mission; after-action report; save/load |
 | M5 | **Research & equipment** ✅ (first slice) | Tech tree over in-game years; projects take time, money and specialists; loadouts; first techs: heartbeat sensor, grappling hook, night vision, suppressors, scout drone |
 | M6 | **Campaign map** ✅ (first slice) | Sector-based dynamic campaign (Gates of Hell conquest feel): move teams between sectors, choose battles, persistent forces, resources for reinforcements, enemy moves too; carrier as mobile HQ; in-game calendar |
-| M7 | **Enemy network** | Node graph, intel leads, growth, adaptation, retaliation |
+| M7 | **Enemy network** ✅ (first slice) | Node graph, intel leads, growth, adaptation, retaliation |
 | M8 | **Operations** | Multi-step operation templates (supply-chain op, HVT capture, etc.) |
 | M9 | **Training & aging** | Recruitment by agency, facilities, courses, aging, instructors |
 | M10 | **Scale & variety** | Teams of up to 30, compounds, civilians, hostages, ROE scoring, generated maps |
@@ -397,9 +407,9 @@ The tactical layer only needs to be **good enough** (user feedback after M2: the
 - [ ] **Real-world news:** fictional generated world (recommended), or a world inspired by real regions and events? Pulling live real news is not planned.
 - [x] **Setting:** real countries and cities (decided 2026-11-19). The enemy organization stays fictional.
 - [ ] **Enemy org identity:** name, ideology and look. Fictional is recommended.
-- [ ] **Interrogation / informants:** a mechanic, or abstracted?
-- [ ] **Failure state:** can the campaign be lost (funding pulled, a major attack succeeds)? Or is it endless/sandbox?
-- [ ] **Campaign end:** dismantle the network's leadership, or ongoing sandbox?
+- [x] **Interrogation / informants (2026-11-20):** abstracted for now: a capture reveals the people linked to the target. Original question: a mechanic, or abstracted?
+- [x] **Failure state (provisional 2026-11-20):** threat 90+ for 4 weeks ends the program. Original question: can the campaign be lost (funding pulled, a major attack succeeds)? Or is it endless/sandbox?
+- [x] **Campaign end (provisional 2026-11-20):** take down the Emir. Original question: dismantle the network's leadership, or ongoing sandbox?
 - [ ] **Vehicles on tactical maps:** drivable, or scripted insertion/extraction only?
 - [ ] **Sniper/overwatch** role at long range on large maps.
 
@@ -409,6 +419,8 @@ The tactical layer only needs to be **good enough** (user feedback after M2: the
 
 | Date | Decision |
 |---|---|
+| 2026-11-20 | M7 enemy network built (user: "move to next phase, add more and more"; the game was not fun yet). Named people in a hierarchy (Emir, 4 lieutenants, cells), intel 0-100 per person (25 = suspected, 60 = located and targetable), KILL or CAPTURE raids with a named target in the mission, interrogation reveals contacts, lieutenants lead to the Emir |
+| 2026-11-20 | Campaign end (provisional, Claude's call, user may overrule): WIN by killing or capturing the Emir; LOSE when the threat stays at 90+ for 4 weeks (oversight shuts the program down). Enemy org named "the Sixth Hour" (placeholder) |
 | 2026-11-19 | Engine: Godot 4 + GDScript |
 | 2026-11-19 | Real-time with pause; free camera + lock-on |
 | 2026-11-19 | 1–30 operators per mission; teams above ~8 |

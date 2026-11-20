@@ -34,6 +34,21 @@ func _ready() -> void:
 		Color(0.45, 0.9, 0.5) if success else Color(0.9, 0.35, 0.3)))
 	if rep.has("where"):
 		col.add_child(_label(str(rep["where"]), 15, Color.WHITE))
+	if rep.has("hvt"):
+		var h: Dictionary = rep["hvt"]
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 12)
+		var outcome: String = str(h.get("outcome", ""))
+		var tr := TextureRect.new()
+		tr.texture = Portrait.make(int(h.get("seed", 0)), outcome == "killed")
+		tr.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tr.custom_minimum_size = Vector2(64, 64)
+		row.add_child(tr)
+		var txt: String = {"captured": "IN CUSTODY", "killed": "KILLED", "escaped": "ESCAPED"}.get(outcome, outcome.to_upper())
+		var c: Color = {"captured": Color(0.5, 0.72, 1.0), "killed": Color(0.9, 0.35, 0.3), "escaped": Color(1.0, 0.6, 0.3)}.get(outcome, Color.WHITE)
+		row.add_child(_label("TARGET  '%s'  %s:  %s" % [h.get("alias", ""), h.get("name", ""), txt], 22, c))
+		col.add_child(row)
 
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -58,12 +73,15 @@ func _ready() -> void:
 		col.add_child(_label("MEANWHILE, THE NETWORK:", 14, DIM))
 		for line in news:
 			var attack: bool = str(line).begins_with("ATTACK")
-			col.add_child(_label("   " + str(line), 14, Color(0.95, 0.4, 0.35) if attack else Color.WHITE))
+			var lc: Color = Color(0.95, 0.4, 0.35) if attack else Color.WHITE
+			if str(line).begins_with("LOCATED") or str(line).begins_with("NEW LEAD"):
+				lc = GOLD
+			col.add_child(_label("   " + str(line), 14, lc))
 	var back := Button.new()
 	back.text = "Return to the map"
 	back.custom_minimum_size = Vector2(220, 44)
 	back.add_theme_font_size_override("font_size", 18)
-	back.pressed.connect(func(): get_tree().change_scene_to_file(campaign.MAP_SCENE))
+	back.pressed.connect(func(): get_tree().change_scene_to_file(campaign.after_report_scene()))
 	col.add_child(back)
 
 

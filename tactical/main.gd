@@ -27,6 +27,8 @@ const SQUAD_CLASSES: Array[String] = ["assaulter", "breacher", "assaulter", "mar
 
 var friendlies: Array = []
 var hostiles: Array = []
+var hvt = null                 # the operation's named target (null = none)
+var hvt_mode: String = ""     # "kill" or "capture"
 var mission_over: bool = false
 
 var _map: Node3D
@@ -39,6 +41,7 @@ var _campaign = null
 var _end_btn: Button
 var _sensor_assigned: bool = false
 var _speed_idx: int = 2
+var _objective: Label
 
 
 func _ready() -> void:
@@ -72,12 +75,13 @@ func _ready() -> void:
 	_selection = SelectionController.new()
 	_selection.name = "Selection"
 	var hint := Label.new()
-	hint.position = Vector2(16.0, 235.0)
+	hint.position = Vector2(16.0, 240.0)
 	_style_label(hint, 18)
 	hint.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3))
 	hud.add_child(hint)
 	var wheel := RadialMenu.new()
 	_selection.setup(_rig, friendlies, box, _map, wheel, hint)
+	_selection.hvt = hvt
 	add_child(_selection)
 
 	var vision := VisionOverlay.new()
@@ -158,7 +162,11 @@ func _spawn_units() -> void:
 	if _in_campaign() and not _campaign.current_op.is_empty():
 		var op: Dictionary = _campaign.current_op
 		tangos.shuffle()
-		tangos.resize(clampi(int(op.get("tangos", tangos.size())), 1, tangos.size()))
+		var want: int = int(op.get("tangos", tangos.size()))
+		if str(op.get("kind", "")) == "node":
+			hvt_mode = str(op.get("mode", "kill"))
+			want -= 1  # the target himself is one of them
+		tangos.resize(clampi(want, 1, tangos.size()))
 		tango_mods = _campaign.WorldSim.theater_of(str(op.get("region", ""))).get("tango", {})
 	for i in tangos.size():
 		var t: Node3D = Unit.new()
@@ -172,6 +180,8 @@ func _spawn_units() -> void:
 		t.fired.connect(_on_unit_fired.bind(t))
 		t.set_revealed(false)
 		hostiles.append(t)
+	if hvt_mode != "":
+		_spawn_hvt(_campaign.current_op, tango_mods)
 
 
 func _in_campaign() -> bool:
@@ -187,8 +197,8 @@ func _end_operation() -> void:
 	var results: Array = []
 	for u in friendlies:
 		results.append({"id": u.record_id, "alive": not u.is_dead, "hp": u.hp, "max_hp": u.max_hp, "kills": u.kills})
-	var success: bool = _count_alive(hostiles) == 0 and _count_alive(friendlies) > 0
-	_campaign.finish_mission(results, success)
+	var success: bool = _objective_done() and _count_alive(friendlies) > 0
+	_campaign.finish_mission(results, success, _hvt_outcome())
 
 
 func _on_unit_fired(from: Vector3, to: Vector3, _hit: bool, shooter: Node3D) -> void:
@@ -238,9 +248,15 @@ func _build_hud_text(hud: CanvasLayer) -> void:
 	hud.add_child(help)
 
 	_status_label = Label.new()
-	_status_label.position = Vector2(16.0, 150.0)
+	_status_label.position = Vector2(16.0, 160.0)
 	_style_label(_status_label, 16)
 	hud.add_child(_status_label)
+
+	_objective = Label.new()
+	_objective.position = Vector2(16.0, 104.0)
+	_style_label(_objective, 17)
+	_objective.add_theme_color_override("font_color", Color(1.0, 0.75, 0.2))
+	hud.add_child(_objective)
 
 	_banner = Label.new()
 	_banner.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -276,11 +292,12 @@ func _physics_process(_delta: float) -> void:
 
 func _process(_delta: float) -> void:
 	var blue_alive: int = _count_alive(friendlies)
-	var red_alive: int = _count_alive(hostiles)
+	var red_alive: int = _armed_alive()
 
 	var lines: Array[String] = []
 	lines.append(("PAUSED" if get_tree().paused else "LIVE") + "   speed %sx" % str(SPEEDS[_speed_idx]))
-	lines.append("Hostiles remaining: %d / %d" % [red_alive, hostiles.size()])
+	lines.append("Armed hostiles remaining: %d" % red_alive)
+	_objective.text = _objective_text()
 	lines.append("FPS %d" % Engine.get_frames_per_second())
 	_status_label.text = "\n".join(lines)
 	_status_label.add_theme_color_override(
@@ -288,8 +305,14 @@ func _process(_delta: float) -> void:
 
 	if mission_over:
 		return
-	if red_alive == 0:
-		_end_mission("AREA SECURE", Color(0.4, 1.0, 0.5), blue_alive)
+	if _objective_done():
+		var title: String = "AREA SECURE"
+		match _hvt_outcome():
+			"captured":
+				title = "HVT CAPTURED"
+			"killed":
+				title = "HVT KILLED"
+		_end_mission(title, Color(0.4, 1.0, 0.5), blue_alive)
 	elif blue_alive == 0:
 		_end_mission("MISSION FAILED", Color(1.0, 0.35, 0.3), blue_alive)
 
@@ -307,3 +330,63 @@ func _count_alive(units: Array) -> int:
 		if not u.is_dead:
 			n += 1
 	return n
+
+
+## The named target: armed (kill raid) or hiding unarmed (capture raid), in the back room.
+func _spawn_hvt(op: Dictionary, mods: Dictionary) -> void:
+	var info: Dictionary = op.get("hvt", {})
+	var t: Node3D = Unit.new()
+	t.name = "HVT"
+	t.setup("HVT", "tango", Unit.Team.RED)
+	if not mods.is_empty():
+		t.apply_modifiers(mods)
+	t.make_hvt(str(info.get("alias", "Target")), hvt_mode == "kill")
+	t.position = _map.hvt_spawn["pos"]
+	t.rotation.y = _map.hvt_spawn["yaw"]
+	_map.add_child(t)
+	t.fired.connect(_on_unit_fired.bind(t))
+	t.set_revealed(false)
+	if t.unarmed:
+		t.set_stance(true)
+	hostiles.append(t)
+	hvt = t
+
+
+## Hostiles still able to fight (a restrained or unarmed target does not count).
+func _armed_alive() -> int:
+	var n: int = 0
+	for u in hostiles:
+		if not u.is_dead and not u.unarmed and not u.captured:
+			n += 1
+	return n
+
+
+## "killed" / "captured" / "escaped", or "" when there is no named target.
+func _hvt_outcome() -> String:
+	if hvt == null:
+		return ""
+	if hvt.captured:
+		return "captured"
+	if hvt.is_dead:
+		return "killed"
+	return "escaped"
+
+
+func _objective_text() -> String:
+	if hvt == null:
+		return "OBJECTIVE: clear the building."
+	var who: String = hvt.callsign.replace("HVT  ", "")
+	match _hvt_outcome():
+		"captured":
+			return "OBJECTIVE: %s is restrained. Clear the building." % who
+		"killed":
+			return "OBJECTIVE: %s is down%s. Clear the building." % [who, " (we wanted him alive)" if hvt_mode == "capture" else ""]
+	if hvt_mode == "capture":
+		return "OBJECTIVE: capture %s ALIVE. He is unarmed; your soldiers will not shoot him.\nSelect a soldier, then RIGHT-CLICK the gold HVT  >  Restrain. Frags and breach blasts can still kill him." % who
+	return "OBJECTIVE: kill %s (gold) and clear the building." % who
+
+
+func _objective_done() -> bool:
+	if _armed_alive() > 0:
+		return false
+	return hvt == null or hvt.is_dead or hvt.captured

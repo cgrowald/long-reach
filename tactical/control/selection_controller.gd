@@ -42,6 +42,7 @@ var _rig
 var _units: Array = []
 var _box
 var _wheel
+var hvt = null  # the operation's named target: right-click him for the Restrain wheel
 var _hint: Label
 var _world: Node3D
 var _drag_start: Vector2 = Vector2.ZERO
@@ -197,6 +198,10 @@ func _handle_right(mb: InputEventMouseButton) -> void:
 	var dragged: bool = mb.position.distance_to(_right_start) > LOOK_DRAG_THRESHOLD
 
 	if not dragged:
+		if _hvt_clicked(_right_start) and hvt.unarmed and not selected.is_empty():
+			var opts: Array = [{"id": "restrain", "label": "Restrain + flex-cuff", "enabled": true}]
+			_wheel.open(_right_start, hvt.callsign, opts, {"kind": "hvt", "queue": mb.shift_pressed})
+			return
 		var unit = _pick_unit(_right_start)
 		if unit != null:
 			if not selected.has(unit):
@@ -266,6 +271,9 @@ func _open_unit_wheel(pos: Vector2) -> void:
 
 
 func _on_wheel_chosen(id: String, ctx: Dictionary) -> void:
+	if ctx.get("kind", "") == "hvt":
+		_do_restrain(bool(ctx.get("queue", false)))
+		return
 	if ctx.get("kind", "") == "door":
 		_do_door(id, ctx["door"], bool(ctx["queue"]), bool(ctx["hold"]))
 	else:
@@ -490,3 +498,29 @@ func _ground_point(screen_pos: Vector2) -> Variant:
 	var origin: Vector3 = cam.project_ray_origin(screen_pos)
 	var normal: Vector3 = cam.project_ray_normal(screen_pos)
 	return Plane(Vector3.UP, 0.0).intersects_ray(origin, normal)
+
+
+func _hvt_clicked(screen_pos: Vector2) -> bool:
+	if hvt == null or hvt.is_dead or hvt.captured or not hvt.is_drawn():
+		return false
+	var p: Vector3 = hvt.global_position + Vector3(0.0, 0.9, 0.0)
+	var cam: Camera3D = _rig.camera
+	if cam.is_position_behind(p):
+		return false
+	return cam.unproject_position(p).distance_to(screen_pos) < PICK_RADIUS_PX
+
+
+## The closest selected soldier goes and flex-cuffs the HVT.
+func _do_restrain(queue: bool) -> void:
+	var best = null
+	var best_d: float = INF
+	for u in selected:
+		if u.is_dead:
+			continue
+		var d: float = u.global_position.distance_to(hvt.global_position)
+		if d < best_d:
+			best_d = d
+			best = u
+	if best != null:
+		best.order_restrain(hvt, queue)
+		Fx.move_marker(_world, hvt.global_position, MARKER_COLOR)

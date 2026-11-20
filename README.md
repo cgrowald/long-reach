@@ -10,15 +10,23 @@ See [docs/GAME_DESIGN.md](docs/GAME_DESIGN.md) for the full design.
 3. Press **F5** (or the ▶ button top-right) to run.
 
 ## Campaign
-The game starts on the **campaign map**: the real world split into 24 regions, the enemy network's strength in each (red pips),
-known attack plots (red "!3w" badges = weeks until it happens) and your **carrier**, whose dotted lines show where you can strike.
+You are hunting a terror network, **the Sixth Hour**: its leader (the Emir), four lieutenants, and their cells around the world.
+Every member is a named person with a face you have to uncover. **Win** by killing or capturing the Emir.
+**Lose** if the threat level stays at 90+ for 4 weeks (oversight shuts you down).
+
+The game starts on the **campaign map**: 24 regions with enemy strength rings, known attack plots ("ATTACK 3 WK"),
+gold **TARGETS** tags where you have located someone, and your **carrier**, whose gold lines show where you can strike.
 Each week:
-1. Optionally move the carrier: click a blue ring at sea next to it, **Move the carrier here** (one zone per week).
-2. Click a region in range (or one under **Operations in range**), **Plan this operation**.
-3. **HQ: pick squad**: click an operator to read their file; **Add to squad** (or double-click) up to 4, then **DEPLOY**.
-4. In the mission, **END OPERATION** (top right) brings everyone home and writes the after-action report:
-   deaths go on the memorial wall, wounds take weeks to heal and can leave permanent injuries, survivors grow and earn traits,
-   and the map shows what your operation did and what the network did meanwhile.
+1. Optionally move the carrier: click a glowing **SAIL HERE** box at sea (one zone per week). Coverage builds intel on the cells there.
+2. Pick an operation in range (right column, or click a region): **KILL** or **CAPTURE** a located person,
+   **STOP THE ATTACK** on a known plot, or a **Blind raid** that hits a random cell and turns up leads.
+3. **HQ: pick squad**: **+ SQUAD** on up to 4 operators (or just **AUTO-PICK + DEPLOY**).
+4. In the mission the target is gold. On a capture raid he is unarmed and your soldiers will not shoot him:
+   select a soldier, **right-click the target > Restrain**. **END OPERATION** (top right) writes the after-action report.
+
+**NETWORK** (map header) shows the org chart: who you know, who is located, who is dead or in custody, and who knows whom.
+Captures reveal a target's contacts; capturing lieutenants is how you find the Emir. Raids make nearby cells go dark for a while,
+and taking down a lieutenant triggers a revenge plot in the West.
 
 **END WEEK** on the map skips the operation. Plots you don't stop become attacks: they cut your budget and raise the threat level.
 The campaign saves automatically.

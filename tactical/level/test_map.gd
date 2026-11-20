@@ -25,7 +25,14 @@ var tango_spawns: Array[Dictionary] = [
 	{"pos": Vector3(1.0, 0.0, -4.5), "yaw": PI},
 	{"pos": Vector3(7.0, 0.0, -4.0), "yaw": PI * 0.75},
 	{"pos": Vector3(6.5, 0.0, 3.4), "yaw": PI},
+	{"pos": Vector3(-4.5, 0.0, -5.5), "yaw": PI * 0.25},
+	{"pos": Vector3(2.5, 0.0, -2.0), "yaw": PI * 0.5},
+	{"pos": Vector3(8.5, 0.0, 5.5), "yaw": PI * 0.75},
+	{"pos": Vector3(12.5, 0.0, -2.0), "yaw": -PI * 0.5},
+	{"pos": Vector3(-13.0, 0.0, -8.0), "yaw": PI * 0.8},
 ]
+## Where the named target of an operation waits: the back room with the safe.
+var hvt_spawn: Dictionary = {"pos": Vector3(7.5, 0.0, -2.5), "yaw": PI * 0.85}
 
 ## Doorways filled while building walls: {"pos": Vector3 (y = 0), "along_x": bool}.
 var doors: Array[Dictionary] = []

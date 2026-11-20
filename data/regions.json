@@ -48,25 +48,10 @@
 		"ungoverned": { "name": "Ungoverned", "roe": "No functioning government. Loosest rules; the enemy is well armed and alert.", "reward": 0.9, "attack_cost": 0.7, "tango": { "accuracy": 1.1, "reaction": 0.9 } },
 		"denied": { "name": "Denied", "roe": "Hostile state. Deniable operation: no support, no acknowledgement if it goes wrong.", "reward": 1.3, "attack_cost": 0.8, "tango": { "accuracy": 1.05, "reaction": 0.9 } }
 	},
-	"cell_types": {
-		"leadership": { "name": "Leadership", "op": "Capture or kill a cell commander", "growth": 0.02 },
-		"finance": { "name": "Finance", "op": "Raid a financier's office", "growth": 0.03 },
-		"logistics": { "name": "Logistics", "op": "Hit a smuggling depot", "spread": 0.08 },
-		"bomb_making": { "name": "Bomb-making", "op": "Raid a bomb workshop", "plot": 0.06 },
-		"recruitment": { "name": "Recruitment", "op": "Raid a recruitment safehouse", "growth": 0.05 }
-	},
 	"rules": {
 		"starting_zone": "mediterranean",
-		"growth_chance": 0.035,
-		"spread_chance": 0.06,
-		"spread_min_strength": 3,
-		"plot_chance_per_strength": 0.018,
-		"plot_min_strength": 3,
 		"plot_weeks_min": 3,
 		"plot_weeks_max": 5,
-		"lie_low_chance": 0.6,
-		"success_strength_drop": 2,
-		"failure_strength_gain": 1,
 		"attack_funding_cost": 120000,
 		"attack_threat": 10,
 		"threat_per_strength": 1.0,

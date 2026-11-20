@@ -47,6 +47,8 @@ const AIM_REACTION_FACTOR := 0.5  # reacting is faster with the weapon already u
 const PIE_ACCURACY := 0.95
 const FLAT_ARC := 0.3
 const LOB_ARC := 1.6
+const RESTRAIN_TIME := 2.0       # seconds to flex-cuff a target
+const RESTRAIN_REACH := 1.6
 
 ## Map info shared by all units (set by main).
 static var door_nodes: Array = []  # door.gd instances
@@ -77,6 +79,9 @@ var shot_noise_range: float = HEARING_RANGE  # how far this soldier's gunfire is
 var breach_radius_mult: float = 1.0
 var heartbeat_range: float = 0.0            # > 0: carries a heartbeat sensor
 var sensed: bool = false                    # hostile picked up by a friendly heartbeat sensor
+var is_hvt: bool = false                     # the named target of this operation
+var unarmed: bool = false                    # does not fight (a capture target); never engaged
+var captured: bool = false                   # restrained by our team
 
 var pace: int = Pace.WALK
 var hold_fire: bool = false
@@ -360,6 +365,58 @@ func order_door(verb: String, door, queue: bool, hold: bool, index: int = 0) -> 
 	_enqueue({"pos": stack, "face": face, "hold": hold and verb == "stack", "action": action}, queue)
 
 
+## Make this unit the operation's named target. Unarmed = a capture target: he hides and
+## does not fight, and our soldiers will not shoot him.
+func make_hvt(alias: String, armed: bool) -> void:
+	is_hvt = true
+	unarmed = not armed
+	callsign = "HVT  '%s'" % alias
+	team_color = Color(1.0, 0.72, 0.15)
+	if unarmed:
+		hold_fire = true
+
+
+## Walk up to the HVT and flex-cuff him.
+func order_restrain(hvt, queue: bool) -> void:
+	if is_dead or hvt == null or hvt.is_dead or hvt.captured:
+		return
+	var map: RID = get_world_3d().navigation_map
+	var from: Vector3 = _planned_end() if queue else global_position
+	var dir: Vector3 = from - hvt.global_position
+	dir.y = 0.0
+	dir = dir.normalized() if dir.length() > 0.01 else Vector3.BACK
+	var spot: Vector3 = NavigationServer3D.map_get_closest_point(map, hvt.global_position + dir * 0.9)
+	spot.y = 0.0
+	_enqueue({"pos": spot, "face": _yaw_toward(hvt.global_position - spot), "hold": false,
+		"action": {"verb": "restrain", "target": hvt}}, queue)
+
+
+func _update_restrain(delta: float) -> void:
+	var t = _action.get("target")
+	if t == null or not is_instance_valid(t) or t.is_dead or t.captured:
+		_finish_action()
+		return
+	if global_position.distance_to(t.global_position) > RESTRAIN_REACH:
+		_finish_action()  # he is not where we expected; the order is dropped
+		return
+	_action_timer -= delta
+	if _action_timer <= 0.0:
+		t.set_captured()
+		_finish_action()
+
+
+func set_captured() -> void:
+	captured = true
+	hold_fire = true
+	_moving = false
+	_waypoints.clear()
+	target = null
+	team_color = Color(0.55, 0.75, 1.0)
+	if _body_mat != null:
+		_body_mat.albedo_color = team_color
+	set_stance(true)
+
+
 ## Look toward a point. If moving, applies to the end of the planned route.
 func order_face(point: Vector3) -> void:
 	if is_dead:
@@ -515,6 +572,8 @@ func get_status_text() -> String:
 
 func _action_status() -> String:
 	match str(_action.get("verb", "")):
+		"restrain":
+			return "RESTRAINING HVT"
 		"open", "open_flash":
 			return "OPENING DOOR"
 		"kick", "kick_flash":
@@ -847,6 +906,8 @@ func _begin_action(action: Dictionary) -> void:
 			_action_timer = float(GameData.equipment("open_door").get("time", 1.0))
 		"kick", "kick_flash":
 			_action_timer = float(GameData.equipment("kick_door").get("time", 0.5))
+		"restrain":
+			_action_timer = RESTRAIN_TIME
 		"breach":
 			_action["phase"] = "place"
 			_action_timer = float(GameData.equipment("breach_charge").get("place_time", 2.0))
@@ -855,6 +916,9 @@ func _begin_action(action: Dictionary) -> void:
 
 
 func _update_action(delta: float) -> void:
+	if str(_action.get("verb", "")) == "restrain":
+		_update_restrain(delta)
+		return
 	var door = _action["door"]
 	var verb: String = _action["verb"]
 	if verb in ["open", "kick"] and door.is_open:
@@ -945,7 +1009,8 @@ func _update_facing(delta: float) -> void:
 	if target != null:
 		desired = _yaw_toward(target.global_position - global_position)
 	elif not _action.is_empty():
-		desired = _yaw_toward(_action["door"].center - global_position)
+		var focus_pos: Vector3 = _action["target"].global_position if _action.has("target") else _action["door"].center
+		desired = _yaw_toward(focus_pos - global_position)
 	elif _pie_target != null:
 		desired = _yaw_toward((_pie_target as Vector3) - global_position)
 	elif _focus != null:
@@ -984,6 +1049,8 @@ func _separate_from_others() -> void:
 func _update_combat(delta: float) -> void:
 	if target != null and (not is_instance_valid(target) or target.is_dead):
 		target = null
+	if unarmed or captured:
+		return
 
 	_scan_timer -= delta
 	if _scan_timer <= 0.0:
@@ -1022,7 +1089,7 @@ func _find_target():
 	var best = null
 	var best_dist: float = INF
 	for u in get_tree().get_nodes_in_group("units"):
-		if u == self or u.is_dead or u.team == team:
+		if u == self or u.is_dead or u.team == team or u.unarmed or u.captured:
 			continue
 		var d: float = global_position.distance_to(u.global_position)
 		if d >= best_dist:
@@ -1168,6 +1235,7 @@ func _build_visuals() -> void:
 	_gun.mesh = gun_box
 	_gun.material_override = dark
 	_visual.add_child(_gun)
+	_gun.visible = not unarmed
 	_apply_gun_pose(0.0)
 
 	var ring_mat := StandardMaterial3D.new()

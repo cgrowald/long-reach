@@ -14,6 +14,8 @@ const HQ_SCENE := "res://hq/hq.tscn"
 const MAP_SCENE := "res://world/campaign_map.tscn"
 const AAR_SCENE := "res://hq/aar.tscn"
 const MISSION_SCENE := "res://tactical/main.tscn"
+const END_SCENE := "res://world/campaign_end.tscn"
+const NETWORK_SCENE := "res://world/network_board.tscn"
 
 const OP_WORDS_A: Array[String] = ["Iron", "Silent", "Broken", "Hollow", "Northern", "Quiet", "Red", "Long", "Cold", "Black", "Steel", "Distant"]
 const OP_WORDS_B: Array[String] = ["Ledger", "Harbor", "Lantern", "Anvil", "Orchard", "Compass", "Bastion", "Meridian", "Thicket", "Gate", "Ember", "Tide"]
@@ -22,6 +24,7 @@ var save_path: String = "user://campaign.json"
 var roster = null
 var world = null                 # WorldSim: the campaign map
 var current_op: Dictionary = {}  # operation picked on the map, waiting for a squad
+var map_focus: String = ""      # region the map should open on (set by the network board)
 var deployment: Array[int] = []
 var operation_name: String = ""
 var last_report: Dictionary = {}
@@ -67,7 +70,10 @@ func load_game() -> bool:
 		return false
 	roster = Roster.from_dict(parsed)
 	var wd: Variant = parsed.get("world", null)
-	world = WorldSim.from_dict(wd) if typeof(wd) == TYPE_DICTIONARY else WorldSim.create(rng)  # older saves: fresh map
+	world = WorldSim.from_dict(wd) if typeof(wd) == TYPE_DICTIONARY else null
+	if world == null:  # older saves (before the network): fresh map, roster kept
+		world = WorldSim.create(rng)
+		parsed["current_op"] = {}
 	current_op = (parsed.get("current_op", {}) as Dictionary).duplicate()
 	return true
 
@@ -135,17 +141,24 @@ func move_carrier(zone: String) -> bool:
 	return ok
 
 
-## Pick this week's operation on the map; the squad is chosen at HQ.
-func plan_operation(region_id: String) -> bool:
-	if not world.in_range(region_id):
+## Pick this week's operation on the map (one entry from world.operations_for); the squad
+## is chosen at HQ. mode: "kill" or "capture" for a named target, "" otherwise.
+func plan_operation(op_in: Dictionary, mode: String = "") -> bool:
+	if op_in.is_empty() or not world.in_range(str(op_in.get("region", ""))):
 		return false
-	var op: Dictionary = world.operation_for(region_id)
-	if op.is_empty():
-		return false
+	var op: Dictionary = op_in.duplicate(true)
+	if str(op.get("kind", "")) == "node":
+		op["mode"] = "capture" if mode == "capture" else "kill"
+		op["title"] = str(op["capture_title"] if op["mode"] == "capture" else op["kill_title"])
 	op["name"] = "Operation %s %s" % [OP_WORDS_A[rng.randi() % OP_WORDS_A.size()], OP_WORDS_B[rng.randi() % OP_WORDS_B.size()]]
 	current_op = op
 	save_game()
 	return true
+
+
+## Where to go after the after-action report: the map, or the end screen if the war is over.
+func after_report_scene() -> String:
+	return END_SCENE if world.outcome != "" else MAP_SCENE
 
 
 func cancel_operation() -> void:
@@ -181,8 +194,8 @@ func deploy(ids: Array) -> void:
 
 
 ## results: [{"id", "alive", "hp", "max_hp", "kills"}]. Applies everything, saves, shows the AAR.
-func finish_mission(results: Array, success: bool) -> void:
-	last_report = apply_results(results, success)
+func finish_mission(results: Array, success: bool, hvt: String = "") -> void:
+	last_report = apply_results(results, success, hvt)
 	deployment.clear()
 	current_op = {}
 	save_game()
@@ -190,7 +203,7 @@ func finish_mission(results: Array, success: bool) -> void:
 	get_tree().change_scene_to_file(AAR_SCENE)
 
 
-func apply_results(results: Array, success: bool) -> Dictionary:
+func apply_results(results: Array, success: bool, hvt: String = "") -> Dictionary:
 	var date: String = roster.date_string()
 	var inj: Dictionary = GameData.injuries()
 	var any_dead: bool = results.any(func(x): return not bool(x["alive"]))
@@ -266,7 +279,9 @@ func apply_results(results: Array, success: bool) -> Dictionary:
 				r.add_log(date, "Steadied after a clean operation; no longer shaken.")
 		report["entries"].append({"id": r.id, "name": r.full_name(), "outcome": outcome, "kills": kills, "notes": notes})
 
-	report["map_result"] = world.resolve_operation(current_op, success) if not current_op.is_empty() else []
+	if hvt != "" and current_op.has("hvt"):
+		report["hvt"] = {"outcome": hvt, "alias": str(current_op["hvt"].get("alias", "")), "name": str(current_op["hvt"].get("name", "")), "seed": int(current_op["hvt"].get("seed", 0))}
+	report["map_result"] = world.resolve_operation(current_op, success, hvt, rng) if not current_op.is_empty() else []
 	var week: Dictionary = _week_passes()
 	report["research_finished"] = week["research_finished"]
 	report["news"] = week["news"]

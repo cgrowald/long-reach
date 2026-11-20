@@ -6,6 +6,8 @@ const MapView := preload("res://world/map_view.gd")
 const WorldSim := preload("res://sim/world_sim.gd")
 const Research := preload("res://people/research.gd")
 const UiTheme := preload("res://world/ui_theme.gd")
+const Network := preload("res://sim/network.gd")
+const Portrait := preload("res://people/portrait.gd")
 
 const GOLD := Color(1.0, 0.82, 0.3)
 const DIM := Color(0.62, 0.66, 0.7)
@@ -30,11 +32,18 @@ var _notice: String = ""
 
 func _ready() -> void:
 	_campaign = get_node("/root/Campaign")
+	if _campaign.world.outcome != "":
+		get_tree().change_scene_to_file.call_deferred(_campaign.END_SCENE)
+		return
 	theme = UiTheme.make()
 	_build()
 	_map.world = _campaign.world
 	if not _campaign.current_op.is_empty():
 		_map.selected_region = str(_campaign.current_op["region"])
+	if _campaign.map_focus != "":
+		_map.selected_region = _campaign.map_focus
+		_map.focus_region.call_deferred(_campaign.map_focus)
+		_campaign.map_focus = ""
 	_refresh()
 
 
@@ -57,7 +66,6 @@ func _build() -> void:
 	header.add_theme_constant_override("separation", 14)
 	root.add_child(header)
 	header.add_child(_label("LONG REACH", 26, GOLD))
-	header.add_child(_label("//  GLOBAL OPERATIONS", 15, DIM))
 	_date_label = _label("", 16, Color.WHITE)
 	header.add_child(_date_label)
 	var sp := Control.new()
@@ -75,6 +83,9 @@ func _build() -> void:
 	header.add_child(_threat_bar)
 	_threat_label = _label("", 15, Color.WHITE)
 	header.add_child(_threat_label)
+	var net_btn := _button("NETWORK", func(): get_tree().change_scene_to_file(_campaign.NETWORK_SCENE))
+	net_btn.custom_minimum_size = Vector2(130, 40)
+	header.add_child(net_btn)
 	_hq_btn = _button("HQ", _go_hq)
 	header.add_child(_hq_btn)
 	_end_btn = _button("END WEEK", _on_end_week)
@@ -122,8 +133,8 @@ func _refresh() -> void:
 	_map.planned_region = str(_campaign.current_op.get("region", ""))
 	_map.planned_city = str(_campaign.current_op.get("city", ""))
 	_map.refresh()
-	_date_label.text = "%s  ·  week %d  ·  Funding %s  ·  Operations %d  ·  Fallen %d" % [
-		ro.date_string(), w.week + 1, _money(ro.funding), ro.missions_run, ro.fallen().size()]
+	_date_label.text = "%s  ·  week %d  ·  Funding %s" % [
+		ro.date_string(), w.week + 1, _money(ro.funding)]
 	_threat_bar.value = w.threat
 	var fill := StyleBoxFlat.new()
 	fill.bg_color = Color(0.9, 0.75, 0.3).lerp(Color(0.9, 0.25, 0.2), w.threat / 100.0)
@@ -140,19 +151,27 @@ func _refresh() -> void:
 func _build_brief() -> void:
 	_clear(_brief)
 	var w = _campaign.world
+	var gi: bool = _campaign.has_global_intel()
 	if _notice != "":
 		_brief.add_child(_wrap(_notice, 15, GOLD, COL_W))
 	_brief.add_child(_label("THIS WEEK'S BRIEFING", 14, DIM))
 	for line in w.news:
-		_brief.add_child(_wrap("·  " + str(line), 14, RED if str(line).begins_with("ATTACK") else Color.WHITE, COL_W))
-	var known: Array = w.plots.filter(func(p): return w.has_intel(str(p["region"]), _campaign.has_global_intel()))
+		var s: String = str(line)
+		var col: Color = Color.WHITE
+		if s.begins_with("ATTACK") or s.begins_with("WASHINGTON"):
+			col = RED
+		elif s.begins_with("LOCATED") or s.begins_with("NEW LEAD"):
+			col = GOLD
+		_brief.add_child(_wrap("·  " + s, 14, col, COL_W))
+	var known: Array = w.plots.filter(func(p): return w.plot_known(p, gi))
 	if not known.is_empty():
 		_brief.add_child(_label("KNOWN ATTACK PLOTS", 14, DIM))
 		for p in known:
-			_brief.add_child(_wrap("·  %s, %s: %d week%s until it happens." % [p["city"], WorldSim.region_name(str(p["region"])), int(p["weeks"]), "" if int(p["weeks"]) == 1 else "s"], 14, RED, COL_W))
+			var src: String = w.plot_source(p)
+			_brief.add_child(_wrap("·  %s, %s: %d week%s until it happens.%s" % [p["city"], WorldSim.region_name(str(p["region"])), int(p["weeks"]), "" if int(p["weeks"]) == 1 else "s", ("  Behind it: " + src + ".") if src != "" else ""], 14, RED, COL_W))
 	var hidden: int = w.plots.size() - known.size()
 	if hidden > 0:
-		_brief.add_child(_wrap("·  Chatter suggests %d more plot%s where we have no intel. Get the carrier closer, or hit the network there." % [hidden, "" if hidden == 1 else "s"], 14, DIM, COL_W))
+		_brief.add_child(_wrap("·  Chatter suggests %d more plot%s we can't place. Build intel: carrier coverage, raids, captures." % [hidden, "" if hidden == 1 else "s"], 14, DIM, COL_W))
 
 
 func _build_panel() -> void:
@@ -179,59 +198,129 @@ func _build_panel() -> void:
 			_campaign.cancel_operation()
 			_refresh()))
 		_ops.add_child(row)
-	_ops.add_child(_section("OPERATIONS IN RANGE"))
-	var ops: Array = w.operations_in_range()
-	if ops.is_empty():
-		_ops.add_child(_wrap("No known enemy in the carrier's reach. Move the carrier.", 14, DIM, COL_W))
-	for o in ops:
-		var what: String = "ATTACK PLOT" if o["plot"] else "%s, strength %d" % [str(WorldSim.cell_types().get(str(o["cell"]), {}).get("name", "safehouse")), int(o["strength"])]
-		var b := _button("%s  ·  %s" % [WorldSim.region_name(str(o["region"])), what], func():
-			_map.selected_zone = ""
-			_map.selected_region = str(o["region"])
-			_map.focus_region(str(o["region"]))
-			_refresh())
+	_ops.add_child(_section("TARGETS IN RANGE"))
+	var ops: Array = w.operations_in_range(_campaign.has_global_intel())
+	var named: Array = ops.filter(func(o): return str(o["kind"]) != "safehouse")
+	if named.is_empty():
+		_ops.add_child(_wrap("No located targets in the carrier's reach yet. Keep the carrier on station to build intel, raid a suspected safehouse to turn up leads, or sail toward the leads you have.", 14, DIM, COL_W))
+	for o in named:
+		var what: String
+		if str(o["kind"]) == "plot":
+			what = "STOP ATTACK in %s (%d wk)" % [o["city"], int(o["weeks"])]
+		else:
+			var x: Dictionary = w.network.node(int(o["node"]))
+			what = "'%s'  ·  %s%s" % [o["hvt"]["alias"], Network.type_name(str(x["type"])), ("  ·  " + str(x["title"]).to_upper()) if int(x["tier"]) < 2 else ""]
+		var b := _button("%s  ·  %s" % [what, WorldSim.region_name(str(o["region"]))], _select_region.bind(str(o["region"])))
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		b.clip_text = true
 		b.custom_minimum_size = Vector2(COL_W, 30)
+		if str(o["kind"]) == "plot":
+			b.add_theme_color_override("font_color", RED)
 		_ops.add_child(b)
+	var blind: Array = ops.filter(func(o): return str(o["kind"]) == "safehouse")
+	if not blind.is_empty():
+		_ops.add_child(_section("SUSPECTED PRESENCE (blind raids)"))
+		for o in blind:
+			var b := _button("%s  ·  strength %d" % [WorldSim.region_name(str(o["region"])), int(o["strength"])], _select_region.bind(str(o["region"])))
+			b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+			b.custom_minimum_size = Vector2(COL_W, 28)
+			_ops.add_child(b)
+
+
+func _select_region(r: String) -> void:
+	_map.selected_zone = ""
+	_map.selected_region = r
+	_map.focus_region(r)
+	_refresh()
 
 
 func _region_panel(r: String) -> void:
 	var w = _campaign.world
+	var net = w.network
 	var reg: Dictionary = WorldSim.region(r)
 	var th: Dictionary = WorldSim.theater_of(r)
-	var intel: bool = w.has_intel(r, _campaign.has_global_intel())
 	var s: int = int(w.strength.get(r, 0))
 	_panel.add_child(_label(str(reg.get("name", r)), 20, GOLD))
 	_panel.add_child(_wrap("%s theater: %s" % [th.get("name", ""), th.get("roe", "")], 13, DIM, COL_W))
-	_panel.add_child(_wrap("Cities: " + ", ".join(reg.get("cities", [])), 13, Color.WHITE, COL_W))
-	var status: String = "No known enemy presence"
-	if s > 0:
-		var cell_name: String = str(WorldSim.cell_types().get(str(w.cells.get(r, "")), {}).get("name", "unknown"))
-		status = "Enemy strength %d / 5  ·  %s cell" % [s, cell_name if intel else "unknown"]
-	_panel.add_child(_label(status + ("   ·   IN RANGE" if w.in_range(r) else ""), 16, RED if s > 0 else OK_GREEN))
-	var plot: Dictionary = w.plot_in(r)
-	if not plot.is_empty() and intel:
-		_panel.add_child(_wrap("ATTACK PLOT: %s, %d week%s left." % [plot["city"], int(plot["weeks"]), "" if int(plot["weeks"]) == 1 else "s"], 15, RED, COL_W))
-	if w.in_range(r):
-		var op: Dictionary = w.operation_for(r)
-		if not op.is_empty():
+	var status: String = ("Enemy strength %d / 5" % s) if s > 0 else "No known enemy presence"
+	_panel.add_child(_label(status + ("   ·   IN RANGE" if w.in_range(r) else "   ·   OUT OF RANGE"), 16, RED if s > 0 else OK_GREEN))
 
-			_panel.add_child(_wrap("OPERATION:  %s in %s" % [op["title"], op["city"]], 16, GOLD, COL_W))
-			_panel.add_child(_label("About %d hostiles  ·  success pays %s" % [int(op["tangos"]), _money(int(Research.funding_rule("success_bonus") * float(th.get("reward", 1.0))))], 13, DIM))
-			if str(_campaign.current_op.get("region", "")) == r:
-				_panel.add_child(_label("Planned for this week.", 14, GOLD))
-			else:
-				_panel.add_child(_button("Plan this operation", func():
-					_campaign.plan_operation(r)
-					_notice = ""
-					_refresh()))
-	else:
+	# What we know about the network here.
+	var here: Array = net.nodes_in(r)
+	var known: Array = here.filter(func(x): return Network.is_suspected(x))
+	for x in known:
+		_panel.add_child(_node_row(x))
+	if here.size() > known.size():
+		var n: int = here.size() - known.size()
+		_panel.add_child(_label("+ %d unidentified cell%s" % [n, "" if n == 1 else "s"], 13, DIM))
+	var plot: Dictionary = w.plot_in(r)
+	if not plot.is_empty() and w.plot_known(plot, _campaign.has_global_intel()):
+		_panel.add_child(_wrap("ATTACK PLOT: %s, %d week%s left." % [plot["city"], int(plot["weeks"]), "" if int(plot["weeks"]) == 1 else "s"], 15, RED, COL_W))
+
+	if not w.in_range(r):
 		var zones: Array = []
 		for z in WorldSim.zones():
 			if WorldSim.zones()[z].get("covers", []).has(r):
 				zones.append(w.zone_name(z))
-		_panel.add_child(_wrap("Out of range. The carrier reaches here from: %s." % ", ".join(zones), 14, DIM, COL_W))
+		_panel.add_child(_wrap("The carrier reaches here from: %s." % ", ".join(zones), 14, DIM, COL_W))
+		return
+	var reward: String = _money(int(Research.funding_rule("success_bonus") * float(th.get("reward", 1.0))))
+	for op in w.operations_for(r, _campaign.has_global_intel()):
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 6)
+		match str(op["kind"]):
+			"node":
+				row.add_child(_plan_btn("KILL '%s'" % op["hvt"]["alias"], op, "kill"))
+				row.add_child(_plan_btn("CAPTURE", op, "capture"))
+				row.add_child(_label("~%d hostiles" % int(op["tangos"]), 13, DIM))
+			"plot":
+				row.add_child(_plan_btn("STOP THE ATTACK in %s" % op["city"], op, ""))
+				row.add_child(_label("~%d hostiles" % int(op["tangos"]), 13, DIM))
+			_:
+				row.add_child(_plan_btn("Blind raid", op, ""))
+				row.add_child(_label("~%d hostiles · hits a random cell, turns up intel" % int(op["tangos"]), 12, DIM))
+		_panel.add_child(row)
+	_panel.add_child(_label("Success pays %s.  Capture = big intel on his contacts." % reward, 12, DIM))
+
+
+func _plan_btn(text: String, op: Dictionary, mode: String) -> Button:
+	var b := _button(text, func():
+		_campaign.plan_operation(op, mode)
+		_notice = ""
+		_refresh())
+	b.custom_minimum_size = Vector2(0, 32)
+	var cur: Dictionary = _campaign.current_op
+	if not cur.is_empty() and str(cur.get("kind", "")) == str(op["kind"]) and int(cur.get("node", -1)) == int(op.get("node", -1)) \
+			and str(cur.get("region", "")) == str(op["region"]) and (mode == "" or str(cur.get("mode", "")) == mode):
+		b.text = "PLANNED"
+		b.disabled = true
+	return b
+
+
+## One known person / cell: portrait once located, alias, type, intel.
+func _node_row(x: Dictionary) -> Control:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	if Network.is_located(x):
+		var tr := TextureRect.new()
+		tr.texture = Portrait.make(int(x["seed"]))
+		tr.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tr.custom_minimum_size = Vector2(34, 34)
+		row.add_child(tr)
+	else:
+		var q := ColorRect.new()
+		q.color = Color(0.16, 0.18, 0.2)
+		q.custom_minimum_size = Vector2(34, 34)
+		row.add_child(q)
+	var tier_txt: String = (str(x["title"]) + "  ·  ") if int(x["tier"]) < 2 else ""
+	var who: String = ("'%s'  %s" % [x["alias"], x["name"]]) if Network.is_located(x) else "Suspected"
+	var state: String = "LOCATED"
+	if not Network.is_located(x):
+		state = "GONE DARK" if str(x["status"]) == "dark" else "intel %d%%" % int(x["intel"])
+	var col: Color = GOLD if Network.is_located(x) else Color.WHITE
+	row.add_child(_wrap("%s  ·  %s%s, size %d  ·  %s" % [who, tier_txt, Network.type_name(str(x["type"])), int(x["size"]), state], 13, col, COL_W - 50))
+	return row
 
 
 func _zone_panel(z: String) -> void:
@@ -286,6 +375,9 @@ func _on_end_week() -> void:
 	for name in out["research_finished"]:
 		bits.append("Research complete: %s!" % name)
 	_notice = "  ".join(bits)
+	if _campaign.world.outcome != "":
+		get_tree().change_scene_to_file(_campaign.END_SCENE)
+		return
 	_refresh()
 
 
@@ -346,14 +438,27 @@ func _box(bg: Color, border: Color, width: int = 1) -> StyleBoxFlat:
 ## Default middle panel: the big picture plus how to play a week.
 func _overview_panel() -> void:
 	var w = _campaign.world
-	var intel: bool = _campaign.has_global_intel()
-	_panel.add_child(_label("GLOBAL PICTURE", 14, GOLD))
+	var net = w.network
+	var gi: bool = _campaign.has_global_intel()
+	_panel.add_child(_label("THE HUNT FOR %s" % str(net.leader().get("title", "THE EMIR")).to_upper(), 14, GOLD))
+	var down: int = net.nodes.filter(func(x): return str(x.get("title", "")) != "" and int(x["tier"]) <= 1 and not Network.is_alive(x)).size()
+	var located: int = net.alive_nodes().filter(func(x): return Network.is_located(x)).size()
+	var leader: Dictionary = net.leader()
+	var where: String = "unknown"
+	if Network.is_located(leader):
+		where = "LOCATED in %s" % WorldSim.region_name(str(leader["region"]))
+	elif Network.is_suspected(leader):
+		where = "suspected in %s (intel %d%%)" % [WorldSim.region_name(str(leader["region"])), int(leader["intel"])]
+	_panel.add_child(_label("Leader: %s" % where, 15, GOLD if Network.is_suspected(leader) else Color.WHITE))
+	_panel.add_child(_label("Lieutenants taken down: %d  ·  located targets: %d" % [down, located], 15, Color.WHITE))
 	_panel.add_child(_label("Network active in %d of 24 regions  ·  total strength %d" % [w.active_regions().size(), w.total_strength()], 15, Color.WHITE))
-	var known: int = w.plots.filter(func(p): return w.has_intel(str(p["region"]), intel)).size()
-	_panel.add_child(_label("Attack plots known: %d  ·  suspected: %d" % [known, w.plots.size() - known], 15, RED if known > 0 else Color.WHITE))
-	_panel.add_child(_label("Attacks landed: %d  ·  plots stopped: %d" % [w.attacks_landed, w.plots_foiled], 15, Color.WHITE))
-	_panel.add_child(_label("Carrier: %s  ·  reaches %d regions" % [w.zone_name(w.carrier_zone), w.covered().size()], 15, GOLD))
+	var known: int = w.plots.filter(func(p): return w.plot_known(p, gi)).size()
+	_panel.add_child(_label("Attack plots known: %d  ·  suspected: %d  ·  landed: %d  ·  stopped: %d" % [known, w.plots.size() - known, w.attacks_landed, w.plots_foiled], 14, RED if known > 0 else Color.WHITE))
+	if net.couriers_weeks > 0:
+		_panel.add_child(_label("They are using couriers: intel at half speed for %d more weeks." % net.couriers_weeks, 13, RED))
+	_panel.add_child(_section("HOW TO WIN"))
+	_panel.add_child(_wrap("Find and take down the Emir. Nobody knows where he is: capture his lieutenants and interrogate them to find out. Captures reveal the people linked to the target; kills reveal less. See NETWORK for the whole board.", 13, DIM, COL_W))
 	_panel.add_child(_section("THIS WEEK"))
-	_panel.add_child(_wrap("1.  Move the carrier if you want: click a glowing SAIL HERE box at sea.", 14, DIM, COL_W))
-	_panel.add_child(_wrap("2.  Click a region inside the gold lines, then Plan this operation.", 14, DIM, COL_W))
-	_panel.add_child(_wrap("3.  Pick the squad at HQ and deploy. Or END WEEK to skip.", 14, DIM, COL_W))
+	_panel.add_child(_wrap("1.  Move the carrier if you want (glowing SAIL HERE boxes). Coverage slowly locates targets.", 13, DIM, COL_W))
+	_panel.add_child(_wrap("2.  Pick a target in range (right column), choose KILL or CAPTURE.", 13, DIM, COL_W))
+	_panel.add_child(_wrap("3.  Pick the squad at HQ and deploy. Or END WEEK to skip.", 13, DIM, COL_W))

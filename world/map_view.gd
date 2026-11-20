@@ -8,6 +8,7 @@ signal zone_clicked(id: String)
 
 const MapGeo := preload("res://world/map_geo.gd")
 const WorldSim := preload("res://sim/world_sim.gd")
+const Network := preload("res://sim/network.gd")
 
 const ZOOM_MIN := 1.0
 const ZOOM_MAX := 5.0
@@ -287,7 +288,30 @@ func _draw_fx() -> void:
 		var in_range: bool = world.in_range(r)
 		_badge(F, font, p, s, in_range)
 		var plot: Dictionary = world.plot_in(r)
-		if not plot.is_empty() and world.has_intel(r, global_intel):
+		var targets: int = 0
+		var leader_here: bool = false
+		for x in world.network.nodes_in(r):
+			if Network.is_located(x):
+				targets += 1
+			if int(x["tier"]) == 0 and Network.is_suspected(x):
+				leader_here = true
+		if targets > 0:
+			var tg: String = "%d TARGET%s" % [targets, "" if targets == 1 else "S"]
+			var gw: float = font.get_string_size(tg, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x + 20.0
+			var gp: Vector2 = p + Vector2(14, 6)
+			F.draw_rect(Rect2(gp, Vector2(gw, 15)), Color(0.12, 0.1, 0.03, 0.92))
+			F.draw_rect(Rect2(gp, Vector2(gw, 15)), Color(GOLD, 0.95), false, 1.0)
+			var dc: Vector2 = gp + Vector2(8, 7.5)
+			F.draw_colored_polygon(PackedVector2Array([dc + Vector2(0, -4), dc + Vector2(4, 0), dc + Vector2(0, 4), dc + Vector2(-4, 0)]), GOLD)
+			F.draw_string(font, gp + Vector2(15, 11.5), tg, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, GOLD)
+		if leader_here:
+			var lt: String = "EMIR?" if not Network.is_located(world.network.leader()) else "EMIR LOCATED"
+			var lw: float = font.get_string_size(lt, HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x + 12.0
+			var lp: Vector2 = p + Vector2(-lw * 0.5, 16)
+			F.draw_rect(Rect2(lp, Vector2(lw, 16)), Color(0.25, 0.05, 0.3, 0.92))
+			F.draw_rect(Rect2(lp, Vector2(lw, 16)), Color(0.85, 0.55, 1.0, 0.6 + 0.4 * pulse), false, 1.5)
+			F.draw_string(font, lp + Vector2(6, 12.5), lt, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.95, 0.85, 1.0))
+		if not plot.is_empty() and world.plot_known(plot, global_intel):
 			F.draw_arc(p, 17.0 + 7.0 * pulse, 0.0, TAU, 40, Color(RED, 0.9 - 0.6 * pulse), 2.0, true)
 			var tag: String = "ATTACK  %d WK" % int(plot["weeks"])
 			var tw: float = font.get_string_size(tag, HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x + 12.0

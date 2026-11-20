@@ -40,7 +40,7 @@ Covert counter-terror tactics + strategy game. **Read `docs/GAME_DESIGN.md` firs
 ```
 data/                 game data: materials, weapons, unit_types (JSON)
 docs/                 design doc
-sim/                  pure rules: game_data.gd (JSON loader), combat_rules.gd, world_sim.gd (campaign map state + weekly enemy phase)
+sim/                  pure rules: game_data.gd (JSON loader), combat_rules.gd, world_sim.gd (campaign map state + weekly enemy phase), network.gd (enemy people/cells graph, intel, raids)
 tactical/main.gd      mission orchestration, HUD, win/lose
 tactical/level/       test_map.gd (gray-box map + spawns), nav_builder.gd (runtime navmesh bake)
 tactical/units/       unit.gd (both teams: pathing, spotting, shooting, damage)
@@ -50,7 +50,8 @@ tactical/ui/          squad_panel, path_overlay, selection_box
 tactical/fx/          tracers, move markers
 people/               research (projects, status, effects), operator_record, recruiter, roster (calendar + save), portrait (procedural pixel faces), campaign (autoload: deploy, results, AAR data)
 hq/                   hq.gd (roster, detail, memorial, recruit, squad + deploy), aar.gd (after-action report)
-world/                campaign_map.gd (main screen), map_view.gd (vector map: zoom/pan, glow coasts, badges, carrier, clicks), map_geo.gd (smoothed coastlines, regions = areas clipped to coast, Miller projection), ui_theme.gd (Bahnschrift font + button styles for map/HQ/AAR)
+world/                network_board.gd (org chart of the enemy), campaign_end.gd (victory/defeat screen),
+                      world/                campaign_map.gd (main screen), map_view.gd (vector map: zoom/pan, glow coasts, badges, carrier, clicks), map_geo.gd (smoothed coastlines, regions = areas clipped to coast, Miller projection), ui_theme.gd (Bahnschrift font + button styles for map/HQ/AAR)
 ```
 
 ## Testing
@@ -74,5 +75,6 @@ world/                campaign_map.gd (main screen), map_view.gd (vector map: zo
 - In test scripts count time with _physics_process (60/s game time); _process frame counts depend on FPS.
 - M4 characters (first slice) built and tested: persistent roster, HQ, memorial, deploy, stats affect missions, AAR with wounds/permanent injuries/growth/traits/service record. Awaiting user playtest.
 - M5 research (first slice) built and tested: funding (weekly budget, success bonus, recruit cost), research tab, one lab project at a time, Stand down 1 week, tech effects in missions (optics, plates, suppressors = shot noise, frame charges, trauma kits, heartbeat sensor with through-wall blips + HEARTBEAT tags). Data: data/research.json. Logic: people/research.gd.
-- M6 campaign map (first slice) built and tested, awaiting user playtest: see design doc 4.4 "as built". Data: data/regions.json (regions, sea zones, theaters, cell types, tuning rules), data/world_land.json (hand-drawn coastline polygons, must stay non-self-intersecting), data/region_areas.json (region border areas + city positions). User declined downloading Natural Earth data; geography is hand-authored. Campaign autoload holds `world` + `current_op` (saved in the same JSON; old saves get a fresh map). Balance was tuned with a headless 52-week simulation (idle vs. active player); rerun something similar after changing the rules. Next: M7 enemy network (ask the user first).
+- M6 campaign map (first slice) built and tested, awaiting user playtest: see design doc 4.4 "as built". Data: data/regions.json (regions, sea zones, theaters, cell types, tuning rules), data/world_land.json (hand-drawn coastline polygons, must stay non-self-intersecting), data/region_areas.json (region border areas + city positions). User declined downloading Natural Earth data; geography is hand-authored. Campaign autoload holds `world` + `current_op` (saved in the same JSON; old saves get a fresh map). Balance was tuned with a headless 52-week simulation (idle vs. active player); rerun something similar after changing the rules.
+- M7 enemy network (first slice) built and tested 2026-11-20, awaiting user playtest: see design doc 5 "M7 first slice as built". Data: data/network.json. User said the game is "not fun" yet and asked for more content before giving detailed feedback: keep adding systems, then ask what feels wrong. Campaign win (Emir down) / loss (threat 90+ for 4 weeks) are provisional. Old saves keep the roster but get a fresh map. Balance sim: idle vs. bot player, rerun after rule changes.
 - Long silent runs (battle regressions, screenshots): tell the user first, or run in background.
