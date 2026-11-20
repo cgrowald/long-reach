@@ -1,10 +1,11 @@
 extends Node
-## Little synthesized sounds for the laptop (no audio files needed).
+## Laptop sounds: files from data/terminal/sounds.json (Kenney CC0), synthesized fallback for the rest.
 
 const RATE := 22050
 
 var _players: Array = []
 var _cache: Dictionary = {}
+var _files: Dictionary = {}
 var _fan: AudioStreamPlayer
 
 
@@ -20,15 +21,44 @@ func _ready() -> void:
 
 
 func play(name: String, volume_db: float = -10.0) -> void:
-	if not _cache.has(name):
-		_cache[name] = _make(name)
+	var stream: AudioStream = _file_stream(name)
+	if stream == null:
+		if not _cache.has(name):
+			_cache[name] = _make(name)
+		stream = _cache[name]
 	for p in _players:
 		if not p.playing:
-			p.stream = _cache[name]
+			p.stream = stream
 			p.volume_db = volume_db
 			p.pitch_scale = randf_range(0.95, 1.05) if name == "key" or name == "click" else 1.0
 			p.play()
 			return
+
+
+func _file_stream(name: String) -> AudioStream:
+	if _files.is_empty():
+		_load_files()
+	var list: Array = _files.get(name, [])
+	if list.is_empty():
+		return null
+	return list[randi() % list.size()]
+
+
+func _load_files() -> void:
+	_files["_loaded"] = []
+	var f := FileAccess.open("res://data/terminal/sounds.json", FileAccess.READ)
+	if f == null:
+		return
+	var d = JSON.parse_string(f.get_as_text())
+	if not d is Dictionary:
+		return
+	for n in d.get("sounds", {}):
+		var streams: Array = []
+		for file in d["sounds"][n]:
+			var s = load(str(d["dir"]) + str(file))
+			if s is AudioStream:
+				streams.append(s)
+		_files[n] = streams
 
 
 func fan(on: bool, louder: bool = false) -> void:

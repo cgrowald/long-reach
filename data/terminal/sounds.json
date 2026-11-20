@@ -1,0 +1,17 @@
+{
+	"_note": "Sound name -> files (one is picked at random). Names without files fall back to synthesized sounds in terminal/sfx.gd. Kenney Interface Sounds, CC0.",
+	"dir": "res://art/audio/kenney_interface/",
+	"sounds": {
+		"click": ["click_001.ogg", "click_002.ogg", "click_003.ogg", "click_004.ogg", "click_005.ogg"],
+		"key": ["tick_001.ogg", "tick_002.ogg", "tick_004.ogg"],
+		"pip": ["glass_001.ogg", "glass_002.ogg"],
+		"error": ["error_006.ogg", "error_004.ogg"],
+		"chime": ["confirmation_002.ogg"],
+		"secret": ["confirmation_004.ogg"],
+		"open": ["open_001.ogg", "maximize_006.ogg"],
+		"close": ["close_001.ogg"],
+		"toggle": ["switch_002.ogg"],
+		"paper": ["drop_002.ogg"],
+		"notify": ["bong_001.ogg"]
+	}
+}

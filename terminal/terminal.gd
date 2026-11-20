@@ -109,7 +109,7 @@ func _refresh_desk() -> void:
 
 func _toggle_charger() -> void:
 	state.plugged = not state.plugged
-	sfx.play("click")
+	sfx.play("toggle")
 	_refresh_desk()
 	state.changed.emit()
 
@@ -144,12 +144,12 @@ func _close_overlay() -> void:
 
 
 func _show_notebook() -> void:
-	sfx.play("click")
+	sfx.play("paper")
 	_paper("Notebook", state.notebook if not state.notebook.is_empty() else ["(empty)"])
 
 
 func _show_sticky() -> void:
-	sfx.play("click")
+	sfx.play("paper")
 	_paper("Sticky note on the bench", ["laptop: " + state.sticky])
 
 

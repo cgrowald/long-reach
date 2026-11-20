@@ -145,10 +145,12 @@ func open_app(id: String, arg = null) -> Control:
 	var n := windows_layer.get_child_count()
 	w.position = Vector2(140 + (n % 6) * 34, 30 + (n % 6) * 26)
 	w.setup(str(a["title"]), id, a["size"])
+	sfx.play("open", -14.0)
 	var app: Control = load(str(a["script"])).new()
 	w.content.add_child(app)
 	app.setup(self, state, arg)
 	w.focused.connect(func(): _focus(w))
+	w.closed.connect(func(): sfx.play("close", -14.0))
 	w.closed.connect(func(): call_deferred("_refresh_taskbar"))
 	_focus(w)
 	_refresh_taskbar()
@@ -161,6 +163,8 @@ func open_window(title: String, body: Control, size_px: Vector2) -> Control:
 	windows_layer.add_child(w)
 	w.position = (windows_layer.size - size_px) / 2.0 + Vector2(randf_range(-40, 40), randf_range(-30, 30))
 	w.setup(title, "window", size_px)
+	w.closed.connect(func(): sfx.play("close", -16.0))
+	sfx.play("open", -16.0)
 	w.content.add_child(body)
 	w.focused.connect(func(): _focus(w))
 	_focus(w)
@@ -284,7 +288,7 @@ func _start_item(what: String) -> void:
 
 
 func _toggle_vpn() -> void:
-	sfx.play("click")
+	sfx.play("toggle")
 	if state.vpn_installed() == "":
 		return
 	if state.has_flag("vpn_on"):
@@ -333,6 +337,8 @@ func toast(text: String) -> void:
 	_toasts.add_child(p)
 	if text.begins_with("Secret"):
 		sfx.play("secret", -8.0)
+	else:
+		sfx.play("notify", -20.0)
 	var tw := create_tween()
 	tw.tween_interval(5.0)
 	tw.tween_property(p, "modulate:a", 0.0, 0.6)
