@@ -9,6 +9,7 @@ Underground resistance game: a reluctant parent in a generated country builds a 
 - Cybersecurity in the game is fully gamified: fun toys and learnable "angles", never real procedures. Same for weapon building (stylized minigames).
 - Old counter-terror code: delete each part once its replacement exists (user 2026-11-20).
 - Art: Claude makes Blender models, the user tweaks them (docs/ART_GUIDE.md). Ask the user for reference screenshots before deciding a look.
+- The user writes some of the story text (docs/WRITING_GUIDE.md): keep all text in data/ JSON, never overwrite user-written text without asking, check `git log` on data files before rewriting them.
 - Downloads need explicit user permission. Never kill the user's Godot editor. Warn before long silent runs.
 
 ## Tech

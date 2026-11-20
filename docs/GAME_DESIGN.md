@@ -351,6 +351,7 @@ Each milestone ends playable.
 
 | Date | Decision |
 |---|---|
+| 2026-11-20 | The user will write some of the game text; all writing lives in data/ JSON (docs/WRITING_GUIDE.md). |
 | 2026-11-20 | Middle game = making equipment for the army + routine recruiting + small-unit attacks on infrastructure and regime logistics + building your own logistics; small-unit tactics and routine fade in the late game (delegated), leaving large-engagement command. Saves when you sleep, optional ironman. ~10 h finishable proof of concept first, ~60 h later. Torture allowed, only adults hurt, civilian deaths possible but punishing. Bleak regime/news, darkly funny own side. Free sound packs OK (user wants to learn to make sounds later). Blender art made by Claude, then the user tweaks it to remove the "AI look" (Claude teaches what to change; see docs/ART_GUIDE.md); user will share reference screenshots for the look. Delete old counter-terror code once its replacement exists. |
 | 2026-11-20 | T1 built (terminal on its own, days 1-4 of FIRST_WEEK.md). Cybersecurity is fully gamified (fun angles, not real procedures). Workflow: lean CLAUDE.md + a `godot-verify` project skill; Claude asks gap questions before each milestone. |
 | 2026-11-20 | Successor: late game, you can anoint a second in command who takes over if you die (the movement takes a hit). Ideology: chosen at the start, or when it unlocks. First gameplay to build = the terminal on its own, to make sure it's fun to use; it should have its own quirks and secrets. |
