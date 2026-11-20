@@ -9,7 +9,7 @@ See [docs/GAME_DESIGN.md](docs/GAME_DESIGN.md) for the full design.
 2. Open Godot → **Import** → select `project.godot` in this folder → **Import & Edit**.
 3. Press **F5** (or the ▶ button top-right) to run.
 
-## Controls (M3.6)
+## Controls (M3.7)
 Only seeing and shooting are automatic. Everything else is an order you give.
 
 | Input | Action |
@@ -17,6 +17,7 @@ Only seeing and shooting are automatic. Everything else is an order you give.
 | Left click / drag box | Select operators (Shift adds) |
 | Right click ground | Move (Shift = queue waypoint, Ctrl = move and wait for GO) |
 | Right **drag** | Draw a route freehand (Shift = add to the plan, Ctrl = wait for GO at the end) |
+| Shift + left click the **ground** (a corner or doorway) | **Pie it**: rifle up, slow arc around that point keeping it covered, revealing what is behind it slice by slice. Faster reactions while pieing. Shift + Ctrl = after the current plan |
 | Shift + left click on a **route**, then click a point | From that spot on the route, the soldier watches that point while he walks (pie it). Add several; each one switches his focus. Right-click instead of the second click = back to looking where he walks |
 | Right click a **door** | Door wheel: Open, Kick, Breach charge, Open + flash, Kick + flash, Stack up (open doors: Flash in, Frag in). Hold Ctrl to do it on GO, Shift to queue it |
 | Right click a **soldier** | Soldier wheel: Crouch/Stand, Walk/Run, Hold fire/Weapons free, Flashbang, Frag, Stop |

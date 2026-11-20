@@ -38,6 +38,13 @@ const STACK_DIST := 0.95
 const STACK_SPACING := 0.8
 const THROW_IN_DIST := 2.5
 const CROUCH_SCALE := 0.65
+const PIE_SPEED := 0.8          # m/s while slicing the pie
+const PIE_STEP_DEG := 10.0
+const PIE_MAX_SWEEP_DEG := 120.0
+const PIE_MIN_RADIUS := 1.5
+const PIE_MAX_RADIUS := 5.0
+const AIM_REACTION_FACTOR := 0.5  # reacting is faster with the weapon already up
+const PIE_ACCURACY := 0.95
 const FLAT_ARC := 0.3
 const LOB_ARC := 1.6
 
@@ -88,6 +95,7 @@ var _idle_yaw: float = 0.0
 ## in route order. When the soldier reaches an anchor, his eyes switch to that focus point.
 var _focus_marks: Array[Dictionary] = []
 var _focus: Variant = null  # point currently being watched (null = look where walking)
+var _pie_target: Variant = null  # corner/doorway being pied on the current leg
 
 var _scan_timer: float = 0.0
 var _reaction_timer: float = 0.0
@@ -98,6 +106,8 @@ var _visual: Node3D
 var _body_mat: StandardMaterial3D
 var _ring: MeshInstance3D
 var _flash_tween: Tween
+var _gun: MeshInstance3D
+var _gun_len: float = 0.7
 
 
 func setup(p_callsign: String, p_type_id: String, p_team: int, p_class_id: String = "") -> void:
@@ -209,6 +219,93 @@ func get_active_focus() -> Variant:
 	return _focus
 
 
+## Slice the pie on a corner or doorway: sidestep in an arc around it at the current
+## distance, weapon up and aimed at it the whole time, toward the side with more space
+## behind it (so each step reveals more). Slow, but fast to react.
+func order_pie(corner: Vector3, queue: bool) -> void:
+	if is_dead:
+		return
+	var from: Vector3 = _planned_end() if queue else global_position
+	var c := Vector3(corner.x, 0.0, corner.z)
+	var flat := Vector3(from.x - c.x, 0.0, from.z - c.z)
+	var r: float = clampf(flat.length(), PIE_MIN_RADIUS, PIE_MAX_RADIUS)
+	var a0: float = atan2(flat.z, flat.x)
+	var map: RID = get_world_3d().navigation_map
+	# Sweep toward whichever side shows more of what's behind the corner after a short step.
+	var best_dir: float = 1.0
+	var best_score: float = -1.0
+	for d in [1.0, -1.0]:
+		var probe: Array = _pie_arc(map, from, c, r, a0, d, 3)
+		if probe.is_empty():
+			continue
+		var a: float = a0 + d * deg_to_rad(PIE_STEP_DEG * probe.size())
+		var score: float = _open_beyond(c, a, r)
+		if score > best_score:
+			best_score = score
+			best_dir = d
+	var samples := PackedVector3Array(_pie_arc(map, from, c, r, a0, best_dir, int(PIE_MAX_SWEEP_DEG / PIE_STEP_DEG)))
+	if samples.is_empty():
+		order_face(c)
+		return
+	var path := PackedVector3Array([from])
+	var prev: Vector3 = from
+	for s in samples:
+		var seg: PackedVector3Array = NavigationServer3D.map_get_path(map, prev, s, true)
+		for p in seg:
+			if path[path.size() - 1].distance_to(p) > 0.05:
+				path.append(p)
+		prev = s
+	_enqueue({"pos": path[path.size() - 1], "face": NAN, "hold": false, "action": {}, "path": path, "pie": c}, queue)
+
+
+## Points on an arc around corner c (radius r, starting angle a0, direction dir), staying on
+## our side: stops where the arc would run into or cross a wall.
+func _pie_arc(map: RID, from: Vector3, c: Vector3, r: float, a0: float, dir: float, steps: int) -> Array:
+	var out: Array = []
+	var prev: Vector3 = from
+	for k in range(1, steps + 1):
+		var a: float = a0 + dir * deg_to_rad(PIE_STEP_DEG * k)
+		var want: Vector3 = c + Vector3(cos(a), 0.0, sin(a)) * r
+		var got: Vector3 = NavigationServer3D.map_get_closest_point(map, want)
+		got.y = 0.0
+		if Vector2(got.x - want.x, got.z - want.z).length() > 0.6:
+			break  # blocked by something solid
+		if not _clear_line(prev + Vector3(0.0, 1.0, 0.0), got + Vector3(0.0, 1.0, 0.0)):
+			break  # would cross a wall
+		out.append(got)
+		prev = got
+	return out
+
+
+## Corners currently or later being pied (for the overlay): [leg end, corner] pairs.
+func get_pie_targets() -> Array:
+	var out: Array = []
+	if _pie_target != null and _moving:
+		out.append([_leg.get("pos", global_position), _pie_target])
+	for w in _waypoints:
+		if w.has("pie"):
+			out.append([w["pos"], w["pie"]])
+	return out
+
+
+## Weapon up: pieing, engaging, or holding on a watched point.
+func is_aiming() -> bool:
+	if is_dead or stunned > 0.0:
+		return false
+	return _pie_target != null or target != null or (not _moving and _focus != null)
+
+
+## How much open space lies beyond the corner when looking at it from angle .
+func _open_beyond(c: Vector3, a: float, r: float) -> float:
+	var eye: Vector3 = c + Vector3(cos(a), 0.0, sin(a)) * r + Vector3(0.0, EYE_STAND, 0.0)
+	var through: Vector3 = c + Vector3(0.0, EYE_STAND, 0.0)
+	var dir: Vector3 = (through - eye).normalized()
+	var start: Vector3 = through + dir * 0.2
+	var end: Vector3 = through + dir * 12.0
+	var hit: Dictionary = get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(start, end, LOS_MASK))
+	return 12.0 if hit.is_empty() else start.distance_to(hit["position"])
+
+
 ## Door orders: walk to this side of the door, then do the verb.
 ## verb: open | kick | breach | flash_in | frag_in | stack.  index: place in a stack line.
 func order_door(verb: String, door, queue: bool, hold: bool, index: int = 0) -> void:
@@ -268,6 +365,7 @@ func stop() -> void:
 	_blocked_by = null
 	_focus_marks.clear()
 	_focus = null
+	_pie_target = null
 	_idle_yaw = rotation.y
 
 
@@ -346,6 +444,8 @@ func get_status_text() -> String:
 		s = "WAITING FOR GO"
 	elif _blocked_by != null:
 		s = "BLOCKED BY DOOR"
+	elif _pie_target != null and _moving:
+		s = "PIEING"
 	elif _moving:
 		s = "MOVING"
 	var flags: Array[String] = [s]
@@ -556,6 +656,7 @@ func _planned_end() -> Vector3:
 
 func _start_leg(leg: Dictionary) -> void:
 	_leg = leg
+	_pie_target = leg.get("pie", null)
 	var stored: PackedVector3Array = leg.get("path", PackedVector3Array())
 	if not stored.is_empty() and stored[0].distance_to(global_position) < 1.5:
 		_path = stored
@@ -575,6 +676,9 @@ func _arrive() -> void:
 	_idle_yaw = rotation.y if is_nan(face) else face
 	if not is_nan(face):
 		_focus = null
+	if _pie_target != null:
+		_focus = _pie_target  # keep the weapon on the corner after the sweep
+		_pie_target = null
 	var leg: Dictionary = _leg
 	_leg = {}
 	var action: Dictionary = leg.get("action", {})
@@ -612,6 +716,8 @@ func _update_movement(delta: float) -> void:
 		_idle_yaw = _yaw_toward(_blocked_by.center - global_position)
 		return  # wait until someone opens it
 	var move_speed: float = run_speed if pace == Pace.RUN else walk_speed
+	if _pie_target != null:
+		move_speed = minf(move_speed, PIE_SPEED)
 	if crouched:
 		move_speed *= CROUCH_SPEED
 	if is_wounded():
@@ -777,6 +883,8 @@ func _update_facing(delta: float) -> void:
 		desired = _yaw_toward(target.global_position - global_position)
 	elif not _action.is_empty():
 		desired = _yaw_toward(_action["door"].center - global_position)
+	elif _pie_target != null:
+		desired = _yaw_toward((_pie_target as Vector3) - global_position)
 	elif _focus != null:
 		desired = _yaw_toward((_focus as Vector3) - global_position)
 	elif _moving and _blocked_by == null:
@@ -822,7 +930,7 @@ func _update_combat(delta: float) -> void:
 			target = best
 			_burst_left = 0
 			if target != null:
-				_reaction_timer = reaction_time * (0.5 if alerted else 1.0)
+				_reaction_timer = reaction_time * (0.5 if alerted else 1.0) * (AIM_REACTION_FACTOR if is_aiming() else 1.0)
 
 	if target == null or hold_fire:
 		return
@@ -872,6 +980,8 @@ func _fire_at(t) -> void:
 	var move_factor: float = 1.0
 	if is_moving():
 		move_factor = CombatRules.RUN_ACCURACY if pace == Pace.RUN else CombatRules.WALK_ACCURACY
+		if _pie_target != null:
+			move_factor = PIE_ACCURACY
 	var chance: float = CombatRules.hit_chance(weapon, distance, move_factor, t.is_moving()) * exposure
 	var hit: bool = randf() < chance
 
@@ -930,6 +1040,24 @@ func _die() -> void:
 
 # ---------------------------------------------------------------- visuals
 
+## Rifle raised to the eye when aiming (pieing, engaging, watching a point),
+## held low and angled down otherwise.
+func _process(delta: float) -> void:
+	if _gun != null and not is_dead:
+		var want: float = 1.0 if is_aiming() else 0.0
+		_gun_raise = move_toward(_gun_raise, want, delta * 5.0)
+		_apply_gun_pose(_gun_raise)
+
+
+var _gun_raise: float = 0.0
+
+
+func _apply_gun_pose(raise: float) -> void:
+	var low := Vector3(0.18, 1.1, -0.15 - _gun_len * 0.35)
+	var high := Vector3(0.16, 1.47, -0.12 - _gun_len * 0.5)
+	_gun.position = low.lerp(high, raise)
+	_gun.rotation.x = lerpf(-0.6, 0.0, raise)
+
 func _flash(color: Color) -> void:
 	if _flash_tween != null:
 		_flash_tween.kill()
@@ -970,13 +1098,14 @@ func _build_visuals() -> void:
 		gun_len = 1.0
 	elif class_id == "breacher":
 		gun_len = 0.55
-	var gun := MeshInstance3D.new()
+	_gun_len = gun_len
+	_gun = MeshInstance3D.new()
 	var gun_box := BoxMesh.new()
 	gun_box.size = Vector3(0.07, 0.09, gun_len)
-	gun.mesh = gun_box
-	gun.material_override = dark
-	gun.position = Vector3(0.18, 1.3, -0.1 - gun_len * 0.5)
-	_visual.add_child(gun)
+	_gun.mesh = gun_box
+	_gun.material_override = dark
+	_visual.add_child(_gun)
+	_apply_gun_pose(0.0)
 
 	var ring_mat := StandardMaterial3D.new()
 	ring_mat.albedo_color = Color(1.0, 0.85, 0.2)

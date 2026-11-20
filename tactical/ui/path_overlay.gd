@@ -77,6 +77,18 @@ func _process(_delta: float) -> void:
 				verts.append((m["focus"] as Vector3) + LIFT)
 				cols.append(Color(fc, fc.a * 0.6))
 				cols.append(Color(fc, fc.a * 0.6))
+		# Pie targets: an X on the corner and a sight line from the end of the sweep.
+		for pt in u.get_pie_targets():
+			var corner: Vector3 = (pt[1] as Vector3) + LIFT
+			for d in [Vector3(0.3, 0, 0.3), Vector3(0.3, 0, -0.3)]:
+				verts.append(corner - d)
+				verts.append(corner + d)
+				cols.append(fc)
+				cols.append(fc)
+			verts.append((pt[0] as Vector3) + LIFT)
+			verts.append(corner)
+			cols.append(Color(fc, fc.a * 0.5))
+			cols.append(Color(fc, fc.a * 0.5))
 		var active: Variant = u.get_active_focus()
 		if active != null and bright:
 			verts.append(u.global_position + LIFT)

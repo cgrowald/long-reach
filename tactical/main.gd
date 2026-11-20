@@ -67,7 +67,7 @@ func _ready() -> void:
 	_selection = SelectionController.new()
 	_selection.name = "Selection"
 	var hint := Label.new()
-	hint.position = Vector2(16.0, 210.0)
+	hint.position = Vector2(16.0, 235.0)
 	_style_label(hint, 18)
 	hint.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3))
 	hud.add_child(hint)
@@ -164,7 +164,8 @@ func _build_hud_text(hud: CanvasLayer) -> void:
 	var help := Label.new()
 	help.text = "\n".join([
 		"Left click / drag  select    Right click ground  move (Shift queue, Ctrl wait for GO)    Right DRAG  draw a route",
-		"Shift + left click a ROUTE, then click a point  watch it from there (pie)    Right click a DOOR / SOLDIER  action wheel",
+		"Shift + left click GROUND  pie that corner / doorway    Shift + left click a ROUTE, then a point  watch it from there",
+		"Right click a DOOR / SOLDIER  action wheel",
 		"Alt + right click  look at point    Enter  GO    Space  pause    - / =  game speed    P  pixel look    R  restart",
 		"WASD Q/E wheel middle-drag  camera    F / Tab / double-click  follow    1-4  select    Esc  cancel",
 	])
@@ -173,7 +174,7 @@ func _build_hud_text(hud: CanvasLayer) -> void:
 	hud.add_child(help)
 
 	_status_label = Label.new()
-	_status_label.position = Vector2(16.0, 128.0)
+	_status_label.position = Vector2(16.0, 150.0)
 	_style_label(_status_label, 16)
 	hud.add_child(_status_label)
 

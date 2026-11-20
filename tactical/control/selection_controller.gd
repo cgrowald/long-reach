@@ -5,6 +5,7 @@ extends Node
 ##   Left click / drag        select (Shift adds)        Double-click   select + follow
 ##   Right click ground       move selected (Shift = queue waypoint, Ctrl = wait for GO)
 ##   Right DRAG               draw a route freehand (Shift = add to plan, Ctrl = wait for GO at the end)
+##   Shift + left click GROUND   pie that corner/doorway (Shift+Ctrl = after current plan)
 ##   Shift + left click ROUTE then click a point: from there on, watch that point (pie it)
 ##                            (right-click instead = go back to looking where you walk)
 ##   Alt + right click        look toward point
@@ -163,6 +164,8 @@ func _handle_left(mb: InputEventMouseButton) -> void:
 			if mb.shift_pressed:
 				if picked != null:
 					toggle(picked)
+				else:
+					_issue_pie(mb.position, mb.ctrl_pressed)
 			else:
 				select_only(picked)
 
@@ -347,6 +350,15 @@ func _handle_key(key: InputEventKey) -> void:
 
 
 # ---------------------------------------------------------------- helpers
+
+func _issue_pie(screen_pos: Vector2, queue: bool) -> void:
+	var point: Variant = _ground_point(screen_pos)
+	if point == null or selected.is_empty():
+		return
+	for u in selected:
+		u.order_pie(point, queue)
+	Fx.move_marker(_world, point, FACE_MARKER_COLOR)
+
 
 func _extend_drawing(pos: Vector2) -> void:
 	if not _drawing:
