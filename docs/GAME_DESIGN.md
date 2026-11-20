@@ -211,6 +211,13 @@ The goal: you **don't want them to die**. Losing someone should hurt because you
 - **The game rewards bringing everyone home:** medics, carrying wounded, retreat and extraction orders, a mission bonus for zero losses.
 - Veterans retire into instructors (7.3), so your best people live on in the next generation.
 
+**M4 first slice (what gets built first):**
+- Persistent campaign saved to disk: roster, memorial, in-game calendar (starts 2031).
+- 10 starting operators generated from source agencies: name, callsign, age, hometown, agency, class, stats, 0-1 trait, pixel portrait.
+- Stats matter in missions: Marksmanship → accuracy, Composure → reaction time, Endurance → speed and toughness.
+- HQ screen: roster cards, operator detail with bio and service record, memorial wall, pick a squad of 4 and deploy.
+- After-action report: KIA → memorial with date and mission; wounded → weeks of recovery, severe wounds can leave a permanent injury; survivors gain experience (small stat growth) and can earn traits; each mission auto-writes a line in every participant's service record. Each mission advances the calendar a week.
+
 ---
 
 ## 8. Theaters & Rules of Engagement
@@ -320,7 +327,7 @@ Each milestone ends with something **playable**. Don't move on until it's fun.
 | M2 | **Eyes & angles** ✅ | Vision cones + fog of war, turn speed, firing arc, facing orders, corner-slicing at doorways, walk/run, hold fire |
 | M3 | **CQB bare bones** ✅ | Doors, go-code, flashbangs + frags, crouch with exposure-based hits, slower pace + game speed control, pixel-art look |
 | M3.5 | **Classes & action wheel** | Only seeing/shooting automatic; doors block until ordered; right-click radial action wheel on doors and soldiers; Assaulter / Breacher / Marksman with different weapons, kit and options; breach charges |
-| M4 | **Characters you care about** | Persistent roster with names, bios, portraits, stats, traits, service records, lasting injuries, permadeath + memorial wall; pick your squad before a mission; after-action report; save/load |
+| M4 | **Characters you care about** ✅ (first slice) | Persistent roster with names, bios, portraits, stats, traits, service records, lasting injuries, permadeath + memorial wall; pick your squad before a mission; after-action report; save/load |
 | M5 | **Research & equipment** | Tech tree over in-game years; projects take time, money and specialists; loadouts; first techs: heartbeat sensor, grappling hook, night vision, suppressors, scout drone |
 | M6 | **Campaign map** | Sector-based dynamic campaign (Gates of Hell conquest feel): move teams between sectors, choose battles, persistent forces, resources for reinforcements, enemy moves too; carrier as mobile HQ; in-game calendar |
 | M7 | **Enemy network** | Node graph, intel leads, growth, adaptation, retaliation |

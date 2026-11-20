@@ -1,0 +1,29 @@
+{
+	"first": [
+		"James", "Marcus", "Daniel", "Tyler", "Ethan", "Caleb", "Luis", "Andre", "Kevin", "Ryan",
+		"Michael", "Jordan", "Derek", "Sam", "Victor", "Owen", "Mateo", "Isaiah", "Grant", "Nolan",
+		"Elena", "Sarah", "Maya", "Rachel", "Nadia", "Jessica", "Carmen", "Hannah", "Leah", "Tara",
+		"Omar", "Yusuf", "Karim", "Dmitri", "Tomas", "Erik", "Rafael", "Hector", "Wesley", "Cole",
+		"Brandon", "Travis", "Aaron", "Jamal", "Darius", "Emmett", "Silas", "Reid", "Ana", "Jade"
+	],
+	"last": [
+		"Walker", "Reyes", "Mitchell", "Hayes", "Brennan", "Okafor", "Delgado", "Novak", "Sutton", "Price",
+		"Harlow", "Castillo", "Mercer", "Vance", "Kowalski", "Holloway", "Ramirez", "Grady", "Lindqvist", "Ortega",
+		"Barrett", "Cho", "Nakamura", "Haddad", "Farouk", "Petrov", "Sandoval", "Whitaker", "Lowell", "Dunn",
+		"Garrison", "Pike", "Ashford", "Calloway", "Foster", "Bishop", "Kerrigan", "Moreau", "Rourke", "Tate",
+		"Stroud", "Valdez", "Wolfe", "Keane", "Abbott", "Ibarra", "Lang", "Mahoney", "Quinn", "Ridley"
+	],
+	"callsigns": [
+		"Ghost", "Rook", "Hollow", "Saint", "Tank", "Wire", "Doc", "Echo", "Mako", "Viper",
+		"Lucky", "Preacher", "Brick", "Hawk", "Shade", "Nomad", "Tex", "Moose", "Fuse", "Static",
+		"Bishop", "Ranger", "Smoke", "Duke", "Jinx", "Kodiak", "Sparrow", "Ice", "Torch", "Gunny",
+		"Mouse", "Atlas", "Badger", "Coyote", "Dutch", "Flint", "Gator", "Haze", "Kilo", "Ledger"
+	],
+	"hometowns": [
+		"El Paso, TX", "Fayetteville, NC", "Bakersfield, CA", "Tacoma, WA", "Dayton, OH", "Pueblo, CO",
+		"Mobile, AL", "Scranton, PA", "Duluth, MN", "Boise, ID", "Tulsa, OK", "Savannah, GA",
+		"Brooklyn, NY", "Chicago, IL", "Detroit, MI", "Phoenix, AZ", "Norfolk, VA", "Lubbock, TX",
+		"Missoula, MT", "Flagstaff, AZ", "Lafayette, LA", "Portland, ME", "Reno, NV", "Omaha, NE",
+		"San Diego, CA", "Jacksonville, FL", "Knoxville, TN", "Anchorage, AK", "Fresno, CA", "Wichita, KS"
+	]
+}

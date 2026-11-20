@@ -9,7 +9,8 @@ Covert counter-terror tactics + strategy game. **Read `docs/GAME_DESIGN.md` firs
 
 ## Tech
 - Godot 4.7, GDScript, Forward+ renderer. Project root = repo root.
-- Main scene: `res://tactical/main.tscn`.
+- Start scene: `res://hq/hq.tscn` (HQ). Mission scene: `res://tactical/main.tscn` (runs standalone with a test squad when nothing is deployed).
+- Autoload `Campaign` (people/campaign.gd) owns the roster + save (`user://campaign.json`). TESTS MUST set `Campaign.save_path` to a test file before writing, never touch the user's save.
 - Godot exe (use the `_console` one for headless runs):
   `C:\Users\Chandler\Tools\Godot\Godot_v4.7.2-stable_win64_console.exe`
 - Smoke test: `<godot> --headless --path . --quit-after 120` and check output for `ERROR` / `SCRIPT ERROR`.
@@ -47,7 +48,9 @@ tactical/control/     selection_controller.gd (select, box select, move orders)
 tactical/camera/      camera_rig.gd
 tactical/ui/          squad_panel, path_overlay, selection_box
 tactical/fx/          tracers, move markers
-world/ people/        (later milestones)
+people/               operator_record, recruiter, roster (calendar + save), portrait (procedural pixel faces), campaign (autoload: deploy, results, AAR data)
+hq/                   hq.gd (roster, detail, memorial, recruit, squad + deploy), aar.gd (after-action report)
+world/                (later milestones)
 ```
 
 ## Testing
@@ -65,8 +68,9 @@ world/ people/        (later milestones)
 - M2, M3 done. User: tactical only needs to be good enough; real interest is characters, research, campaign map.
 - MOUSE RULE (user decision): LEFT = feet (move, draw routes, select), RIGHT = eyes (look, watch points; Shift+right = pie with dotted line + pie icon), right click on door/soldier = action wheel.
 - CONTROL RULE: only seeing and shooting are automatic. Every other action is an explicit order (action wheel). Never add automatic door opening, crouching, pie-slicing etc.
-- M3.5 classes + action wheel; M3.6 freehand route drawing + focus points along routes; M3.7 pie maneuver (Shift+left-click ground: arc around a corner, weapon up) + raised/low-ready rifle poses - built and tested, awaiting user playtest. Next: M4 characters you care about.
+- M3.5 classes + action wheel; M3.6 freehand route drawing + focus points along routes; M3.7 pie maneuver (Shift+left-click ground: arc around a corner, weapon up) + raised/low-ready rifle poses - built and tested, awaiting user playtest. 
 - UI gotcha: a Control whose parent is a CanvasLayer is NOT sized by full-rect anchors; set position/size from get_viewport_rect() or it gets zero size and no mouse input.
 - Simulated mouse input (root.push_input) only maps correctly in a windowed run, not --headless.
 - In test scripts count time with _physics_process (60/s game time); _process frame counts depend on FPS.
+- M4 characters (first slice) built and tested: persistent roster, HQ, memorial, deploy, stats affect missions, AAR with wounds/permanent injuries/growth/traits/service record. Awaiting user playtest. Next: M5 research.
 - Long silent runs (battle regressions, screenshots): tell the user first, or run in background.

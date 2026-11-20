@@ -1,0 +1,11 @@
+{
+	"recovery_days_per_damage": 0.35,
+	"permanent_chance_when_critical": 0.4,
+	"critical_fraction": 0.3,
+	"wound_places": ["shoulder", "arm", "leg", "side", "hand", "thigh", "chest"],
+	"permanent": {
+		"bad_knee": { "name": "Bad Knee", "desc": "Rebuilt knee. Moves slower.", "effects": { "speed": 0.9 } },
+		"nerve_damage": { "name": "Nerve Damage", "desc": "Shooting hand never fully recovered.", "effects": { "accuracy": 0.92 } },
+		"lung_scar": { "name": "Scarred Lung", "desc": "Tires faster, takes less punishment.", "effects": { "hp": 0.9 } }
+	}
+}

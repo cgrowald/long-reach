@@ -34,11 +34,14 @@ var _selection
 var _status_label: Label
 var _banner: Label
 var _fog_tick: int = 0
+var _campaign = null
+var _end_btn: Button
 var _speed_idx: int = 2
 
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	_campaign = get_node_or_null("/root/Campaign")
 
 	_map = TestMap.new()
 	_map.name = "Level"
@@ -88,6 +91,19 @@ func _ready() -> void:
 	hud.add_child(panel)
 
 	_build_hud_text(hud)
+	_end_btn = Button.new()
+	_end_btn.text = "END OPERATION" if _in_campaign() else "RESTART"
+	_end_btn.custom_minimum_size = Vector2(190, 40)
+	_end_btn.position = Vector2(get_viewport().get_visible_rect().size.x - 210.0, 16.0)
+	_end_btn.pressed.connect(_end_operation)
+	hud.add_child(_end_btn)
+	if _in_campaign():
+		var op := Label.new()
+		op.text = _campaign.operation_name
+		op.position = Vector2(get_viewport().get_visible_rect().size.x - 420.0, 24.0)
+		_style_label(op, 18)
+		op.add_theme_color_override("font_color", Color(1.0, 0.82, 0.3))
+		hud.add_child(op)
 	hud.add_child(wheel)  # last, so it draws on top
 
 
@@ -104,11 +120,21 @@ func _spawn_doors() -> void:
 func _spawn_units() -> void:
 	var map := _map as Node3D
 	var ops: Array[Vector3] = _map.operator_spawns
-	for i in ops.size():
+	# Campaign: deploy the operators picked at HQ. Standalone: a default test squad.
+	var records: Array = _campaign.deployed_records() if _in_campaign() else []
+	var count: int = records.size() if not records.is_empty() else ops.size()
+	for i in count:
 		var u: Node3D = Unit.new()
 		u.name = "Alpha%d" % (i + 1)
-		u.setup("ALPHA-%d" % (i + 1), "operator", Unit.Team.BLUE, SQUAD_CLASSES[i % SQUAD_CLASSES.size()])
-		u.position = ops[i]
+		var spawn: Vector3 = ops[i % ops.size()] + Vector3(0.0, 0.0, 1.5 * float(i / ops.size()))
+		if records.is_empty():
+			u.setup("ALPHA-%d" % (i + 1), "operator", Unit.Team.BLUE, SQUAD_CLASSES[i % SQUAD_CLASSES.size()])
+		else:
+			var r = records[i]
+			u.setup(r.callsign.to_upper(), "operator", Unit.Team.BLUE, r.class_id)
+			u.record_id = r.id
+			u.apply_modifiers(r.modifiers())
+		u.position = spawn
 		map.add_child(u)
 		u.fired.connect(_on_unit_fired.bind(u))
 		friendlies.append(u)
@@ -126,6 +152,23 @@ func _spawn_units() -> void:
 		hostiles.append(t)
 
 
+func _in_campaign() -> bool:
+	return _campaign != null and _campaign.is_deployed()
+
+
+## End the operation and hand results back to the campaign (or restart when standalone).
+func _end_operation() -> void:
+	if not _in_campaign():
+		get_tree().paused = false
+		get_tree().reload_current_scene()
+		return
+	var results: Array = []
+	for u in friendlies:
+		results.append({"id": u.record_id, "alive": not u.is_dead, "hp": u.hp, "max_hp": u.max_hp, "kills": u.kills})
+	var success: bool = _count_alive(hostiles) == 0 and _count_alive(friendlies) > 0
+	_campaign.finish_mission(results, success)
+
+
 func _on_unit_fired(from: Vector3, to: Vector3, _hit: bool, shooter: Node3D) -> void:
 	var color: Color = TRACER_BLUE if shooter.team == Unit.Team.BLUE else TRACER_RED
 	Fx.tracer(_map, from, to, color)
@@ -141,7 +184,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if key.physical_keycode == KEY_SPACE:
 		get_tree().paused = not get_tree().paused
-	elif key.physical_keycode == KEY_R:
+	elif key.physical_keycode == KEY_R and not _in_campaign():
 		get_tree().paused = false
 		get_tree().reload_current_scene()
 	elif key.physical_keycode == KEY_ENTER or key.physical_keycode == KEY_KP_ENTER:
@@ -231,7 +274,8 @@ func _process(_delta: float) -> void:
 
 func _end_mission(title: String, color: Color, survivors: int) -> void:
 	mission_over = true
-	_banner.text = "%s\n%d / %d operators alive\nPress R to restart" % [title, survivors, friendlies.size()]
+	var how: String = "Click END OPERATION to return to HQ" if _in_campaign() else "Press R to restart"
+	_banner.text = "%s\n%d / %d operators alive\n%s" % [title, survivors, friendlies.size(), how]
 	_banner.add_theme_color_override("font_color", color)
 
 

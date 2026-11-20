@@ -69,6 +69,9 @@ var peripheral_range: float = 4.0
 var team_color: Color = Color.WHITE
 var items: Dictionary = {}          # flashbang / frag / breach_charge counts
 var actions: Array[String] = []     # what this soldier's class can do
+var record_id: int = -1             # campaign operator this unit is (-1 = none)
+var kills: int = 0
+var accuracy_mult: float = 1.0       # from the operator's stats / traits / injuries
 
 var pace: int = Pace.WALK
 var hold_fire: bool = false
@@ -400,6 +403,16 @@ func set_stance(crouch: bool) -> void:
 		_visual.scale.y = CROUCH_SCALE if crouched else 1.0
 
 
+## Campaign operator stats: {accuracy, reaction (lower = faster), speed, hp} multipliers.
+func apply_modifiers(m: Dictionary) -> void:
+	accuracy_mult = float(m.get("accuracy", 1.0))
+	reaction_time *= float(m.get("reaction", 1.0))
+	walk_speed *= float(m.get("speed", 1.0))
+	run_speed *= float(m.get("speed", 1.0))
+	max_hp *= float(m.get("hp", 1.0))
+	hp = max_hp
+
+
 ## Throw a grenade at a ground point now. Returns false if not possible.
 func throw_grenade(kind: String, point: Vector3) -> bool:
 	if is_dead or stunned > 0.0 or not can_do(kind):
@@ -608,6 +621,8 @@ func take_damage(amount: float, source) -> void:
 		_idle_yaw = _yaw_toward(source.global_position - global_position)
 	_flash(Color.WHITE)
 	if hp <= 0.0:
+		if source != null and is_instance_valid(source) and source != self and source.team != team:
+			source.kills += 1
 		_die()
 
 
@@ -1011,7 +1026,7 @@ func _fire_at(t) -> void:
 		move_factor = CombatRules.RUN_ACCURACY if pace == Pace.RUN else CombatRules.WALK_ACCURACY
 		if _pieing():
 			move_factor = PIE_ACCURACY
-	var chance: float = CombatRules.hit_chance(weapon, distance, move_factor, t.is_moving()) * exposure
+	var chance: float = CombatRules.hit_chance(weapon, distance, move_factor, t.is_moving()) * exposure * accuracy_mult
 	var hit: bool = randf() < chance
 
 	var forward: Vector3 = -global_transform.basis.z

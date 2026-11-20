@@ -1,0 +1,32 @@
+{
+	"army_sf": {
+		"name": "Army Special Forces",
+		"blurb": "Years of deployments; steady in a long fight.",
+		"stats": { "marksmanship": 62, "cqb": 58, "composure": 64, "endurance": 70, "tradecraft": 30 },
+		"classes": ["assaulter", "assaulter", "marksman", "breacher"]
+	},
+	"navy_maritime": {
+		"name": "Navy Maritime Special Ops",
+		"blurb": "Ship boarding and direct action; lives for the breach.",
+		"stats": { "marksmanship": 60, "cqb": 68, "composure": 62, "endurance": 66, "tradecraft": 28 },
+		"classes": ["breacher", "assaulter", "assaulter"]
+	},
+	"cia_ground": {
+		"name": "CIA Ground Branch",
+		"blurb": "Quiet professional; better at not being seen than at kicking doors.",
+		"stats": { "marksmanship": 60, "cqb": 50, "composure": 66, "endurance": 55, "tradecraft": 72 },
+		"classes": ["marksman", "assaulter"]
+	},
+	"fbi_hrt": {
+		"name": "FBI Hostage Rescue",
+		"blurb": "Precision in rooms full of innocents.",
+		"stats": { "marksmanship": 66, "cqb": 66, "composure": 60, "endurance": 54, "tradecraft": 40 },
+		"classes": ["assaulter", "marksman", "breacher"]
+	},
+	"police_swat": {
+		"name": "City SWAT",
+		"blurb": "Fast in a hallway; new to long operations overseas.",
+		"stats": { "marksmanship": 54, "cqb": 62, "composure": 52, "endurance": 50, "tradecraft": 32 },
+		"classes": ["breacher", "assaulter"]
+	}
+}

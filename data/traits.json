@@ -1,0 +1,33 @@
+{
+	"steady": {
+		"name": "Steady Under Fire",
+		"desc": "Reacts faster when the shooting starts.",
+		"effects": { "reaction": 0.85 },
+		"earned_by": "survive_heavy"
+	},
+	"dead_eye": {
+		"name": "Dead Eye",
+		"desc": "Noticeably more accurate.",
+		"effects": { "accuracy": 1.1 },
+		"earned_by": "kills"
+	},
+	"iron": {
+		"name": "Iron",
+		"desc": "Takes more punishment before going down.",
+		"effects": { "hp": 1.15 },
+		"earned_by": "survive_wounded"
+	},
+	"quick": {
+		"name": "Quick Feet",
+		"desc": "Moves a little faster.",
+		"effects": { "speed": 1.08 },
+		"earned_by": "none"
+	},
+	"shaken": {
+		"name": "Shaken",
+		"desc": "Lost a teammate. Slower to react for now.",
+		"effects": { "reaction": 1.2 },
+		"earned_by": "teammate_killed",
+		"negative": true
+	}
+}

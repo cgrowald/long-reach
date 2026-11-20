@@ -43,6 +43,22 @@ static func class_def(id: String) -> Dictionary:
 	return _entry(CLASSES_PATH, id)
 
 
+static func names() -> Dictionary:
+	return load_json("res://data/names.json")
+
+
+static func agencies() -> Dictionary:
+	return load_json("res://data/agencies.json")
+
+
+static func traits() -> Dictionary:
+	return load_json("res://data/traits.json")
+
+
+static func injuries() -> Dictionary:
+	return load_json("res://data/injuries.json")
+
+
 static func _entry(path: String, id: String) -> Dictionary:
 	var all: Dictionary = load_json(path)
 	if not all.has(id):

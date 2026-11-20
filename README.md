@@ -9,6 +9,13 @@ See [docs/GAME_DESIGN.md](docs/GAME_DESIGN.md) for the full design.
 2. Open Godot → **Import** → select `project.godot` in this folder → **Import & Edit**.
 3. Press **F5** (or the ▶ button top-right) to run.
 
+## Campaign
+The game starts at **HQ**: your roster of operators (each with a name, agency, stats, traits and a service record).
+Click an operator to read their file; **Add to squad** (or double-click) up to 4, then **DEPLOY**.
+In the mission, **END OPERATION** (top right) brings everyone home and writes the after-action report:
+deaths go on the memorial wall, wounds take weeks to heal and can leave permanent injuries, survivors grow and earn traits.
+Each operation moves the calendar a week. The campaign saves automatically.
+
 ## Controls
 Only seeing and shooting are automatic. Everything else is an order you give.
 **Left mouse = feet. Right mouse = eyes.**
