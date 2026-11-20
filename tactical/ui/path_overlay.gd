@@ -14,6 +14,8 @@ const HOLD_MARK := 0.4
 const COLOR_FOCUS := Color(1.0, 0.85, 0.3, 0.95)
 const COLOR_FOCUS_DIM := Color(1.0, 0.85, 0.3, 0.35)
 const DIAMOND := 0.3
+const DASH := 0.2
+const PIE_ICON := 0.55
 
 var _units: Array = []
 var _selection
@@ -38,6 +40,35 @@ func _ready() -> void:
 	_mat.no_depth_test = true
 
 
+func _line(verts: PackedVector3Array, cols: PackedColorArray, a: Vector3, b: Vector3, c: Color) -> void:
+	verts.append(a)
+	verts.append(b)
+	cols.append(c)
+	cols.append(c)
+
+
+## Sight line from a to b. Pie: dotted, with a pie icon (circle + filled slice) at b.
+func _sight(verts: PackedVector3Array, cols: PackedColorArray, a: Vector3, b: Vector3, c: Color, pie: bool) -> void:
+	if not pie:
+		_line(verts, cols, a, b, c)
+		return
+	var length: float = a.distance_to(b)
+	var dashes: int = maxi(1, int(length / (DASH * 2.0)))
+	for i in dashes:
+		var t0: float = float(i) / float(dashes)
+		var t1: float = t0 + 0.5 / float(dashes)
+		_line(verts, cols, a.lerp(b, t0), a.lerp(b, t1), c)
+	var r: float = PIE_ICON
+	var prev: Vector3 = b + Vector3(r, 0, 0)
+	for k in range(1, 17):
+		var p: Vector3 = b + Vector3(cos(TAU * k / 16.0), 0, sin(TAU * k / 16.0)) * r
+		_line(verts, cols, prev, p, c)
+		prev = p
+	for k in 4:  # filled-looking slice: fan of lines
+		var ang: float = -PI * 0.5 + k * (PI * 0.5 / 3.0)
+		_line(verts, cols, b, b + Vector3(cos(ang), 0, sin(ang)) * r, c)
+
+
 func _process(_delta: float) -> void:
 	_imesh.clear_surfaces()
 	var verts := PackedVector3Array()
@@ -46,56 +77,33 @@ func _process(_delta: float) -> void:
 		if u.is_dead:
 			continue
 		var pts: Array[Vector3] = u.get_planned_points()
-		if pts.size() < 2 and not u.is_holding():
-			continue
-		var color: Color = COLOR_SELECTED if _selection.is_selected(u) else COLOR_OTHER
-		for i in pts.size() - 1:
-			verts.append(pts[i] + LIFT)
-			verts.append(pts[i + 1] + LIFT)
-			cols.append(color)
-			cols.append(color)
-		var end: Vector3 = pts[pts.size() - 1] + LIFT
-		for d in [Vector3(END_MARK, 0.0, END_MARK), Vector3(END_MARK, 0.0, -END_MARK)]:
-			verts.append(end - d)
-			verts.append(end + d)
-			cols.append(color)
-			cols.append(color)
-		# Focus (pie) points: diamond on the route + sight line to the watched point.
 		var bright: bool = _selection.is_selected(u)
+		var color: Color = COLOR_SELECTED if bright else COLOR_OTHER
+		if pts.size() >= 2:
+			for i in pts.size() - 1:
+				_line(verts, cols, pts[i] + LIFT, pts[i + 1] + LIFT, color)
+			var end: Vector3 = pts[pts.size() - 1] + LIFT
+			_line(verts, cols, end - Vector3(END_MARK, 0, END_MARK), end + Vector3(END_MARK, 0, END_MARK), color)
+			_line(verts, cols, end - Vector3(END_MARK, 0, -END_MARK), end + Vector3(END_MARK, 0, -END_MARK), color)
 		var fc: Color = COLOR_FOCUS if bright else COLOR_FOCUS_DIM
+		# Look / pie points along the route: diamond on the route, line to the watched point.
+		# Look = solid line; pie = dotted line with a pie icon on the target.
 		for m in u.get_focus_marks():
 			var a: Vector3 = (m["pos"] as Vector3) + LIFT
 			for k in 4:
 				var d0 := Vector3(DIAMOND, 0, 0).rotated(Vector3.UP, PI * 0.5 * k)
 				var d1 := Vector3(DIAMOND, 0, 0).rotated(Vector3.UP, PI * 0.5 * (k + 1))
-				verts.append(a + d0)
-				verts.append(a + d1)
-				cols.append(fc)
-				cols.append(fc)
+				_line(verts, cols, a + d0, a + d1, fc)
 			if m["focus"] != null:
-				verts.append(a)
-				verts.append((m["focus"] as Vector3) + LIFT)
-				cols.append(Color(fc, fc.a * 0.6))
-				cols.append(Color(fc, fc.a * 0.6))
-		# Pie targets: an X on the corner and a sight line from the end of the sweep.
+				_sight(verts, cols, a, (m["focus"] as Vector3) + LIFT, fc, bool(m.get("pie", false)))
+		# Old-style pie maneuver legs (still supported by the unit).
 		for pt in u.get_pie_targets():
-			var corner: Vector3 = (pt[1] as Vector3) + LIFT
-			for d in [Vector3(0.3, 0, 0.3), Vector3(0.3, 0, -0.3)]:
-				verts.append(corner - d)
-				verts.append(corner + d)
-				cols.append(fc)
-				cols.append(fc)
-			verts.append((pt[0] as Vector3) + LIFT)
-			verts.append(corner)
-			cols.append(Color(fc, fc.a * 0.5))
-			cols.append(Color(fc, fc.a * 0.5))
+			_sight(verts, cols, (pt[0] as Vector3) + LIFT, (pt[1] as Vector3) + LIFT, fc, true)
 		var active: Variant = u.get_active_focus()
 		if active != null and bright:
-			verts.append(u.global_position + LIFT)
-			verts.append((active as Vector3) + LIFT)
-			cols.append(Color(COLOR_FOCUS, 0.5))
-			cols.append(Color(COLOR_FOCUS, 0.5))
-		# Go-code hold points: a box around the spot.
+			_sight(verts, cols, u.global_position + LIFT, (active as Vector3) + LIFT, Color(fc, 0.6), u.is_focus_pie())
+		if pts.size() < 2 and not u.is_holding():
+			continue		# Go-code hold points: a box around the spot.
 		for h in u.get_planned_holds():
 			var c: Vector3 = h + LIFT
 			var corners: Array[Vector3] = [

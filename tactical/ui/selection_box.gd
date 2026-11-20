@@ -12,6 +12,10 @@ var _arrow_from: Vector2 = Vector2.ZERO
 var _arrow_to: Vector2 = Vector2.ZERO
 var _arrow_active: bool = false
 var _line := PackedVector2Array()
+var _look_from: Vector2 = Vector2.ZERO
+var _look_to: Vector2 = Vector2.ZERO
+var _look_pie: bool = false
+var _look_active: bool = false
 
 const LINE := Color(0.4, 0.85, 1.0, 0.9)
 
@@ -54,7 +58,37 @@ func hide_line() -> void:
 	queue_redraw()
 
 
+## Right-drag preview: solid line = look, dotted line + pie icon = pie.
+func show_look_line(from: Vector2, to: Vector2, pie: bool) -> void:
+	_look_from = from
+	_look_to = to
+	_look_pie = pie
+	_look_active = true
+	queue_redraw()
+
+
+func hide_look_line() -> void:
+	_look_active = false
+	queue_redraw()
+
+
+## A small "pie" glyph: circle with one slice cut out and filled.
+static func draw_pie_icon(ci: CanvasItem, at: Vector2, radius: float, color: Color) -> void:
+	ci.draw_arc(at, radius, 0.0, TAU, 24, color, 2.0)
+	var pts := PackedVector2Array([at])
+	for k in 7:
+		pts.append(at + Vector2.from_angle(-PI * 0.5 + k * (PI * 0.5 / 6.0)) * radius)
+	ci.draw_colored_polygon(pts, color)
+
+
 func _draw() -> void:
+	if _look_active:
+		if _look_pie:
+			draw_dashed_line(_look_from, _look_to, ARROW, 2.0, 8.0)
+			draw_pie_icon(self, _look_to, 9.0, ARROW)
+		else:
+			draw_line(_look_from, _look_to, ARROW, 2.0)
+			draw_circle(_look_to, 4.0, ARROW)
 	if _line.size() >= 2:
 		draw_polyline(_line, LINE, 3.0, true)
 	if _rect_active:

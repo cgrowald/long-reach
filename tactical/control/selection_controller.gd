@@ -1,25 +1,25 @@
 extends Node
-## Player input: selection, movement, and the action wheel.
+## Player input: selection, movement, looking and the action wheel.
 ## Works while paused (plan everything during pause).
 ##
-##   Left click / drag        select (Shift adds)        Double-click   select + follow
-##   Right click ground       move selected (Shift = queue waypoint, Ctrl = wait for GO)
-##   Right DRAG               draw a route freehand (Shift = add to plan, Ctrl = wait for GO at the end)
-##   Shift + left click GROUND   pie that corner/doorway (Shift+Ctrl = after current plan)
-##   Shift + left click ROUTE then click a point: from there on, watch that point (pie it)
-##                            (right-click instead = go back to looking where you walk)
-##   Alt + right click        look toward point
-##   Right click a DOOR       door wheel: open / kick / breach / stack up / flash in / frag in
-##                            (Shift = queue it, Ctrl = do it on GO)
-##   Right click a SOLDIER    soldier wheel: stance, pace, fire mode, flashbang, frag, stop
+## LEFT = feet
+##   Left click soldier          select (Shift = add/remove)      Double-click  select + follow
+##   Left click ground           move selected there (Shift = queue, Ctrl = wait for GO)
+##   Left DRAG from a soldier    draw his route freehand (Shift = add to plan, Ctrl = wait for GO)
+##   Left DRAG on empty ground   box select
+## RIGHT = eyes
+##   Right click ground          look at that point now
+##   Right DRAG from a route     from that spot on the route, watch the point you drag to
+##   (or from a soldier)         (from a soldier: starting now)
+##   Shift + right (click/drag)  same, but PIE it: rifle up, slow, covering that point (dotted line)
+##   Right click DOOR / SOLDIER  action wheel (door: Shift = queue, Ctrl = on GO)
 ##   1-9 select   F follow   Tab cycle follow   Esc clear / cancel
-
 signal selection_changed
 
 const Fx := preload("res://tactical/fx/fx.gd")
 const Unit := preload("res://tactical/units/unit.gd")
 const BOX_THRESHOLD := 6.0
-const FACE_DRAG_THRESHOLD := 14.0
+const LOOK_DRAG_THRESHOLD := 14.0
 const DRAW_SAMPLE_DIST := 0.5
 const ROUTE_PICK_PX := 14.0
 const PICK_RADIUS_PX := 32.0
@@ -54,7 +54,6 @@ var _draw_origin: Vector2 = Vector2.ZERO
 var _draw_unit = null  # soldier the left-drag started on
 var _draw_screen := PackedVector2Array()
 var _draw_world := PackedVector3Array()
-var _focus_pick: Dictionary = {}  # {"unit", "anchor"} while choosing a look point
 
 
 func setup(rig, friendly_units: Array, box, world: Node3D, wheel, hint: Label) -> void:
@@ -97,9 +96,7 @@ func _process(_delta: float) -> void:
 	var alive: Array = selected.filter(func(u): return not u.is_dead)
 	if alive.size() != selected.size():
 		_set_selection(alive)
-	if not _focus_pick.is_empty():
-		_hint.text = "Click the point %s should watch from here   (right-click: look where walking, Esc: cancel)" % _focus_pick["unit"].callsign
-	elif _pending_throw != "":
+	if _pending_throw != "":
 		_hint.text = "Left-click where to throw the %s   (right-click to cancel)" % \
 			("flashbang" if _pending_throw == "flashbang" else "frag grenade")
 	else:
@@ -116,32 +113,21 @@ func _unhandled_input(event: InputEvent) -> void:
 		elif mb.button_index == MOUSE_BUTTON_RIGHT:
 			_handle_right(mb)
 	elif event is InputEventMouseMotion:
-		var pos: Vector2 = (event as InputEventMouseMotion).position
+		var mm := event as InputEventMouseMotion
+		var pos: Vector2 = mm.position
 		if _dragging:
 			_box.show_rect(_drag_start, pos)
 		elif _draw_unit != null and (_drawing or pos.distance_to(_draw_origin) > BOX_THRESHOLD):
 			_extend_drawing(pos)
-		elif _right_down and pos.distance_to(_right_start) > FACE_DRAG_THRESHOLD:
-			_box.show_arrow(_right_start, pos)
+		elif _right_down and pos.distance_to(_right_start) > LOOK_DRAG_THRESHOLD:
+			_box.show_look_line(_right_start, pos, mm.shift_pressed)
 	elif event is InputEventKey:
 		_handle_key(event as InputEventKey)
 
 
-# ---------------------------------------------------------------- mouse
+# ---------------------------------------------------------------- left = feet
 
 func _handle_left(mb: InputEventMouseButton) -> void:
-	if mb.pressed and not _focus_pick.is_empty():
-		var look: Variant = _ground_point(mb.position)
-		if look != null:
-			_focus_pick["unit"].add_focus_mark(_focus_pick["anchor"], look)
-			Fx.move_marker(_world, look, FACE_MARKER_COLOR)
-		_focus_pick = {}
-		return
-	if mb.pressed and mb.shift_pressed and _pick_unit(mb.position) == null:
-		var hit: Dictionary = _pick_route(mb.position)
-		if not hit.is_empty():
-			_focus_pick = hit
-			return
 	if mb.pressed and _pending_throw != "":
 		var point: Variant = _ground_point(mb.position)
 		if point != null:
@@ -154,6 +140,7 @@ func _handle_left(mb: InputEventMouseButton) -> void:
 			if picked != null:
 				select_only(picked)
 				follow(picked)
+			_draw_unit = null
 			_dragging = false
 			return
 		var on_unit = _pick_unit(mb.position)
@@ -186,23 +173,16 @@ func _handle_left(mb: InputEventMouseButton) -> void:
 		_box.hide_rect()
 		if mb.position.distance_to(_drag_start) > BOX_THRESHOLD:
 			_box_select(Rect2(_drag_start, mb.position - _drag_start).abs(), mb.shift_pressed)
-		else:
-			var picked = _pick_unit(mb.position)
-			if mb.shift_pressed:
-				if picked != null:
-					toggle(picked)
-				else:
-					_issue_pie(mb.position, mb.ctrl_pressed)
-			else:
-				select_only(picked)
+		elif not selected.is_empty():
+			var point: Variant = _ground_point(mb.position)
+			if point != null:
+				_issue_move(point, mb.shift_pressed, NAN, mb.ctrl_pressed)
 
+
+# ---------------------------------------------------------------- right = eyes
 
 func _handle_right(mb: InputEventMouseButton) -> void:
 	if mb.pressed:
-		if not _focus_pick.is_empty():
-			_focus_pick["unit"].add_focus_mark(_focus_pick["anchor"], null)
-			_focus_pick = {}
-			return
 		if _pending_throw != "":
 			_pending_throw = ""
 			return
@@ -212,10 +192,11 @@ func _handle_right(mb: InputEventMouseButton) -> void:
 	if not _right_down:
 		return
 	_right_down = false
-	_box.hide_arrow()
-	var dragged: bool = mb.position.distance_to(_right_start) > FACE_DRAG_THRESHOLD
+	_box.hide_look_line()
+	var pie: bool = mb.shift_pressed
+	var dragged: bool = mb.position.distance_to(_right_start) > LOOK_DRAG_THRESHOLD
 
-	if not dragged and not mb.alt_pressed:
+	if not dragged:
 		var unit = _pick_unit(_right_start)
 		if unit != null:
 			if not selected.has(unit):
@@ -227,25 +208,28 @@ func _handle_right(mb: InputEventMouseButton) -> void:
 			if door != null:
 				_open_door_wheel(_right_start, door, mb.shift_pressed, mb.ctrl_pressed)
 				return
+		var look: Variant = _ground_point(_right_start)
+		if look != null and not selected.is_empty():
+			for u in selected:
+				u.look_now(look, pie)
+			Fx.move_marker(_world, look, FACE_MARKER_COLOR)
+		return
 
-	if selected.is_empty():
+	var target: Variant = _ground_point(mb.position)
+	if target == null:
 		return
-	var start: Variant = _ground_point(_right_start)
-	if start == null:
+	# Dragged from a point on someone's route: watch the target from that spot onward.
+	var hit: Dictionary = _pick_route(_right_start)
+	if not hit.is_empty():
+		hit["unit"].add_focus_mark(hit["anchor"], target, pie)
+		Fx.move_marker(_world, target, FACE_MARKER_COLOR)
 		return
-	if mb.alt_pressed:
-		for u in selected:
-			u.order_face(start)
-		Fx.move_marker(_world, start, FACE_MARKER_COLOR)
-		return
-	var face_yaw: float = NAN
-	if dragged:
-		var end: Variant = _ground_point(mb.position)
-		if end != null:
-			var dir: Vector3 = (end as Vector3) - (start as Vector3)
-			face_yaw = atan2(-dir.x, -dir.z)
-	_issue_move(start, mb.shift_pressed, face_yaw, mb.ctrl_pressed)
-
+	# Dragged from a soldier (or anywhere): watch it starting now.
+	var from_unit = _pick_unit(_right_start)
+	var who: Array = [from_unit] if from_unit != null and not selected.has(from_unit) else selected
+	for u in who:
+		u.look_now(target, pie)
+	Fx.move_marker(_world, target, FACE_MARKER_COLOR)
 
 # ---------------------------------------------------------------- wheels
 
@@ -357,9 +341,6 @@ func _handle_key(key: InputEventKey) -> void:
 	elif code == KEY_TAB:
 		_cycle_follow()
 	elif code == KEY_ESCAPE:
-		if not _focus_pick.is_empty():
-			_focus_pick = {}
-			return
 		if _pending_throw != "":
 			_pending_throw = ""
 			return
@@ -368,15 +349,6 @@ func _handle_key(key: InputEventKey) -> void:
 
 
 # ---------------------------------------------------------------- helpers
-
-func _issue_pie(screen_pos: Vector2, queue: bool) -> void:
-	var point: Variant = _ground_point(screen_pos)
-	if point == null or selected.is_empty():
-		return
-	for u in selected:
-		u.order_pie(point, queue)
-	Fx.move_marker(_world, point, FACE_MARKER_COLOR)
-
 
 func _extend_drawing(pos: Vector2) -> void:
 	if not _drawing:

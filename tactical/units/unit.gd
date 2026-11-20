@@ -96,6 +96,7 @@ var _idle_yaw: float = 0.0
 var _focus_marks: Array[Dictionary] = []
 var _focus: Variant = null  # point currently being watched (null = look where walking)
 var _pie_target: Variant = null  # corner/doorway being pied on the current leg
+var _focus_pie: bool = false  # the watched point is being PIED (rifle up, slow, ready)
 
 var _scan_timer: float = 0.0
 var _reaction_timer: float = 0.0
@@ -202,8 +203,8 @@ func order_path(samples: PackedVector3Array, queue: bool, hold: bool = false) ->
 
 ## Add a focus point: from nchor (a point on the planned route) onward, watch ocus.
 ## focus = null means go back to looking where you walk.
-func add_focus_mark(anchor: Vector3, focus: Variant) -> void:
-	var mark: Dictionary = {"pos": anchor, "focus": focus, "at": _route_distance(anchor)}
+func add_focus_mark(anchor: Vector3, focus: Variant, pie: bool = false) -> void:
+	var mark: Dictionary = {"pos": anchor, "focus": focus, "pie": pie, "at": _route_distance(anchor)}
 	var i: int = 0
 	while i < _focus_marks.size() and float(_focus_marks[i]["at"]) <= float(mark["at"]):
 		i += 1
@@ -217,6 +218,26 @@ func get_focus_marks() -> Array[Dictionary]:
 
 func get_active_focus() -> Variant:
 	return _focus
+
+
+func is_focus_pie() -> bool:
+	return _focus != null and _focus_pie
+
+
+## Right click: look at a point starting now (pie = Shift: rifle up, slow, ready).
+## Keeps any route; the next focus mark along the route takes over when reached.
+func look_now(point: Vector3, pie: bool) -> void:
+	if is_dead:
+		return
+	_focus = point
+	_focus_pie = pie
+	if not _moving:
+		_idle_yaw = _yaw_toward(point - global_position)
+
+
+## Pieing right now: either a pie maneuver leg or a pie focus point.
+func _pieing() -> bool:
+	return _pie_target != null or is_focus_pie()
 
 
 ## Slice the pie on a corner or doorway: sidestep in an arc around it at the current
@@ -292,7 +313,7 @@ func get_pie_targets() -> Array:
 func is_aiming() -> bool:
 	if is_dead or stunned > 0.0:
 		return false
-	return _pie_target != null or target != null or (not _moving and _focus != null)
+	return _pieing() or target != null or (not _moving and _focus != null)
 
 
 ## How much open space lies beyond the corner when looking at it from angle .
@@ -444,7 +465,7 @@ func get_status_text() -> String:
 		s = "WAITING FOR GO"
 	elif _blocked_by != null:
 		s = "BLOCKED BY DOOR"
-	elif _pie_target != null and _moving:
+	elif _pieing() and _moving:
 		s = "PIEING"
 	elif _moving:
 		s = "MOVING"
@@ -716,7 +737,7 @@ func _update_movement(delta: float) -> void:
 		_idle_yaw = _yaw_toward(_blocked_by.center - global_position)
 		return  # wait until someone opens it
 	var move_speed: float = run_speed if pace == Pace.RUN else walk_speed
-	if _pie_target != null:
+	if _pieing():
 		move_speed = minf(move_speed, PIE_SPEED)
 	if crouched:
 		move_speed *= CROUCH_SPEED
@@ -739,6 +760,7 @@ func _check_focus_marks() -> void:
 		if Vector2(p.x - global_position.x, p.z - global_position.z).length() > FOCUS_TRIGGER_DIST:
 			return
 		_focus = m["focus"]
+		_focus_pie = bool(m.get("pie", false))
 		_focus_marks.pop_front()
 
 
@@ -980,7 +1002,7 @@ func _fire_at(t) -> void:
 	var move_factor: float = 1.0
 	if is_moving():
 		move_factor = CombatRules.RUN_ACCURACY if pace == Pace.RUN else CombatRules.WALK_ACCURACY
-		if _pie_target != null:
+		if _pieing():
 			move_factor = PIE_ACCURACY
 	var chance: float = CombatRules.hit_chance(weapon, distance, move_factor, t.is_moving()) * exposure
 	var hit: bool = randf() < chance

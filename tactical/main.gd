@@ -163,10 +163,9 @@ func _set_speed(idx: int) -> void:
 func _build_hud_text(hud: CanvasLayer) -> void:
 	var help := Label.new()
 	help.text = "\n".join([
-		"Left DRAG from a soldier  draw his route    Left click / drag ground  select    Right click  move (Shift queue, Ctrl wait for GO)    Right DRAG  move + face",
-		"Shift + left click GROUND  pie that corner / doorway    Shift + left click a ROUTE, then a point  watch it from there",
-		"Right click a DOOR / SOLDIER  action wheel",
-		"Alt + right click  look at point    Enter  GO    Space  pause    - / =  game speed    P  pixel look    R  restart",
+		"LEFT = feet:  click ground  move    drag from a soldier  draw his route    drag on empty ground  box select    (Shift queue, Ctrl wait for GO)",
+		"RIGHT = eyes:  click ground  look there    drag from a route / soldier to a point  watch it from there    Shift + right  PIE it (dotted line)",
+		"Right click a DOOR / SOLDIER  action wheel    Enter  GO    Space  pause    - / =  game speed    P  pixel look    R  restart",
 		"WASD Q/E wheel middle-drag  camera    F / Tab / double-click  follow    1-4  select    Esc  cancel",
 	])
 	help.position = Vector2(16.0, 12.0)

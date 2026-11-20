@@ -362,5 +362,6 @@ The tactical layer only needs to be **good enough** (user feedback after M2: the
 | 2026-11-19 | "Open world" = go anywhere in the world, but a place becomes a playable 3D map only when you send a team there |
 | 2026-11-19 | M0 playtested and approved; M1 built |
 | 2026-11-19 | M1 playtested and approved. Personal project, not for release |
+| 2026-11-19 | Mouse scheme: left = feet (move, draw routes freehand, select), right = eyes (look, watch points along routes), Shift+right = pie (dotted line + pie icon: rifle up, slow, covering that point). Pieing is separate from walking |
 | 2026-11-19 | After M3: only seeing and shooting are automatic; every other action is chosen through a right-click action wheel; classes define weapons, kit and wheel options. Campaign map should feel like Gates of Hell's dynamic conquest mode |
 | 2026-11-19 | After M2: tactical layer only needs to be good enough. Focus moves to characters you care about, XCOM-style research over years, and the world. Pixel-art low-poly look. Combat pace was too fast: slow it down and add game speed control |

@@ -63,6 +63,7 @@ world/ people/        (later milestones)
 - M1 done (user playtested 2026-11-19).
 - User wants realistic CQB mechanics fully right before anything else (see design doc M2-M3c).
 - M2, M3 done. User: tactical only needs to be good enough; real interest is characters, research, campaign map.
+- MOUSE RULE (user decision): LEFT = feet (move, draw routes, select), RIGHT = eyes (look, watch points; Shift+right = pie with dotted line + pie icon), right click on door/soldier = action wheel.
 - CONTROL RULE: only seeing and shooting are automatic. Every other action is an explicit order (action wheel). Never add automatic door opening, crouching, pie-slicing etc.
 - M3.5 classes + action wheel; M3.6 freehand route drawing + focus points along routes; M3.7 pie maneuver (Shift+left-click ground: arc around a corner, weapon up) + raised/low-ready rifle poses - built and tested, awaiting user playtest. Next: M4 characters you care about.
 - UI gotcha: a Control whose parent is a CanvasLayer is NOT sized by full-rect anchors; set position/size from get_viewport_rect() or it gets zero size and no mouse input.
