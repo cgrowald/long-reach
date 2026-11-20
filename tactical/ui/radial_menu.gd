@@ -6,8 +6,8 @@ extends Control
 signal chosen(id: String, context: Dictionary)
 signal cancelled
 
-const RADIUS := 105.0
-const INNER := 30.0
+const RADIUS := 135.0
+const INNER := 32.0
 const FONT_SIZE := 14
 const COLOR_BG := Color(0.06, 0.08, 0.1, 0.88)
 const COLOR_HOVER := Color(0.95, 0.75, 0.25, 0.95)
@@ -115,7 +115,7 @@ func _draw() -> void:
 		draw_colored_polygon(pts, fill)
 		pts.append(pts[0])
 		draw_polyline(pts, COLOR_EDGE, 1.0)
-		var mid: Vector2 = _center + Vector2.from_angle((a0 + a1) * 0.5) * (INNER + RADIUS) * 0.5
+		var mid: Vector2 = _center + Vector2.from_angle((a0 + a1) * 0.5) * (INNER + RADIUS) * 0.55
 		var label: String = _options[i]["label"]
 		var size: Vector2 = font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE)
 		var color: Color = COLOR_TEXT if enabled else COLOR_DISABLED

@@ -1,19 +1,15 @@
 extends Node
-## Player input for selecting friendly units and giving them orders.
-## Works while paused (orders can be planned during pause).
+## Player input: selection, movement, and the action wheel.
+## Works while paused (plan everything during pause).
 ##
-##   Left click            select unit (Shift = add/remove)
-##   Left drag             box select (Shift = add)
-##   Double-click          select + camera follow
-##   Right click ground    move selected (Shift = queue waypoint)
-##   Right drag            move, then face the drag direction on arrival
-##   Alt + right click     look toward that point (no move; end of route if moving)
-##   Ctrl + right click    move there and WAIT for the go-code (Enter)
-##   G / T                 throw flashbang / frag at the cursor
-##   K                     toggle kicking doors (fast, loud) vs opening quietly
-##   V                     toggle walk / run          H  toggle hold fire
-##   1-9                   select unit by number (Shift = add)
-##   F                     follow selected     Tab  cycle follow     Esc  clear
+##   Left click / drag        select (Shift adds)        Double-click   select + follow
+##   Right click ground       move selected (Shift = queue waypoint, Ctrl = wait for GO)
+##   Right drag               move, then face the drag direction
+##   Alt + right click        look toward point
+##   Right click a DOOR       door wheel: open / kick / breach / stack up / flash in / frag in
+##                            (Shift = queue it, Ctrl = do it on GO)
+##   Right click a SOLDIER    soldier wheel: stance, pace, fire mode, flashbang, frag, stop
+##   1-9 select   F follow   Tab cycle follow   Esc clear / cancel
 
 signal selection_changed
 
@@ -21,30 +17,43 @@ const Fx := preload("res://tactical/fx/fx.gd")
 const Unit := preload("res://tactical/units/unit.gd")
 const BOX_THRESHOLD := 6.0
 const FACE_DRAG_THRESHOLD := 14.0
-const PICK_RADIUS_PX := 40.0
+const PICK_RADIUS_PX := 32.0
+const DOOR_PICK_RADIUS_PX := 45.0
 const FORMATION_SPACING := 1.1
 const MARKER_COLOR := Color(0.4, 0.85, 1.0)
 const FACE_MARKER_COLOR := Color(1.0, 0.85, 0.3)
 const THROW_MARKER_COLOR := Color(1.0, 1.0, 1.0)
 const NO_THROW_COLOR := Color(1.0, 0.2, 0.2)
 
+const DOOR_LABELS := {
+	"open": "Open", "kick": "Kick", "breach": "Breach charge", "stack": "Stack up",
+	"flash_in": "Flash in", "frag_in": "Frag in",
+	"open_flash": "Open + flash", "kick_flash": "Kick + flash",
+}
+
 var selected: Array = []
 
-var _rig  # camera rig script
+var _rig
 var _units: Array = []
-var _box  # selection_box.gd Control
+var _box
+var _wheel
+var _hint: Label
 var _world: Node3D
 var _drag_start: Vector2 = Vector2.ZERO
 var _dragging: bool = false
 var _right_start: Vector2 = Vector2.ZERO
 var _right_down: bool = false
+var _pending_throw: String = ""
 
 
-func setup(rig, friendly_units: Array, box, world: Node3D) -> void:
+func setup(rig, friendly_units: Array, box, world: Node3D, wheel, hint: Label) -> void:
 	_rig = rig
 	_units = friendly_units
 	_box = box
 	_world = world
+	_wheel = wheel
+	_hint = hint
+	_wheel.chosen.connect(_on_wheel_chosen)
 
 
 func _ready() -> void:
@@ -77,11 +86,22 @@ func _process(_delta: float) -> void:
 	var alive: Array = selected.filter(func(u): return not u.is_dead)
 	if alive.size() != selected.size():
 		_set_selection(alive)
+	if _pending_throw != "":
+		_hint.text = "Left-click where to throw the %s   (right-click to cancel)" % \
+			("flashbang" if _pending_throw == "flashbang" else "frag grenade")
+	else:
+		_hint.text = ""
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if _wheel.is_open():
+		return
 	if event is InputEventMouseButton:
-		_handle_mouse_button(event as InputEventMouseButton)
+		var mb := event as InputEventMouseButton
+		if mb.button_index == MOUSE_BUTTON_LEFT:
+			_handle_left(mb)
+		elif mb.button_index == MOUSE_BUTTON_RIGHT:
+			_handle_right(mb)
 	elif event is InputEventMouseMotion:
 		var pos: Vector2 = (event as InputEventMouseMotion).position
 		if _dragging:
@@ -92,14 +112,15 @@ func _unhandled_input(event: InputEvent) -> void:
 		_handle_key(event as InputEventKey)
 
 
-func _handle_mouse_button(mb: InputEventMouseButton) -> void:
-	if mb.button_index == MOUSE_BUTTON_LEFT:
-		_handle_left(mb)
-	elif mb.button_index == MOUSE_BUTTON_RIGHT:
-		_handle_right(mb)
-
+# ---------------------------------------------------------------- mouse
 
 func _handle_left(mb: InputEventMouseButton) -> void:
+	if mb.pressed and _pending_throw != "":
+		var point: Variant = _ground_point(mb.position)
+		if point != null:
+			_throw(_pending_throw, point)
+		_pending_throw = ""
+		return
 	if mb.pressed:
 		if mb.double_click:
 			var picked = _pick_unit(mb.position)
@@ -126,6 +147,9 @@ func _handle_left(mb: InputEventMouseButton) -> void:
 
 func _handle_right(mb: InputEventMouseButton) -> void:
 	if mb.pressed:
+		if _pending_throw != "":
+			_pending_throw = ""
+			return
 		_right_start = mb.position
 		_right_down = true
 		return
@@ -133,22 +157,132 @@ func _handle_right(mb: InputEventMouseButton) -> void:
 		return
 	_right_down = false
 	_box.hide_arrow()
+	var dragged: bool = mb.position.distance_to(_right_start) > FACE_DRAG_THRESHOLD
+
+	if not dragged and not mb.alt_pressed:
+		var unit = _pick_unit(_right_start)
+		if unit != null:
+			if not selected.has(unit):
+				select_only(unit)
+			_open_unit_wheel(_right_start)
+			return
+		if not selected.is_empty():
+			var door = _pick_door(_right_start)
+			if door != null:
+				_open_door_wheel(_right_start, door, mb.shift_pressed, mb.ctrl_pressed)
+				return
+
 	if selected.is_empty():
 		return
 	var start: Variant = _ground_point(_right_start)
 	if start == null:
 		return
 	if mb.alt_pressed:
-		_issue_face(start)
+		for u in selected:
+			u.order_face(start)
+		Fx.move_marker(_world, start, FACE_MARKER_COLOR)
 		return
 	var face_yaw: float = NAN
-	if mb.position.distance_to(_right_start) > FACE_DRAG_THRESHOLD:
+	if dragged:
 		var end: Variant = _ground_point(mb.position)
 		if end != null:
 			var dir: Vector3 = (end as Vector3) - (start as Vector3)
 			face_yaw = atan2(-dir.x, -dir.z)
 	_issue_move(start, mb.shift_pressed, face_yaw, mb.ctrl_pressed)
 
+
+# ---------------------------------------------------------------- wheels
+
+func _open_door_wheel(pos: Vector2, door, queue: bool, hold: bool) -> void:
+	var verbs: Array[String] = []
+	if door.is_open:
+		verbs.assign(["stack", "flash_in", "frag_in"])
+	else:
+		verbs.assign(["open", "kick", "breach", "open_flash", "kick_flash", "stack"])
+	var opts: Array = []
+	for v in verbs:
+		var label: String = DOOR_LABELS[v]
+		opts.append({"id": v, "label": label, "enabled": v == "stack" or _performer(v, door) != null})
+	var title: String = "DOOR" + ("  (wait for GO)" if hold else "") + ("  (queued)" if queue else "")
+	_wheel.open(pos, title, opts, {"kind": "door", "door": door, "queue": queue, "hold": hold})
+
+
+func _open_unit_wheel(pos: Vector2) -> void:
+	var first = selected[0]
+	var any_flash: bool = selected.any(func(u): return u.can_do("flashbang"))
+	var any_frag: bool = selected.any(func(u): return u.can_do("frag"))
+	var opts: Array = [
+		{"id": "stance", "label": "Stand up" if first.crouched else "Crouch", "enabled": true},
+		{"id": "pace", "label": "Walk" if first.pace == Unit.Pace.RUN else "Run", "enabled": true},
+		{"id": "fire", "label": "Weapons free" if first.hold_fire else "Hold fire", "enabled": true},
+		{"id": "flashbang", "label": "Flashbang", "enabled": any_flash},
+		{"id": "frag", "label": "Frag", "enabled": any_frag},
+		{"id": "stop", "label": "Stop / cancel", "enabled": true},
+	]
+	var title: String = first.callsign if selected.size() == 1 else "%d SOLDIERS" % selected.size()
+	if selected.size() == 1 and first.class_label != "":
+		title += " · " + first.class_label
+	_wheel.open(pos, title, opts, {"kind": "unit"})
+
+
+func _on_wheel_chosen(id: String, ctx: Dictionary) -> void:
+	if ctx.get("kind", "") == "door":
+		_do_door(id, ctx["door"], bool(ctx["queue"]), bool(ctx["hold"]))
+	else:
+		_do_unit(id)
+
+
+func _do_door(verb: String, door, queue: bool, hold: bool) -> void:
+	if verb == "stack":
+		var alive: Array = selected.filter(func(u): return not u.is_dead)
+		alive.sort_custom(func(a, b): return a.global_position.distance_to(door.center) < b.global_position.distance_to(door.center))
+		for i in alive.size():
+			alive[i].order_door("stack", door, queue, hold, i)
+	else:
+		var p = _performer(verb, door)
+		if p == null:
+			return
+		p.order_door(verb, door, queue, hold)
+	Fx.move_marker(_world, door.center, MARKER_COLOR)
+
+
+## Closest selected soldier whose class can do this door action.
+func _performer(verb: String, door):
+	var best = null
+	var best_d: float = INF
+	for u in selected:
+		if not u.can_do(verb):
+			continue
+		var d: float = u.global_position.distance_to(door.center)
+		if d < best_d:
+			best_d = d
+			best = u
+	return best
+
+
+func _do_unit(id: String) -> void:
+	var first = selected[0]
+	match id:
+		"stance":
+			var crouch: bool = not first.crouched
+			for u in selected:
+				u.set_stance(crouch)
+		"pace":
+			var run: bool = first.pace == Unit.Pace.WALK
+			for u in selected:
+				u.set_pace(Unit.Pace.RUN if run else Unit.Pace.WALK)
+		"fire":
+			var hold: bool = not first.hold_fire
+			for u in selected:
+				u.hold_fire = hold
+		"flashbang", "frag":
+			_pending_throw = id
+		"stop":
+			for u in selected:
+				u.stop()
+
+
+# ---------------------------------------------------------------- keys
 
 func _handle_key(key: InputEventKey) -> void:
 	if not key.pressed or key.echo:
@@ -167,19 +301,14 @@ func _handle_key(key: InputEventKey) -> void:
 	elif code == KEY_TAB:
 		_cycle_follow()
 	elif code == KEY_ESCAPE:
+		if _pending_throw != "":
+			_pending_throw = ""
+			return
 		_rig.release()
 		select_only(null)
-	elif code == KEY_V:
-		_toggle_pace()
-	elif code == KEY_H:
-		_toggle_hold_fire()
-	elif code == KEY_K:
-		_toggle_kick()
-	elif code == KEY_G:
-		_throw("flashbang")
-	elif code == KEY_T:
-		_throw("frag")
 
+
+# ---------------------------------------------------------------- helpers
 
 func _set_selection(units: Array) -> void:
 	for u in selected:
@@ -191,36 +320,8 @@ func _set_selection(units: Array) -> void:
 	selection_changed.emit()
 
 
-func _toggle_pace() -> void:
-	if selected.is_empty():
-		return
-	# If any selected unit walks, everyone runs; otherwise everyone walks.
-	var any_walk: bool = selected.any(func(u): return u.pace == Unit.Pace.WALK)
-	for u in selected:
-		u.set_pace(Unit.Pace.RUN if any_walk else Unit.Pace.WALK)
-
-
-func _toggle_hold_fire() -> void:
-	if selected.is_empty():
-		return
-	var any_free: bool = selected.any(func(u): return not u.hold_fire)
-	for u in selected:
-		u.hold_fire = any_free
-
-
-func _toggle_kick() -> void:
-	if selected.is_empty():
-		return
-	var any_quiet: bool = selected.any(func(u): return not u.kick_doors)
-	for u in selected:
-		u.kick_doors = any_quiet
-
-
-## The first selected soldier who can make the throw (has one, in range, clear line) throws.
-func _throw(kind: String) -> void:
-	var point: Variant = _ground_point(get_viewport().get_mouse_position())
-	if point == null or selected.is_empty():
-		return
+## The first selected soldier able to make the throw does it.
+func _throw(kind: String, point: Vector3) -> void:
 	for u in selected:
 		if u.throw_grenade(kind, point):
 			Fx.move_marker(_world, point, THROW_MARKER_COLOR)
@@ -242,7 +343,6 @@ func _issue_move(point: Vector3, queue: bool, face_yaw: float = NAN, hold: bool 
 	var map: RID = _world.get_world_3d().navigation_map
 	var n: int = selected.size()
 	var cols: int = ceili(sqrt(float(n)))
-	# Spread the group sideways relative to the facing (or the camera) so the line faces forward.
 	var basis_yaw: float = face_yaw if not is_nan(face_yaw) else _rig.rotation.y
 	for i in n:
 		var offset := Vector3(
@@ -252,12 +352,6 @@ func _issue_move(point: Vector3, queue: bool, face_yaw: float = NAN, hold: bool 
 		var dest: Vector3 = NavigationServer3D.map_get_closest_point(map, point + offset)
 		selected[i].order_move(dest, queue, face_yaw, hold)
 	Fx.move_marker(_world, point, MARKER_COLOR)
-
-
-func _issue_face(point: Vector3) -> void:
-	for u in selected:
-		u.order_face(point)
-	Fx.move_marker(_world, point, FACE_MARKER_COLOR)
 
 
 func _box_select(rect: Rect2, additive: bool) -> void:
@@ -288,6 +382,21 @@ func _pick_unit(screen_pos: Vector2):
 		if d < best_dist:
 			best_dist = d
 			best = u
+	return best
+
+
+func _pick_door(screen_pos: Vector2):
+	var cam: Camera3D = _rig.camera
+	var best = null
+	var best_dist: float = DOOR_PICK_RADIUS_PX
+	for d in Unit.door_nodes:
+		var p: Vector3 = d.center + Vector3(0.0, 1.0, 0.0)
+		if cam.is_position_behind(p):
+			continue
+		var dist: float = cam.unproject_position(p).distance_to(screen_pos)
+		if dist < best_dist:
+			best_dist = dist
+			best = d
 	return best
 
 

@@ -1,13 +1,13 @@
 extends Node3D
 ## A soldier on the tactical map (friendly or hostile).
 ##
-## Eyes & angles: sees inside its FOV cone (or peripheral range) with line of sight,
-## turns at a limited rate, fires only when the target is inside a narrow arc,
-## slices the pie at doorways while walking.
-## CQB bare bones: opens or kicks closed doors on its path, can wait for a go-code,
-## crouches behind low cover, gets stunned by flashbangs, throws grenades.
+## Control philosophy: ONLY seeing and shooting are automatic. A soldier spots hostiles
+## inside its vision cone (or peripheral range) with line of sight, turns onto them
+## and fires. Everything else (doors, breaching, grenades, stance, pace, facing)
+## happens only when ordered. A soldier whose path runs into a closed door stops.
+##
+## Classes (data/classes.json) set weapon, kit and which actions the soldier can do.
 ## Hit chance scales with how exposed the target is (head / chest / legs visible).
-## Stats come from data/unit_types.json, data/weapons.json, data/equipment.json.
 
 signal fired(from_pos: Vector3, to_pos: Vector3, hit: bool)
 signal died(unit: Node3D)
@@ -28,28 +28,26 @@ const LOS_MASK := 1
 const ARRIVE_DIST := 0.12
 const SCAN_INTERVAL := 0.15
 const HEARING_RANGE := 20.0
-const KICK_NOISE_RANGE := 15.0
 const WOUNDED_FRACTION := 0.4
 const PERSONAL_SPACE := 0.7
 const FIRE_ARC_DEG := 12.0
-const PIE_RANGE := 5.5
-const PIE_MIN_DIST := 0.9
 const RUN_TURN_FACTOR := 0.6
+const CROUCH_SPEED := 0.55
 const DOOR_REACH := 1.0
-const OPEN_TIME := 1.0
-const KICK_TIME := 0.35
-const COVER_REACH := 1.1
+const STACK_DIST := 0.95
+const STACK_SPACING := 0.8
+const THROW_IN_DIST := 2.5
 const CROUCH_SCALE := 0.65
 const FLAT_ARC := 0.3
 const LOB_ARC := 1.6
 
 ## Map info shared by all units (set by main).
-static var doors: Array[Vector3] = []      # doorway centers, for slicing the pie
-static var door_nodes: Array = []          # door.gd instances
-static var low_cover: Array[AABB] = []     # boxes you can crouch behind
+static var door_nodes: Array = []  # door.gd instances
 
 var callsign: String = "UNIT"
 var type_id: String = ""
+var class_id: String = ""
+var class_label: String = ""
 var team: int = Team.BLUE
 var max_hp: float = 100.0
 var hp: float = 100.0
@@ -62,11 +60,11 @@ var vision_range: float = 40.0
 var fov_deg: float = 100.0
 var peripheral_range: float = 4.0
 var team_color: Color = Color.WHITE
-var grenades: Dictionary = {}
+var items: Dictionary = {}          # flashbang / frag / breach_charge counts
+var actions: Array[String] = []     # what this soldier's class can do
 
 var pace: int = Pace.WALK
 var hold_fire: bool = false
-var kick_doors: bool = false
 var alerted: bool = false
 var crouched: bool = false
 var is_dead: bool = false
@@ -77,14 +75,15 @@ var target = null  # another unit (untyped: same script)
 
 var _path: PackedVector3Array = PackedVector3Array()
 var _path_index: int = 0
-var _leg: Dictionary = {}  # {"pos": Vector3, "face": float (NAN = none), "hold": bool}
+var _leg: Dictionary = {}  # {"pos", "face" (NAN = none), "hold": bool, "action": Dictionary}
 var _waypoints: Array[Dictionary] = []
 var _moving: bool = false
 var _holding: bool = false
+var _blocked_by = null      # closed door in the way
+var _action: Dictionary = {}  # current door / throw action
+var _action_timer: float = 0.0
 var _move_yaw: float = 0.0
 var _idle_yaw: float = 0.0
-var _door = null
-var _door_timer: float = 0.0
 
 var _scan_timer: float = 0.0
 var _reaction_timer: float = 0.0
@@ -97,24 +96,33 @@ var _ring: MeshInstance3D
 var _flash_tween: Tween
 
 
-func setup(p_callsign: String, p_type_id: String, p_team: int) -> void:
+func setup(p_callsign: String, p_type_id: String, p_team: int, p_class_id: String = "") -> void:
 	callsign = p_callsign
 	type_id = p_type_id
+	class_id = p_class_id
 	team = p_team
-	var t: Dictionary = GameData.unit_type(type_id)
-	max_hp = float(t.get("hp", 100))
+	var stats: Dictionary = GameData.unit_type(type_id).duplicate()
+	if class_id != "":
+		var c: Dictionary = GameData.class_def(class_id)
+		for k in c:
+			stats[k] = c[k]
+		class_label = str(c.get("name", class_id))
+	max_hp = float(stats.get("hp", 100))
 	hp = max_hp
-	weapon = GameData.weapon(str(t.get("weapon", "")))
-	walk_speed = float(t.get("walk_speed", 2.2))
-	run_speed = float(t.get("run_speed", 4.5))
-	turn_rate = deg_to_rad(float(t.get("turn_rate_deg", 360.0)))
-	reaction_time = float(t.get("reaction_time", 0.5))
-	vision_range = float(t.get("vision_range", 40.0))
-	fov_deg = float(t.get("fov_deg", 100.0))
-	peripheral_range = float(t.get("peripheral_range", 4.0))
-	team_color = GameData.color_from(t)
-	var g: Variant = t.get("grenades", {})
-	grenades = (g as Dictionary).duplicate() if typeof(g) == TYPE_DICTIONARY else {}
+	weapon = GameData.weapon(str(stats.get("weapon", "")))
+	walk_speed = float(stats.get("walk_speed", 2.2))
+	run_speed = float(stats.get("run_speed", 4.5))
+	turn_rate = deg_to_rad(float(stats.get("turn_rate_deg", 360.0)))
+	reaction_time = float(stats.get("reaction_time", 0.5))
+	vision_range = float(stats.get("vision_range", 40.0))
+	fov_deg = float(stats.get("fov_deg", 100.0))
+	peripheral_range = float(stats.get("peripheral_range", 4.0))
+	team_color = GameData.color_from(stats)
+	var it: Variant = stats.get("items", {})
+	items = (it as Dictionary).duplicate() if typeof(it) == TYPE_DICTIONARY else {}
+	actions.clear()
+	for a in stats.get("actions", []):
+		actions.append(str(a))
 
 
 func _ready() -> void:
@@ -126,21 +134,60 @@ func _ready() -> void:
 	_build_visuals()
 
 
+# ---------------------------------------------------------------- capabilities
+
+func can_do(verb: String) -> bool:
+	if is_dead:
+		return false
+	match verb:
+		"breach":
+			return actions.has("breach") and item_count("breach_charge") > 0
+		"open_flash":
+			return actions.has("open") and can_do("flashbang")
+		"kick_flash":
+			return actions.has("kick") and can_do("flashbang")
+		"flash_in", "flashbang":
+			return actions.has("flashbang") and item_count("flashbang") > 0
+		"frag_in", "frag":
+			return actions.has("frag") and item_count("frag") > 0
+	return actions.has(verb)
+
+
+func item_count(kind: String) -> int:
+	return int(items.get(kind, 0))
+
+
 # ---------------------------------------------------------------- orders
 
 ## Move to destination. face_yaw = where to look on arrival (NAN = keep travel direction).
-## hold = wait at the destination until go() (go-code).
+## hold = wait there until go() (go-code).
 func order_move(destination: Vector3, queue: bool, face_yaw: float = NAN, hold: bool = false) -> void:
-	if is_dead:
-		return
-	var leg: Dictionary = {"pos": destination, "face": face_yaw, "hold": hold}
-	if queue and (_moving or _holding or not _waypoints.is_empty()):
-		_waypoints.append(leg)
-		return
-	_waypoints.clear()
-	_holding = false
-	_door = null
-	_start_leg(leg)
+	_enqueue({"pos": destination, "face": face_yaw, "hold": hold, "action": {}}, queue)
+
+
+## Door orders: walk to this side of the door, then do the verb.
+## verb: open | kick | breach | flash_in | frag_in | stack.  index: place in a stack line.
+func order_door(verb: String, door, queue: bool, hold: bool, index: int = 0) -> void:
+	var from: Vector3 = _planned_end() if queue else global_position
+	var n: Vector3 = door.normal()
+	var map: RID = get_world_3d().navigation_map
+	# Stack on whichever side we can reach by the shorter walk (= the near side).
+	var side: float = 1.0
+	var best_len: float = INF
+	for s in [1.0, -1.0]:
+		var p: Vector3 = NavigationServer3D.map_get_closest_point(map, door.center + n * s * STACK_DIST)
+		var len: float = _path_length(NavigationServer3D.map_get_path(map, from, p, true))
+		if len < best_len:
+			best_len = len
+			side = s
+	var stack: Vector3 = door.center + n * side * (STACK_DIST + STACK_SPACING * float(index))
+	stack = NavigationServer3D.map_get_closest_point(map, stack)
+	stack.y = 0.0
+	var face: float = _yaw_toward(door.center - stack)
+	var action: Dictionary = {}
+	if verb != "stack":
+		action = {"verb": verb, "door": door, "side": side, "hold": hold, "phase": ""}
+	_enqueue({"pos": stack, "face": face, "hold": hold and verb == "stack", "action": action}, queue)
 
 
 ## Look toward a point. If moving, applies to the end of the planned route.
@@ -156,22 +203,40 @@ func order_face(point: Vector3) -> void:
 		_idle_yaw = _yaw_toward(point - global_position)
 
 
-## Go-code: units waiting at a hold point continue their route.
+## Go-code: waiting soldiers continue; armed breach charges detonate.
 func go() -> void:
 	if not _holding or is_dead:
 		return
 	_holding = false
-	if not _waypoints.is_empty():
-		_start_leg(_waypoints.pop_front())
+	if _action.get("phase", "") == "armed":
+		_action_timer = 0.25
+		return
+	_continue_route()
+
+
+func stop() -> void:
+	_waypoints.clear()
+	_moving = false
+	_holding = false
+	_action = {}
+	_leg = {}
+	_blocked_by = null
+	_idle_yaw = rotation.y
 
 
 func set_pace(p: int) -> void:
 	pace = p
 
 
-## Throw a grenade at a ground point. Returns false if out of grenades, range or line.
+func set_stance(crouch: bool) -> void:
+	crouched = crouch
+	if _visual != null and not is_dead:
+		_visual.scale.y = CROUCH_SCALE if crouched else 1.0
+
+
+## Throw a grenade at a ground point now. Returns false if not possible.
 func throw_grenade(kind: String, point: Vector3) -> bool:
-	if is_dead or stunned > 0.0 or int(grenades.get(kind, 0)) <= 0:
+	if is_dead or stunned > 0.0 or not can_do(kind):
 		return false
 	var data: Dictionary = GameData.equipment(kind)
 	var land: Vector3 = point + Vector3(0.0, 0.1, 0.0)
@@ -185,7 +250,7 @@ func throw_grenade(kind: String, point: Vector3) -> bool:
 		arc = FLAT_ARC
 	elif not (_clear_line(hand, apex) and _clear_line(apex, land + Vector3(0.0, 0.3, 0.0))):
 		return false
-	grenades[kind] = int(grenades[kind]) - 1
+	items[kind] = item_count(kind) - 1
 	if not _moving:
 		_idle_yaw = _yaw_toward(point - global_position)
 	var g := Grenade.new()
@@ -205,7 +270,7 @@ func chest_height() -> float:
 
 
 func is_moving() -> bool:
-	return _moving and not _holding
+	return _moving and not _holding and _blocked_by == null and _action.is_empty()
 
 
 func is_holding() -> bool:
@@ -226,12 +291,14 @@ func get_status_text() -> String:
 	var s: String = "HOLDING"
 	if stunned > 0.0:
 		s = "STUNNED"
-	elif _door != null:
-		s = "KICKING DOOR" if kick_doors else "OPENING DOOR"
+	elif not _action.is_empty():
+		s = _action_status()
 	elif target != null:
 		s = "ENGAGING"
 	elif _holding:
 		s = "WAITING FOR GO"
+	elif _blocked_by != null:
+		s = "BLOCKED BY DOOR"
 	elif _moving:
 		s = "MOVING"
 	var flags: Array[String] = [s]
@@ -239,13 +306,28 @@ func get_status_text() -> String:
 		flags.append("CROUCHED")
 	if pace == Pace.RUN:
 		flags.append("RUN")
-	if kick_doors:
-		flags.append("KICK")
 	if hold_fire:
 		flags.append("HOLD FIRE")
 	if is_wounded():
 		flags.append("WOUNDED")
 	return " · ".join(flags)
+
+
+func _action_status() -> String:
+	match str(_action.get("verb", "")):
+		"open", "open_flash":
+			return "OPENING DOOR"
+		"kick", "kick_flash":
+			return "KICKING DOOR"
+		"breach":
+			if _action.get("phase", "") == "armed":
+				return "CHARGE SET · WAITING FOR GO" if _holding else "CHARGE SET"
+			return "PLACING CHARGE"
+		"flash_in":
+			return "THROWING FLASHBANG"
+		"frag_in":
+			return "THROWING FRAG"
+	return "BUSY"
 
 
 ## Current position, remaining path, then queued waypoints (for the path overlay).
@@ -270,17 +352,24 @@ func get_planned_facings() -> Array:
 	return out
 
 
-## Positions where the route stops to wait for the go-code.
+## Positions where the route waits for the go-code.
 func get_planned_holds() -> Array[Vector3]:
 	var out: Array[Vector3] = []
 	if _holding:
 		out.append(global_position)
-	elif _moving and bool(_leg.get("hold", false)):
+	elif _moving and _leg_waits(_leg):
 		out.append(_leg["pos"])
 	for w in _waypoints:
-		if bool(w["hold"]):
+		if _leg_waits(w):
 			out.append(w["pos"])
 	return out
+
+
+func _leg_waits(leg: Dictionary) -> bool:
+	if bool(leg.get("hold", false)):
+		return true
+	var a: Variant = leg.get("action", {})
+	return typeof(a) == TYPE_DICTIONARY and bool((a as Dictionary).get("hold", false))
 
 
 func set_selected(value: bool) -> void:
@@ -366,11 +455,43 @@ func _physics_process(delta: float) -> void:
 	if stunned > 0.0:
 		stunned -= delta
 		return
-	_update_movement(delta)
+	if not _action.is_empty():
+		_update_action(delta)
+	else:
+		_update_movement(delta)
 	_separate_from_others()
-	_update_crouch()
 	_update_combat(delta)
 	_update_facing(delta)
+
+
+func _enqueue(leg: Dictionary, queue: bool) -> void:
+	if is_dead:
+		return
+	if queue and (_moving or _holding or not _action.is_empty() or not _waypoints.is_empty()):
+		_waypoints.append(leg)
+		return
+	_waypoints.clear()
+	_holding = false
+	_action = {}
+	_blocked_by = null
+	_start_leg(leg)
+
+
+static func _path_length(path: PackedVector3Array) -> float:
+	if path.is_empty():
+		return INF
+	var total: float = 0.0
+	for i in path.size() - 1:
+		total += path[i].distance_to(path[i + 1])
+	return total
+
+
+func _planned_end() -> Vector3:
+	if not _waypoints.is_empty():
+		return _waypoints[_waypoints.size() - 1]["pos"]
+	if _moving:
+		return _leg["pos"]
+	return global_position
 
 
 func _start_leg(leg: Dictionary) -> void:
@@ -385,29 +506,28 @@ func _start_leg(leg: Dictionary) -> void:
 
 func _arrive() -> void:
 	_moving = false
+	_blocked_by = null
 	var face: float = float(_leg.get("face", NAN))
 	_idle_yaw = rotation.y if is_nan(face) else face
-	var hold: bool = bool(_leg.get("hold", false))
+	var leg: Dictionary = _leg
 	_leg = {}
-	if hold:
+	var action: Dictionary = leg.get("action", {})
+	if not action.is_empty():
+		_begin_action(action)
+		return
+	if bool(leg.get("hold", false)):
 		_holding = true
 		return
+	_continue_route()
+
+
+func _continue_route() -> void:
 	if not _waypoints.is_empty():
 		_start_leg(_waypoints.pop_front())
 
 
 func _update_movement(delta: float) -> void:
 	if not _moving:
-		return
-	if _door != null:
-		_door_timer -= delta
-		if _door_timer <= 0.0:
-			if kick_doors:
-				_door.kick()
-				_alert_nearby(KICK_NOISE_RANGE)
-			else:
-				_door.open()
-			_door = null
 		return
 	if _path_index >= _path.size():
 		_arrive()
@@ -420,12 +540,13 @@ func _update_movement(delta: float) -> void:
 		_path_index += 1
 		return
 	var dir: Vector3 = to_point / dist
-	var blocking = _closed_door_ahead(dir)
-	if blocking != null:
-		_door = blocking
-		_door_timer = KICK_TIME if kick_doors else OPEN_TIME
-		return
+	_blocked_by = _closed_door_ahead(dir)
+	if _blocked_by != null:
+		_idle_yaw = _yaw_toward(_blocked_by.center - global_position)
+		return  # wait until someone opens it
 	var move_speed: float = run_speed if pace == Pace.RUN else walk_speed
+	if crouched:
+		move_speed *= CROUCH_SPEED
 	if is_wounded():
 		move_speed *= 0.6
 	var step: float = minf(move_speed * delta, dist)
@@ -436,9 +557,11 @@ func _update_movement(delta: float) -> void:
 
 
 func _closed_door_ahead(dir: Vector3):
+	var a: Variant = _leg.get("action", {})
+	var own_door = (a as Dictionary).get("door") if typeof(a) == TYPE_DICTIONARY else null
 	for d in door_nodes:
-		if d.is_open:
-			continue
+		if d.is_open or d == own_door:
+			continue  # never blocked by the door we were sent to work on
 		var to_door: Vector3 = d.center - global_position
 		to_door.y = 0.0
 		var dist: float = to_door.length()
@@ -447,61 +570,121 @@ func _closed_door_ahead(dir: Vector3):
 	return null
 
 
-func _update_crouch() -> void:
-	var want: bool = not _moving and _near_low_cover()
-	if want == crouched:
+# ---------------------------------------------------------------- door / throw actions
+
+func _begin_action(action: Dictionary) -> void:
+	_action = action
+	var verb: String = action["verb"]
+	match verb:
+		"open", "open_flash":
+			_action_timer = float(GameData.equipment("open_door").get("time", 1.0))
+		"kick", "kick_flash":
+			_action_timer = float(GameData.equipment("kick_door").get("time", 0.5))
+		"breach":
+			_action["phase"] = "place"
+			_action_timer = float(GameData.equipment("breach_charge").get("place_time", 2.0))
+		_:
+			_action_timer = 0.3
+
+
+func _update_action(delta: float) -> void:
+	var door = _action["door"]
+	var verb: String = _action["verb"]
+	if verb in ["open", "kick"] and door.is_open:
+		_finish_action()
 		return
-	crouched = want
-	_visual.scale.y = CROUCH_SCALE if crouched else 1.0
+	if verb in ["open_flash", "kick_flash"] and door.is_open:
+		_after_door_opened(true, 0.2)  # someone else opened it; just flash
+		return
+	if _holding:
+		return
+	_action_timer -= delta
+	if _action_timer > 0.0:
+		return
+	match verb:
+		"open", "open_flash":
+			door.open()
+			_after_door_opened(verb == "open_flash", 0.5)
+		"kick", "kick_flash":
+			var kick: Dictionary = GameData.equipment("kick_door")
+			_alert_nearby(float(kick.get("noise_range", 15.0)))
+			if randf() < float(kick.get("success_chance", 0.7)):
+				door.kick()
+				_after_door_opened(verb == "kick_flash", 0.2)
+			else:
+				_action_timer = float(kick.get("time", 0.5))  # try again
+		"breach":
+			if _action["phase"] == "place":
+				items["breach_charge"] = item_count("breach_charge") - 1
+				_action["phase"] = "armed"
+				_action_timer = float(GameData.equipment("breach_charge").get("detonate_delay", 0.6))
+				_holding = bool(_action.get("hold", false))
+			else:
+				_detonate_charge(door, float(_action["side"]))
+				_finish_action()
+		"flash_in", "frag_in":
+			var kind: String = "flashbang" if verb == "flash_in" else "frag"
+			var far: float = -float(_action["side"])
+			throw_grenade(kind, door.center + door.normal() * far * THROW_IN_DIST)
+			_finish_action()
+		_:
+			_finish_action()
 
 
-func _near_low_cover() -> bool:
-	for box in low_cover:
-		var grown: AABB = box.grow(COVER_REACH)
-		var probe := Vector3(global_position.x, box.position.y + box.size.y * 0.5, global_position.z)
-		if grown.has_point(probe):
-			return true
-	return false
+## After opening: either done, or chain into a flashbang through the doorway.
+func _after_door_opened(then_flash: bool, delay: float) -> void:
+	if then_flash and can_do("flashbang"):
+		_action["verb"] = "flash_in"
+		_action_timer = delay
+	else:
+		_finish_action()
 
+
+func _finish_action() -> void:
+	_action = {}
+	_continue_route()
+
+
+## Breach charge: door destroyed; people on the far side close to it are stunned / hurt.
+func _detonate_charge(door, side: float) -> void:
+	var data: Dictionary = GameData.equipment("breach_charge")
+	var n: Vector3 = door.normal()
+	var far: float = -side
+	var blast: Vector3 = door.center + n * far * 0.3 + Vector3(0.0, 1.0, 0.0)
+	door.blow()
+	var radius: float = float(data.get("radius", 4.5))
+	var dmg_radius: float = float(data.get("damage_radius", 2.0))
+	var noise: float = float(data.get("noise_range", 35.0))
+	for u in get_tree().get_nodes_in_group("units"):
+		if u.is_dead:
+			continue
+		var rel: Vector3 = u.global_position - door.center
+		var d: float = rel.length()
+		if d <= noise:
+			u.hear_noise(door.center)
+		if rel.dot(n) * far <= 0.0 or d > radius:
+			continue
+		if not _clear_line(blast, u.global_position + Vector3(0.0, u.chest_height(), 0.0)):
+			continue
+		u.stun(float(data.get("stun_seconds", 3.5)))
+		if d <= dmg_radius:
+			u.take_damage(float(data.get("damage", 60.0)) * (1.0 - d / dmg_radius) + 10.0, self)
+
+
+# ---------------------------------------------------------------- facing & combat
 
 func _update_facing(delta: float) -> void:
 	var desired: float = _idle_yaw
 	if target != null:
 		desired = _yaw_toward(target.global_position - global_position)
-	elif _door != null:
-		desired = _yaw_toward(_door.center - global_position)
-	elif _moving:
-		var pie: Variant = _pie_point()
-		desired = _move_yaw if pie == null else _yaw_toward((pie as Vector3) - global_position)
+	elif not _action.is_empty():
+		desired = _yaw_toward(_action["door"].center - global_position)
+	elif _moving and _blocked_by == null:
+		desired = _move_yaw
 	var rate: float = turn_rate
 	if _moving and pace == Pace.RUN:
 		rate *= RUN_TURN_FACTOR
 	rotation.y = rotate_toward(rotation.y, desired, rate * delta)
-
-
-## Slicing the pie: while walking, aim at the nearest doorway ahead that is in view.
-func _pie_point() -> Variant:
-	if pace == Pace.RUN:
-		return null
-	var forward := Vector3(-sin(_move_yaw), 0.0, -cos(_move_yaw))
-	var eye: Vector3 = global_position + Vector3(0.0, eye_height(), 0.0)
-	var best: Variant = null
-	var best_dist: float = PIE_RANGE
-	for d in doors:
-		var to_door: Vector3 = d - global_position
-		to_door.y = 0.0
-		var dist: float = to_door.length()
-		if dist < PIE_MIN_DIST or dist > best_dist:
-			continue
-		if forward.dot(to_door / dist) < 0.2:
-			continue
-		# Check a point just in front of the doorway (a closed door would block its center).
-		var probe: Vector3 = d - (to_door / dist) * 0.3 + Vector3(0.0, eye_height(), 0.0)
-		if not _clear_line(eye, probe):
-			continue
-		best = d
-		best_dist = dist
-	return best
 
 
 ## Keeps living units from standing inside each other, then snaps back onto the navmesh.
@@ -630,7 +813,8 @@ func _die() -> void:
 	stunned = 0.0
 	_moving = false
 	_holding = false
-	_door = null
+	_action = {}
+	_blocked_by = null
 	_waypoints.clear()
 	target = null
 	if _flash_tween != null:
@@ -670,22 +854,28 @@ func _build_visuals() -> void:
 	body.position.y = 0.9
 	_visual.add_child(body)
 
-	var visor_mat := StandardMaterial3D.new()
-	visor_mat.albedo_color = Color(0.08, 0.08, 0.1)
+	var dark := StandardMaterial3D.new()
+	dark.albedo_color = Color(0.08, 0.08, 0.1)
 	var visor := MeshInstance3D.new()
 	var visor_box := BoxMesh.new()
 	visor_box.size = Vector3(0.36, 0.12, 0.14)
 	visor.mesh = visor_box
-	visor.material_override = visor_mat
+	visor.material_override = dark
 	visor.position = Vector3(0.0, 1.55, -0.26)
 	_visual.add_child(visor)
 
+	# Weapon silhouette hints at the class: long rifle, stubby shotgun, standard rifle.
+	var gun_len: float = 0.7
+	if class_id == "marksman":
+		gun_len = 1.0
+	elif class_id == "breacher":
+		gun_len = 0.55
 	var gun := MeshInstance3D.new()
 	var gun_box := BoxMesh.new()
-	gun_box.size = Vector3(0.07, 0.09, 0.7)
+	gun_box.size = Vector3(0.07, 0.09, gun_len)
 	gun.mesh = gun_box
-	gun.material_override = visor_mat
-	gun.position = Vector3(0.18, 1.3, -0.45)
+	gun.material_override = dark
+	gun.position = Vector3(0.18, 1.3, -0.1 - gun_len * 0.5)
 	_visual.add_child(gun)
 
 	var ring_mat := StandardMaterial3D.new()

@@ -5,6 +5,7 @@ const MATERIALS_PATH := "res://data/materials.json"
 const WEAPONS_PATH := "res://data/weapons.json"
 const UNIT_TYPES_PATH := "res://data/unit_types.json"
 const EQUIPMENT_PATH := "res://data/equipment.json"
+const CLASSES_PATH := "res://data/classes.json"
 
 static var _cache: Dictionary = {}
 
@@ -36,6 +37,10 @@ static func unit_type(id: String) -> Dictionary:
 
 static func equipment(id: String) -> Dictionary:
 	return _entry(EQUIPMENT_PATH, id)
+
+
+static func class_def(id: String) -> Dictionary:
+	return _entry(CLASSES_PATH, id)
 
 
 static func _entry(path: String, id: String) -> Dictionary:

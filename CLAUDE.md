@@ -1,4 +1,4 @@
-﻿# Long Reach - notes for Claude
+# Long Reach - notes for Claude
 
 Covert counter-terror tactics + strategy game. **Read `docs/GAME_DESIGN.md` first**: it is the source of truth for what the game is, the design pillars, and the milestone roadmap. Update its Decisions Log when the user makes a design decision.
 
@@ -62,5 +62,7 @@ world/ people/        (later milestones)
 - M0 done (user playtested 2026-11-19, all working).
 - M1 done (user playtested 2026-11-19).
 - User wants realistic CQB mechanics fully right before anything else (see design doc M2-M3c).
-- M2 Eyes & angles (vision cones + fog, turn rate + firing arc, facing orders, pie corners, walk/run, hold fire) - built, battle-tested (careless single-file rush wins ~10/12 with casualties), awaiting user playtest.
-- Next: M3 Doors & breaching.
+- M2, M3 done. User: tactical only needs to be good enough; real interest is characters, research, campaign map.
+- CONTROL RULE: only seeing and shooting are automatic. Every other action is an explicit order (action wheel). Never add automatic door opening, crouching, pie-slicing etc.
+- M3.5 classes + action wheel - built and scenario-tested, awaiting user playtest. Next: M4 characters you care about.
+- Long silent runs (battle regressions, screenshots): tell the user first, or run in background.

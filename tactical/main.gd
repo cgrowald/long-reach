@@ -15,12 +15,14 @@ const Fx := preload("res://tactical/fx/fx.gd")
 const Door := preload("res://tactical/level/door.gd")
 const PixelFilter := preload("res://tactical/fx/pixel_filter.gd")
 const UnitLabels := preload("res://tactical/ui/unit_labels.gd")
+const RadialMenu := preload("res://tactical/ui/radial_menu.gd")
 
 const NAV_BOUNDS := AABB(Vector3(-35.0, -2.0, -35.0), Vector3(70.0, 6.0, 70.0))
 const TRACER_BLUE := Color(1.0, 0.92, 0.55)
 const TRACER_RED := Color(1.0, 0.45, 0.25)
 const FOG_INTERVAL := 3  # physics frames between fog-of-war updates
 const SPEEDS: Array[float] = [0.25, 0.5, 1.0, 2.0]
+const SQUAD_CLASSES: Array[String] = ["assaulter", "breacher", "assaulter", "marksman"]
 
 var friendlies: Array = []
 var hostiles: Array = []
@@ -45,7 +47,6 @@ func _ready() -> void:
 	Engine.time_scale = SPEEDS[_speed_idx]
 	NavBuilder.bake(_map, NAV_BOUNDS)  # before doors, so paths go through doorways
 	_spawn_doors()
-	Unit.low_cover = _map.low_cover
 	_spawn_units()
 
 	_rig = CameraRig.new()
@@ -65,7 +66,13 @@ func _ready() -> void:
 
 	_selection = SelectionController.new()
 	_selection.name = "Selection"
-	_selection.setup(_rig, friendlies, box, _map)
+	var hint := Label.new()
+	hint.position = Vector2(16.0, 210.0)
+	_style_label(hint, 18)
+	hint.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3))
+	hud.add_child(hint)
+	var wheel := RadialMenu.new()
+	_selection.setup(_rig, friendlies, box, _map, wheel, hint)
 	add_child(_selection)
 
 	var vision := VisionOverlay.new()
@@ -81,18 +88,16 @@ func _ready() -> void:
 	hud.add_child(panel)
 
 	_build_hud_text(hud)
+	hud.add_child(wheel)  # last, so it draws on top
 
 
 func _spawn_doors() -> void:
-	var centers: Array[Vector3] = []
 	var nodes: Array = []
 	for d in _map.doors:
 		var door: Node3D = Door.new()
 		door.setup(d["pos"], d["along_x"])
 		_map.add_child(door)
-		centers.append(d["pos"])
 		nodes.append(door)
-	Unit.doors = centers
 	Unit.door_nodes = nodes
 
 
@@ -102,7 +107,7 @@ func _spawn_units() -> void:
 	for i in ops.size():
 		var u: Node3D = Unit.new()
 		u.name = "Alpha%d" % (i + 1)
-		u.setup("ALPHA-%d" % (i + 1), "operator", Unit.Team.BLUE)
+		u.setup("ALPHA-%d" % (i + 1), "operator", Unit.Team.BLUE, SQUAD_CLASSES[i % SQUAD_CLASSES.size()])
 		u.position = ops[i]
 		map.add_child(u)
 		u.fired.connect(_on_unit_fired.bind(u))
@@ -158,10 +163,10 @@ func _set_speed(idx: int) -> void:
 func _build_hud_text(hud: CanvasLayer) -> void:
 	var help := Label.new()
 	help.text = "\n".join([
-		"Left click / drag  select (Shift adds)    Right click  move (Shift queues)    Right DRAG  move + face that way",
-		"Ctrl + right click  move and WAIT    Enter  GO (waiting units continue)    Alt + right click  look at point",
-		"G  flashbang at cursor    T  frag at cursor    K  kick doors on/off    V  walk / run    H  hold fire",
-		"Space  pause    - / =  game speed    P  pixel look on/off    R  restart    WASD Q/E wheel  camera    F / Tab  follow",
+		"Left click / drag  select    Right click ground  move (Shift queue, Ctrl wait for GO)    Right DRAG  move + face",
+		"Right click a DOOR  door actions    Right click a SOLDIER  soldier actions    Alt + right click  look at point",
+		"Enter  GO    Space  pause    - / =  game speed    P  pixel look    R  restart",
+		"WASD Q/E wheel middle-drag  camera    F / Tab / double-click  follow    1-4  select    Esc  cancel",
 	])
 	help.position = Vector2(16.0, 12.0)
 	_style_label(help, 15)
