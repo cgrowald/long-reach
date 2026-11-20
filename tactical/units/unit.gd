@@ -649,8 +649,11 @@ func _enqueue(leg: Dictionary, queue: bool) -> void:
 		_waypoints.append(leg)
 		return
 	if not queue:
-		_focus_marks.clear()
-		_focus = null
+		# New orders drop plain look points, but PIES ARE ANCHORED: never drop security
+		# you've set (an active pie stays on, placed pie points stay where they are).
+		_focus_marks.assign(_focus_marks.filter(func(m): return bool(m.get("pie", false))))
+		if not is_focus_pie():
+			_focus = null
 	_waypoints.clear()
 	_holding = false
 	_action = {}
@@ -695,7 +698,7 @@ func _arrive() -> void:
 	_blocked_by = null
 	var face: float = float(_leg.get("face", NAN))
 	_idle_yaw = rotation.y if is_nan(face) else face
-	if not is_nan(face):
+	if not is_nan(face) and not is_focus_pie():
 		_focus = null
 	if _pie_target != null:
 		_focus = _pie_target  # keep the weapon on the corner after the sweep
@@ -753,15 +756,19 @@ func _update_movement(delta: float) -> void:
 const FOCUS_TRIGGER_DIST := 0.6
 
 
+## Any look/pie point the soldier reaches takes over his eyes (pies kept from an older
+## route can sit anywhere along a new one, so every mark is checked, not just the next).
 func _check_focus_marks() -> void:
-	while not _focus_marks.is_empty():
-		var m: Dictionary = _focus_marks[0]
+	var i: int = 0
+	while i < _focus_marks.size():
+		var m: Dictionary = _focus_marks[i]
 		var p: Vector3 = m["pos"]
-		if Vector2(p.x - global_position.x, p.z - global_position.z).length() > FOCUS_TRIGGER_DIST:
-			return
-		_focus = m["focus"]
-		_focus_pie = bool(m.get("pie", false))
-		_focus_marks.pop_front()
+		if Vector2(p.x - global_position.x, p.z - global_position.z).length() <= FOCUS_TRIGGER_DIST:
+			_focus = m["focus"]
+			_focus_pie = bool(m.get("pie", false))
+			_focus_marks.remove_at(i)
+		else:
+			i += 1
 
 
 ## Distance along the planned route to the point on it closest to p.
