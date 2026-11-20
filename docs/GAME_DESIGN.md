@@ -419,6 +419,7 @@ The tactical layer only needs to be **good enough** (user feedback after M2: the
 
 | Date | Decision |
 |---|---|
+| 2026-11-20 | User direction after M7: it must be new every time (procedural, history-inspired events, not Plague Inc's repeating ones); missions are not the point, the point is freedom to attack the organization by any means ("not only Door Kickers"); add family as a side of the game; you lose if your home country is destroyed and your family has to flee. Claude researched comparable games and proposed `docs/VISION_V2.md`; the user adopted it: toolbox of attack approaches with auto-resolvable raids, the Director and operators have families, home country chosen at start, history-inspired event templates (no download). Build order A toolbox, B storyteller + events, C procedural enemy, D home front + family, E living world, F procedural missions |
 | 2026-11-20 | M7 enemy network built (user: "move to next phase, add more and more"; the game was not fun yet). Named people in a hierarchy (Emir, 4 lieutenants, cells), intel 0-100 per person (25 = suspected, 60 = located and targetable), KILL or CAPTURE raids with a named target in the mission, interrogation reveals contacts, lieutenants lead to the Emir |
 | 2026-11-20 | Campaign end (provisional, Claude's call, user may overrule): WIN by killing or capturing the Emir; LOSE when the threat stays at 90+ for 4 weeks (oversight shuts the program down). Enemy org named "the Sixth Hour" (placeholder) |
 | 2026-11-19 | Engine: Godot 4 + GDScript |
