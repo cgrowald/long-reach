@@ -1,0 +1,85 @@
+{
+	"contacts": {
+		"lantern": {"number": "0442 118 905", "name": "lantern", "style": "lowercase, no names", "opener": "lantern_open"},
+		"hana": {"number": "0619 330 274", "name": "Hana", "style": "lowercase, short"},
+		"viktor": {"number": "0655 210 883", "name": "Viktor", "name_known": true, "style": "emoji, friendly"},
+		"dee": {"number": "0731 559 016", "name": "D.", "dial_requires": "found_d_number", "opener": "dee_open"}
+	},
+	"special_numbers": {
+		"112": "CITIZEN EMERGENCY LINE: All operators are currently serving the Republic. Your call is important. Your number has been recorded.",
+		"1950": "OFFICE OF THE MARSHAL: Thank you for your interest in the Marshal. Your interest has been noted.",
+		"0000": "Nice try.",
+		"8008": "NUMBER NOT IN SERVICE. (It was never in service.)"
+	},
+	"nodes": {
+		"lantern_open": {"contact": "lantern", "replies": [
+			{"text": "Hello? Who is this?", "do": [{"set": {"lantern_contacted": true}}]},
+			{"text": "This number was in my brother's notebook.", "do": [{"set": {"lantern_contacted": true}}]},
+			{"text": "Lantern?", "do": [{"set": {"lantern_contacted": true}}]}
+		]},
+		"lantern_who": {"contact": "lantern", "msgs": ["who gave you this number"], "replies": [
+			{"text": "My brother. Pavel Halden. It was in his notebook.", "goto": "lantern_pavel"},
+			{"text": "A friend gave it to me.", "goto": "lantern_lie1"}
+		]},
+		"lantern_who2": {"contact": "lantern", "msgs": ["?", "who gave you this number"], "replies": [
+			{"text": "My brother. Pavel Halden. It was in his notebook.", "goto": "lantern_pavel"},
+			{"text": "A friend gave it to me.", "goto": "lantern_lie1"}
+		]},
+		"lantern_lie1": {"contact": "lantern", "msgs": ["friends don't have this number.", "last chance. who."], "replies": [
+			{"text": "Pavel Halden. My brother.", "goto": "lantern_pavel"},
+			{"text": "Nobody. Forget it.", "goto": "lantern_gone"}
+		]},
+		"lantern_gone": {"contact": "lantern", "msgs": ["goodbye."], "do": [{"set": {"lantern_lost": true}}]},
+		"lantern_pavel": {"contact": "lantern", "msgs": ["...", "pavel.", "don't search for him on that laptop. they read everything you type into netstate.", "sela's cafe. thursday afternoon. ask for the back pc."], "do": [{"set": {"lantern_trust": true}}, {"notebook": "Lantern: Sela's cafe, Thursday afternoon. The back PC."}], "replies": [
+			{"text": "Is he alive?", "goto": "lantern_alive"},
+			{"text": "Who are you?", "goto": "lantern_whoareyou"},
+			{"text": "Thursday.", "goto": "lantern_ok"}
+		]},
+		"lantern_alive": {"contact": "lantern", "msgs": ["i don't know.", "thursday."]},
+		"lantern_whoareyou": {"contact": "lantern", "msgs": ["someone who knew him.", "thursday."]},
+		"lantern_ok": {"contact": "lantern", "msgs": ["good."]},
+		"lantern_photos": {"contact": "lantern", "msgs": ["one more thing.", "photos talk.", "don't post anything until you know what yours say."], "do": [{"notebook": "Lantern: \"photos talk.\""}]},
+		"lantern_forum": {"contact": "lantern", "msgs": ["you're in.", "read the pinned thread before you post anything. i mean it."]},
+		"lantern_safetunnel": {"contact": "lantern", "msgs": ["the tunnel you installed. safetunnel.", "it's theirs. everything you did through it went straight to the ministry.", "uninstall it. then assume they saw tonight."], "do": [{"set": {"safetunnel_revealed": true}}], "replies": [
+			{"text": "How was I supposed to know?", "goto": "lantern_howknow"},
+			{"text": "Thank you.", "goto": "lantern_ok"}
+		]},
+		"lantern_howknow": {"contact": "lantern", "msgs": ["account two days old. four hundred upvotes overnight. \"military grade\".", "read who is talking, not what they say."]},
+
+		"hana_intro": {"contact": "hana", "msgs": ["it's hana. from the line.", "don't use my name on here.", "friday 8pm. my place. bring nothing. tell nobody."], "do": [{"set": {"named_hana": true}}], "replies": [
+			{"text": "I'll be there.", "goto": "hana_ok", "do": [{"set": {"hana_yes": true}}]},
+			{"text": "Why me?", "goto": "hana_why"}
+		]},
+		"hana_why": {"contact": "hana", "msgs": ["because pavel talked about you.", "said you were careful. be careful."], "replies": [
+			{"text": "I'll be there.", "goto": "hana_ok", "do": [{"set": {"hana_yes": true}}]}
+		]},
+		"hana_ok": {"contact": "hana", "msgs": ["good. now delete this chat."], "do": [{"notebook": "Hana: Friday 8pm, her place."}]},
+		"hana_forum": {"contact": "hana", "msgs": ["you didn't go to the cafe.", "lantern.vx", "the password is the river.", "you didn't get it from me."], "do": [{"notebook": "Forum: lantern.vx  -  password: the river"}]},
+
+		"viktor_beers": {"contact": "viktor", "msgs": ["Tomas!! Long time 😄", "Beers Saturday? Mira says you've been working late"], "replies": [
+			{"text": "Sure. Saturday.", "goto": "viktor_ok", "do": [{"set": {"viktor_saturday": true}}]},
+			{"text": "Busy this week, sorry.", "goto": "viktor_sad"}
+		]},
+		"viktor_ok": {"contact": "viktor", "msgs": ["👍 I'll bring the good stuff"]},
+		"viktor_sad": {"contact": "viktor", "msgs": ["Busy! Ha. Ok. Don't work too hard 👮"]},
+		"viktor_post": {"contact": "viktor", "msgs": ["Hey. You see that stuff going around online about the bridge?", "People are idiots. Someone's going to get hurt.", "Stay away from it ok? For Mira."], "replies": [
+			{"text": "Don't worry about me.", "goto": "viktor_ok2"},
+			{"text": "What stuff?", "goto": "viktor_what"}
+		]},
+		"viktor_ok2": {"contact": "viktor", "msgs": ["I always worry about you 😄 Saturday."]},
+		"viktor_what": {"contact": "viktor", "msgs": ["Never mind. Forget I said anything."], "do": [{"set": {"viktor_suspects": true}}]},
+
+		"dee_open": {"contact": "dee", "replies": [
+			{"text": "Hello. I found your number on Elena's laptop.", "goto": "dee_reply"},
+			{"text": "Who is this?", "goto": "dee_reply"}
+		]},
+		"dee_reply": {"contact": "dee", "msgs": ["...", "elena's laptop?", "where is she. she's been gone since march.", "who are you"], "do": [{"set": {"named_dee": true}}], "replies": [
+			{"text": "I bought it secondhand. I'm sorry.", "goto": "dee_sad"},
+			{"if": {"unlocked:/Documents/do_not_open": true}, "text": "I think they took her to Station 4.", "goto": "dee_station4"}
+		]},
+		"dee_sad": {"contact": "dee", "msgs": ["secondhand.", "they sold her things.", "if you ever find out where they took her. please."], "do": [{"secret": "dee", "secret_label": "Someone is still waiting for Elena"}, {"notebook": "D. (Elena's partner) wants to know where she is."}], "replies": [
+			{"if": {"unlocked:/Documents/do_not_open": true}, "text": "I think they took her to Station 4.", "goto": "dee_station4"}
+		]},
+		"dee_station4": {"contact": "dee", "msgs": ["...", "station 4.", "thank you.", "i won't forget this. whoever you are."], "do": [{"set": {"dee_ally": true}}, {"secret": "dee", "secret_label": "Someone is still waiting for Elena"}]}
+	}
+}

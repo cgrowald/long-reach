@@ -321,6 +321,7 @@ Each milestone ends playable.
 
 | Date | Decision |
 |---|---|
+| 2026-11-20 | T1 built (terminal on its own, days 1-4 of FIRST_WEEK.md). Cybersecurity is fully gamified (fun angles, not real procedures). Workflow: lean CLAUDE.md + a `godot-verify` project skill; Claude asks gap questions before each milestone. |
 | 2026-11-20 | Successor: late game, you can anoint a second in command who takes over if you die (the movement takes a hit). Ideology: chosen at the start, or when it unlocks. First gameplay to build = the terminal on its own, to make sure it's fun to use; it should have its own quirks and secrets. |
 | 2026-11-20 | Planning before building: the user wants the full picture before starting a milestone. |
 | 2026-11-20 | Core loop = one day: morning laptop (news, messages, daily new rule) → cover job → evening home/family → night in the room (laptop + workbench) → overnight map resolution. Juggling is the fun, but systems unlock gradually. |

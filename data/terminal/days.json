@@ -1,0 +1,104 @@
+{
+	"days": {
+		"1": {
+			"weekday": "Monday",
+			"news": [
+				"Marshal Darvan opens the new Unity Bridge in the capital: \"A nation that is connected is a nation that is safe.\"",
+				"Kessel: the checkpoint on the Oster River bridge will remain in place \"for the foreseeable future\", the Interior Ministry confirms.",
+				"Truck plant No. 2 exceeds its quarterly quota for the ninth time running.",
+				"Weather: rain over the eastern province all week."
+			],
+			"card": [
+				{"title": "KESSEL, REPUBLIC OF VALDENMARK", "text": "Monday night.\n\nThree months ago your brother Pavel drove onto the Oster bridge checkpoint and never came home. The police say there is no record of him.\n\nToday they gave his things back. A cardboard box: his jacket, his keys, a cracked phone, a notebook."},
+				{"text": "Most of the notebook is empty. On the last page, in Pavel's handwriting, a phone number and one word:\n\n          0442 118 905   lantern\n\nMira and Lena are asleep. You carry the box out to the garage, where the old laptop sits on the workbench. You bought it secondhand for Lena's homework.\n\nThe rain is loud on the tin roof.", "do": [{"notebook": "Find out what happened to Pavel."}, {"notebook": "Pavel's notebook: 0442 118 905 - lantern"}]}
+			],
+			"triggers": [
+				{"id": "d1_nudge", "at": "22:30", "if": {"!lantern_contacted": true}, "do": [{"toast": "Pavel's notebook lies open next to the laptop."}]}
+			]
+		},
+		"2": {
+			"weekday": "Tuesday",
+			"news": [
+				"NEW RULE: from today, internet cafes must record the ID of every customer. \"Honest citizens have nothing to fear.\"",
+				"Interior Ministry: 41 \"foreign-funded provocateurs\" detained in the western province.",
+				"Kessel truck plant receives a medal from the Ministry of Industry.",
+				"Weather: rain."
+			],
+			"card": [
+				{"title": "TUESDAY", "text": "Breakfast. The radio reads the new rules:\n\nNEW RULE: Internet cafes must record every customer's ID."},
+				{"text": "At the truck plant, three trucks are waiting. The last one is a police van with a bad fuel pump.\n\nKoval, your shift boss, isn't watching.", "choices": [
+					{"text": "Fix it properly.", "result": "It runs like new. Koval nods at you on his way out.", "do": [{"set": {"van_fixed": true}}]},
+					{"text": "Fix it so it dies in a week.", "result": "Nobody will know it was you. Probably.", "do": [{"set": {"van_sabotaged": true}}, {"exposure": 1, "why": "sabotaged a police van at work (Koval keeps the job sheets)"}]}
+				]},
+				{"text": "Dinner. Lena pushes peas around her plate.\n\n\"Is Uncle Pavel coming to my birthday on Sunday?\"", "choices": [
+					{"text": "\"No, sweetheart. We don't know where he is.\"", "result": "She stops eating. Mira looks at you across the table.", "do": [{"set": {"told_lena": true}}]},
+					{"text": "\"Maybe.\"", "result": "Lena smiles. Mira doesn't."},
+					{"text": "\"Eat your peas.\"", "result": "She eats her peas."}
+				]},
+				{"text": "After dinner Mira finds Pavel's notebook on the counter.\n\n\"Is that his? What are you doing with it?\"", "choices": [
+					{"text": "Tell her the truth.", "result": "She listens without a word. Then: \"Be careful. We have Lena.\"", "do": [{"set": {"mira_knows": true}}]},
+					{"text": "\"Nothing. I'm just keeping it.\"", "result": "She looks at you a moment too long.", "do": [{"set": {"mira_lied": true}}]}
+				]},
+				{"text": "Late, at the workbench, you swap the cracked screen on Pavel's phone for one from the plant's scrap bin.\n\nIt lights up. You copy everything on it to the laptop.", "do": [{"add_file": "pavel_photo"}, {"add_file": "pavel_plates"}]}
+			],
+			"triggers": [
+				{"id": "d2_who", "if": {"lantern_contacted": true}, "do": [{"msg": "lantern_who", "delay": 4}]},
+				{"id": "d2_viktor", "at": "22:40", "do": [{"msg": "viktor_beers"}]},
+				{"id": "d2_nudge", "at": "23:15", "if": {"!lantern_contacted": true}, "do": [{"toast": "The number from Pavel's notebook. You haven't tried it yet."}]}
+			]
+		},
+		"3": {
+			"weekday": "Wednesday",
+			"news": [
+				"NEW RULE: curfew in Kessel from 23:00 to 05:00 \"until calm returns\".",
+				"State Television: fake photos of the Oster bridge are being spread by enemies of the Republic. Report them on the Citizen Portal.",
+				"Marshal Darvan's birthday celebrations to last a full week this year.",
+				"Weather: rain, clearing on Sunday."
+			],
+			"card": [
+				{"title": "WEDNESDAY", "text": "NEW RULE: Curfew in Kessel from 23:00 to 05:00."},
+				{"text": "At the plant, Hana from the next line leans over during the break.\n\n\"You're Pavel Halden's brother. He used to come to our reading group.\"\n\nShe walks off before you can answer.", "do": [{"set": {"met_hana": true}}]},
+				{"text": "Old Bruno is at his gate when you get home.\n\n\"Your garage light was on at two in the morning. Working late, Tomas?\"", "choices": [
+					{"text": "Laugh it off.", "result": "He laughs too. His eyes don't.", "do": [{"set": {"bruno_wary": true}}]},
+					{"text": "Bring him a bottle of plum brandy.", "result": "\"Now THAT's a neighbor.\" Bruno likes you a little more.", "do": [{"set": {"bruno_friend": true}}]},
+					{"text": "\"Mind your own business, Bruno.\"", "result": "He goes inside. Later, his curtain twitches when your garage light comes on.", "do": [{"set": {"bruno_angry": true}}, {"exposure": 1, "why": "Bruno started keeping an eye on your garage"}]}
+				]}
+			],
+			"triggers": [
+				{"id": "d3_who2", "if": {"lantern_contacted": true, "!lantern_trust": true, "!lantern_lost": true}, "do": [{"msg": "lantern_who2", "delay": 3}]},
+				{"id": "d3_hana", "at": "22:15", "do": [{"msg": "hana_intro"}]},
+				{"id": "d3_photos", "at": "23:10", "if": {"lantern_trust": true}, "do": [{"msg": "lantern_photos"}]}
+			]
+		},
+		"4": {
+			"weekday": "Thursday",
+			"news": [
+				"NEW RULE: possessing unregistered encryption software is a criminal offense. Citizens have until Monday to uninstall it.",
+				"Interior Ministry: \"So-called 'VPNs' are tools of foreign intelligence.\"",
+				"Kessel: the Oster bridge checkpoint will now also check phones.",
+				"Weather: rain."
+			],
+			"card": [
+				{"title": "THURSDAY", "text": "NEW RULE: Possessing unregistered encryption software is now a criminal offense."},
+				{"if": {"lantern_trust": true}, "text": "Thursday afternoon. Sela's cafe, the lantern said.\n\nYour shift ends at six. The cafe's back PC is only free in the afternoon.", "choices": [
+					{"text": "Skip work and go to the cafe.", "do": [{"set": {"went_cafe": true, "skipped_work": true}}, {"exposure": 1, "why": "your ID was logged at Sela's cafe (Tuesday's new rule)"}, {"notebook": "Forum: lantern.vx  -  password: the river"}], "result": "Sela takes your ID and types it into a little grey box behind the counter. \"New rule,\" she says, not looking at you.\n\nThe back PC has a single note open on the screen:\n\n          lantern.vx\n          the password is the river.\n\nYou close it and leave. Nobody seems to notice."},
+					{"text": "Don't risk it. Go to work.", "result": "Nothing happens all day. That's the problem."}
+				]},
+				{"if": {"!lantern_trust": true}, "text": "Thursday. Work. Hana doesn't look at you once."},
+				{"if": {"skipped_work": true}, "text": "Mira is waiting in the kitchen.\n\n\"The plant called. They said you weren't there today.\"", "choices": [
+					{"text": "\"I felt sick. I went for a walk.\"", "result": "\"You felt sick.\" She doesn't believe you.", "do": [{"set": {"mira_lied": true}}]},
+					{"text": "Tell her about the cafe and the lantern.", "result": "She sits down slowly. \"Tomas. We have Lena.\"", "do": [{"set": {"mira_knows": true}}]}
+				]}
+			],
+			"triggers": [
+				{"id": "d4_hana_forum", "at": "22:00", "if": {"!went_cafe": true}, "do": [{"msg": "hana_forum"}]},
+				{"id": "d4_lantern_forum", "if": {"forum_in": true, "lantern_trust": true}, "do": [{"msg": "lantern_forum", "delay": 3}]},
+				{"id": "d4_viktor", "at": "23:30", "if": {"posted": true}, "do": [{"msg": "viktor_post"}]}
+			]
+		}
+	},
+	"global_triggers": [
+		{"id": "g_safetunnel", "day_min": 4, "at": "00:30", "if": {"installed_safetunnel": true, "lantern_trust": true}, "do": [{"msg": "lantern_safetunnel"}]},
+		{"id": "g_battery_low", "if": {"battery_low": true}, "do": [{"toast": "Battery low. The charger is on the desk."}]}
+	]
+}

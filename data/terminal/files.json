@@ -1,0 +1,39 @@
+{
+	"dirs": [
+		{"path": "/Documents"},
+		{"path": "/Documents/do_not_open", "password": "biscuit2019", "hint": "Password:", "on_unlock": [
+			{"set": {"station4_proof": true}},
+			{"secret": "do_not_open", "secret_label": "Elena's folder"},
+			{"notebook": "Elena's folder: Pavel listed at Station 4, Block C. This is proof."}
+		]},
+		{"path": "/Pictures"},
+		{"path": "/Pictures/pavel"},
+		{"path": "/Downloads"}
+	],
+	"start": [
+		{"path": "/Pictures/biscuit.png", "type": "image", "pic": "dog", "meta": {"Camera": "Lumo S4", "Taken": "2 May 2021, 09:14", "Comment": "Biscuit turns 5!!"}},
+		{"path": "/Pictures/lake_trip.png", "type": "image", "pic": "lake", "meta": {"Camera": "Lumo S4", "Taken": "14 August 2019, 18:40", "Place": "Lake Vel", "Comment": "first trip with D. <3"}},
+		{"path": "/Documents/letter_draft.txt", "type": "text", "meta": {"Author": "elena"}, "text": "D.,\n\nI keep starting this and deleting it. You always say I'm better at writing than talking, so here.\n\nWork has been strange. I copied something I shouldn't have. I put it where only I can open it. You laugh that I use Biscuit for every password - fine, laugh - but I added the year we met, so now it's safe. Safe from everyone except you.\n\nIf anything happens, you know what the password is. You were there.\n\nI'll finish this tomorrow.\n\nE."},
+		{"path": "/Documents/shopping.txt", "type": "text", "meta": {"Author": "elena"}, "text": "eggs\nrice\ndog food (the GOOD one, he won't eat the other)\nbatteries\nflowers for D.?"},
+		{"path": "/Documents/.contacts_backup.txt", "type": "text", "hidden": true, "meta": {"Author": "elena"}, "text": "contacts backup (old phone)\n\nmum - 0412 004 771 (disconnected)\nD. - 0731 559 016\nvet - 0418 220 900", "on_open": [{"set": {"found_d_number": true}}, {"notebook": "Elena's hidden contacts: D. - 0731 559 016"}]},
+		{"path": "/Documents/lena_homework.txt", "type": "text", "system": true, "meta": {"Author": "lena"}, "text": "MY HERO\nby Lena Halden, class 3B\n\nMy hero is my uncle Pavel because he can fix anything. He fixed my bike and the radio and grandma's glasses. He says broken things just need someone to not give up on them.\n\nHe is away right now but when he comes back he is going to teach me how to fix a car.\n\nTeacher's note: Good effort, Lena. Next time choose a hero from our national history. - Mrs. Duda"},
+		{"path": "/Documents/do_not_open/station4_intake.txt", "type": "text", "meta": {"Author": "E. Brandt", "Workstation": "MININT-KS-ARCH-02", "Source": "Interior Ministry archive, Kessel Annex"}, "text": "INTERIOR MINISTRY - KESSEL ANNEX\nFACILITY 4 (GRENZ ROAD) - INTAKE LEDGER - RESTRICTED\n\nNo.   NAME            FROM               BLOCK  STATUS\n0371  Sorin, M.       Oster checkpoint   B      released (signed)\n0388  Kolar, J.       Oster checkpoint   C      deceased\n0402  Halden, P.      Oster checkpoint   C      held - no visitors - no record\n0405  Mares, A.       Oster checkpoint   B      held\n0406  Mares, T.       Oster checkpoint   B      held\n0419  Varga, D.       Oster checkpoint   C      transferred (capital)\n\nAuthorized: Maj. R. Stanek\n\nNote: entries marked \"no record\" are not to be entered in the civil registry."},
+		{"path": "/Documents/do_not_open/to_whoever.txt", "type": "text", "meta": {"Author": "E. Brandt"}, "text": "If you are reading this, you bought my laptop, or they gave it to you.\n\nI was a records clerk. I copied the ledger because a woman came to the annex every week asking about her son and every week we told her there was no record. There was a record. I typed it.\n\nI think they know I copied it. If I'm gone, they know.\n\nIf you can, tell D. I'm sorry I never finished the letter.\n\n- Elena"}
+	],
+	"start_trash": [
+		{"path": "/Trash/application_ministry.txt", "type": "text", "meta": {"Author": "elena"}, "text": "APPLICATION - Records Clerk, Interior Ministry, Kessel Annex\n\nName: Elena Brandt\nExperience: 4 years, municipal library\nWhy do you want this position: To serve the Republic with accuracy and discretion."},
+		{"path": "/Trash/application_school.txt", "type": "text", "meta": {"Author": "elena"}, "text": "APPLICATION - Librarian, School No. 7\n\n(unfinished)"}
+	],
+	"library": {
+		"pavel_photo": {"path": "/Pictures/pavel/checkpoint_01.png", "type": "image", "pic": "checkpoint", "meta": {"Device": "Mobi X2 (owner: P. HALDEN)", "Serial": "PH-88213-K", "GPS": "51.204 N, 22.871 E (Oster bridge, Kessel)", "Taken": "14 June, 07:52"}},
+		"pavel_plates": {"path": "/Pictures/pavel/plates.txt", "type": "text", "meta": {"Device": "Mobi X2 (owner: P. HALDEN)"}, "text": "plates - grey vans at the bridge - early mornings\n\nKS 4471 M   (every tuesday)\nKS 0912 M\nKS 4471 M   again\nKS 3380 P   <- police?\nKS 0912 M   goes towards grenz road\n\nwhere do they take them"},
+		"scrub": {"path": "/Downloads/scrub.exe", "type": "exe", "installs": "scrub"},
+		"safetunnel": {"path": "/Downloads/safetunnel_setup.exe", "type": "exe", "installs": "safetunnel"},
+		"molenet": {"path": "/Downloads/molenet_setup.exe", "type": "exe", "installs": "molenet"}
+	},
+	"programs": {
+		"scrub": {"name": "Scrub", "installed_text": "Scrub installed. Open a file's Properties to strip its metadata.", "on_install": [{"set": {"scrub": true}}]},
+		"safetunnel": {"name": "SafeTunnel", "illegal": true, "installed_text": "SafeTunnel installed! You are now 100% ANONYMOUS. Click the shield in the tray to connect.", "on_install": [{"set": {"vpn_on": true}}, {"exposure": 3, "why": "installed SafeTunnel - a Ministry honeypot - and sent it your traffic"}]},
+		"molenet": {"name": "molenet", "illegal": true, "installed_text": "molenet: tunnel ready. Click the mole in the tray to connect. It will be slow.", "on_install": [{"set": {"vpn_on": true}}]}
+	}
+}

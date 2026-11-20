@@ -1,0 +1,24 @@
+{
+	"motd": "HEARTH OS 7.2 developer console\nThis console is for authorized factory technicians only.\nType 'help'.",
+	"help": "help        this list\nwhoami      who you are, according to the machine\nls [-a]     list files here (-a: hidden too)\nps          running processes\nkill NAME   stop a process\nscan        look for things that report on you\nfortune     wisdom\ndate        the date\nclear       clear the screen\nwipe        destroy everything you made\nexit        close the console",
+	"fortunes": [
+		"The Marshal sleeps three hours a night so that you may sleep eight. Nobody has asked what he does with the other five.",
+		"A connected citizen is a safe citizen. A disconnected citizen is a citizen.",
+		"Broken things just need someone to not give up on them.",
+		"Rain is free. So far.",
+		"The best place to hide a secret is in a file named 'shopping.txt'.",
+		"Every rule they add is a rule they're afraid of.",
+		"There is no record. There is always a record.",
+		"Keep the lantern lit, but keep it low."
+	],
+	"easter": {
+		"darvan": "Access denied. The Marshal is not a command.",
+		"marshal": "Access denied. The Marshal is not a command.",
+		"sudo": "There is no 'sudo' in the Republic. There is only 'please'.",
+		"please": "No.",
+		"hello": "hello, tomas.",
+		"lantern": "        )\n       (\n      .-'-.\n     |  *  |\n     |     |\n     '-----'\n   keep it lit.",
+		"nightjar": "...\n\nnightjar: you found me.\nnightjar: most people never think to ask the machine.\nnightjar: keep the lantern lit. we'll talk again.",
+		"rm -rf /": "Nice try. Use 'wipe'."
+	}
+}
