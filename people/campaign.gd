@@ -5,11 +5,13 @@ extends Node
 const Roster := preload("res://people/roster.gd")
 const GameData := preload("res://sim/game_data.gd")
 const Research := preload("res://people/research.gd")
+const WorldSim := preload("res://sim/world_sim.gd")
 
 const STARTING_OPERATORS := 10
 const SQUAD_SIZE := 4
 const DAYS_PER_MISSION := 7
 const HQ_SCENE := "res://hq/hq.tscn"
+const MAP_SCENE := "res://world/campaign_map.tscn"
 const AAR_SCENE := "res://hq/aar.tscn"
 const MISSION_SCENE := "res://tactical/main.tscn"
 
@@ -18,6 +20,8 @@ const OP_WORDS_B: Array[String] = ["Ledger", "Harbor", "Lantern", "Anvil", "Orch
 
 var save_path: String = "user://campaign.json"
 var roster = null
+var world = null                 # WorldSim: the campaign map
+var current_op: Dictionary = {}  # operation picked on the map, waiting for a squad
 var deployment: Array[int] = []
 var operation_name: String = ""
 var last_report: Dictionary = {}
@@ -37,6 +41,8 @@ func new_campaign() -> void:
 	for i in STARTING_OPERATORS:
 		roster.recruit(rng)
 	roster.add_event("The program is stood up with %d operators." % STARTING_OPERATORS)
+	world = WorldSim.create(rng)
+	current_op = {}
 	deployment.clear()
 	last_report = {}
 	save_game()
@@ -47,7 +53,10 @@ func save_game() -> void:
 	if f == null:
 		push_error("Campaign: cannot write %s" % save_path)
 		return
-	f.store_string(JSON.stringify(roster.to_dict(), "\t"))
+	var d: Dictionary = roster.to_dict()
+	d["world"] = world.to_dict()
+	d["current_op"] = current_op
+	f.store_string(JSON.stringify(d, "\t"))
 
 
 func load_game() -> bool:
@@ -57,6 +66,9 @@ func load_game() -> bool:
 	if typeof(parsed) != TYPE_DICTIONARY:
 		return false
 	roster = Roster.from_dict(parsed)
+	var wd: Variant = parsed.get("world", null)
+	world = WorldSim.from_dict(wd) if typeof(wd) == TYPE_DICTIONARY else WorldSim.create(rng)  # older saves: fresh map
+	current_op = (parsed.get("current_op", {}) as Dictionary).duplicate()
 	return true
 
 
@@ -83,11 +95,62 @@ func start_research(id: String) -> bool:
 	return ok
 
 
-## A quiet week at home: the wounded heal, money comes in, research moves on.
-func stand_down() -> Array[String]:
-	var finished: Array[String] = roster.advance_days(DAYS_PER_MISSION)
+## End the week without an operation: the enemy moves, the wounded heal, money comes in,
+## research moves on. Returns {"news", "funding_lost", "research_finished"}.
+func end_week() -> Dictionary:
+	current_op = {}
+	var out: Dictionary = _week_passes()
+	roster.add_event("Week ended without an operation.")
 	save_game()
+	return out
+
+
+func stand_down() -> Array[String]:
+	var finished: Array[String] = []
+	finished.assign(end_week()["research_finished"])
 	return finished
+
+
+## The enemy's turn plus a week on the calendar.
+func _week_passes() -> Dictionary:
+	var phase: Dictionary = world.enemy_phase(rng, has_global_intel())
+	var lost: int = int(phase["funding_lost"])
+	if lost > 0:
+		roster.funding = maxi(0, roster.funding - lost)
+		roster.add_event("Attack landed: budget cut by $%dk." % int(lost / 1000.0))
+	var finished: Array[String] = roster.advance_days(DAYS_PER_MISSION)
+	return {"news": phase["news"], "funding_lost": lost, "research_finished": finished}
+
+
+func has_global_intel() -> bool:
+	return float(tech_effects().get("global_intel", 0.0)) > 0.0
+
+
+func move_carrier(zone: String) -> bool:
+	var ok: bool = world.move_carrier(zone)
+	if ok:
+		if not current_op.is_empty() and not world.in_range(str(current_op["region"])):
+			current_op = {}
+		save_game()
+	return ok
+
+
+## Pick this week's operation on the map; the squad is chosen at HQ.
+func plan_operation(region_id: String) -> bool:
+	if not world.in_range(region_id):
+		return false
+	var op: Dictionary = world.operation_for(region_id)
+	if op.is_empty():
+		return false
+	op["name"] = "Operation %s %s" % [OP_WORDS_A[rng.randi() % OP_WORDS_A.size()], OP_WORDS_B[rng.randi() % OP_WORDS_B.size()]]
+	current_op = op
+	save_game()
+	return true
+
+
+func cancel_operation() -> void:
+	current_op = {}
+	save_game()
 
 
 func tech_effects() -> Dictionary:
@@ -109,7 +172,10 @@ func deployed_records() -> Array:
 
 func deploy(ids: Array) -> void:
 	deployment.assign(ids)
-	operation_name = "Operation %s %s" % [OP_WORDS_A[rng.randi() % OP_WORDS_A.size()], OP_WORDS_B[rng.randi() % OP_WORDS_B.size()]]
+	if current_op.has("name"):
+		operation_name = str(current_op["name"])
+	else:
+		operation_name = "Operation %s %s" % [OP_WORDS_A[rng.randi() % OP_WORDS_A.size()], OP_WORDS_B[rng.randi() % OP_WORDS_B.size()]]
 	get_tree().paused = false
 	get_tree().change_scene_to_file(MISSION_SCENE)
 
@@ -118,6 +184,7 @@ func deploy(ids: Array) -> void:
 func finish_mission(results: Array, success: bool) -> void:
 	last_report = apply_results(results, success)
 	deployment.clear()
+	current_op = {}
 	save_game()
 	get_tree().paused = false
 	get_tree().change_scene_to_file(AAR_SCENE)
@@ -128,11 +195,14 @@ func apply_results(results: Array, success: bool) -> Dictionary:
 	var inj: Dictionary = GameData.injuries()
 	var any_dead: bool = results.any(func(x): return not bool(x["alive"]))
 	var report: Dictionary = {"operation": operation_name, "date": date, "success": success, "entries": []}
+	if not current_op.is_empty():
+		report["where"] = "%s, %s  ·  %s" % [current_op.get("city", ""), WorldSim.region_name(str(current_op.get("region", ""))), current_op.get("title", "")]
 	roster.missions_run += 1
 	var tech: Dictionary = tech_effects()
 	var funding_before: int = roster.funding
 	if success:
-		roster.funding += Research.funding_rule("success_bonus")
+		var reward: float = float(WorldSim.theater_of(str(current_op.get("region", ""))).get("reward", 1.0)) if not current_op.is_empty() else 1.0
+		roster.funding += int(Research.funding_rule("success_bonus") * reward)
 	roster.add_event("%s: %s." % [operation_name, "objective complete" if success else "objective not completed"])
 
 	for res in results:
@@ -196,7 +266,11 @@ func apply_results(results: Array, success: bool) -> Dictionary:
 				r.add_log(date, "Steadied after a clean operation; no longer shaken.")
 		report["entries"].append({"id": r.id, "name": r.full_name(), "outcome": outcome, "kills": kills, "notes": notes})
 
-	report["research_finished"] = roster.advance_days(DAYS_PER_MISSION)
+	report["map_result"] = world.resolve_operation(current_op, success) if not current_op.is_empty() else []
+	var week: Dictionary = _week_passes()
+	report["research_finished"] = week["research_finished"]
+	report["news"] = week["news"]
+	report["funding_lost"] = week["funding_lost"]
 	report["funding_gained"] = roster.funding - funding_before
 	report["next_date"] = roster.date_string()
 	return report

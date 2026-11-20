@@ -32,6 +32,7 @@ var _research_tab: Button
 var _recruit_btn: Button
 var _focused_project: String = ""
 var _notice: String = ""
+var _op_label: Label
 
 
 func _ready() -> void:
@@ -100,6 +101,10 @@ func _build() -> void:
 	_detail.add_theme_constant_override("separation", 6)
 	right.add_child(_detail)
 
+	_op_label = _label("", 16, GOLD)
+	_op_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	root.add_child(_op_label)
+
 	var footer := HBoxContainer.new()
 	footer.add_theme_constant_override("separation", 10)
 	root.add_child(footer)
@@ -110,7 +115,7 @@ func _build() -> void:
 	footer.add_child(fs)
 	_recruit_btn = _button("Recruit", _on_recruit)
 	footer.add_child(_recruit_btn)
-	footer.add_child(_button("Stand down 1 week", _on_stand_down))
+	footer.add_child(_button("Back to map", _on_back_to_map))
 	_new_btn = _button("New campaign", _on_new_campaign)
 	footer.add_child(_new_btn)
 	_deploy_btn = _button("DEPLOY", _on_deploy)
@@ -150,7 +155,16 @@ func _update_squad_footer() -> void:
 	_squad = _squad.filter(func(id): return ro.get_by_id(id) != null and ro.get_by_id(id).is_available())
 	var names: Array = _squad.map(func(id): return ro.get_by_id(id).callsign)
 	_squad_label.text = "Squad (%d/%d):  %s" % [_squad.size(), _campaign.SQUAD_SIZE, ", ".join(names) if not names.is_empty() else "click an operator, then Add to squad"]
-	_deploy_btn.disabled = _squad.is_empty()
+	var op: Dictionary = _campaign.current_op
+	_deploy_btn.disabled = _squad.is_empty() or op.is_empty()
+	if op.is_empty():
+		_op_label.text = "No operation picked this week. Choose one on the map (Back to map), then come back to pick the squad."
+		_op_label.add_theme_color_override("font_color", DIM)
+	else:
+		var th: Dictionary = _campaign.WorldSim.theater_of(str(op["region"]))
+		_op_label.text = "THIS WEEK: %s  ·  %s in %s, %s  ·  %s theater  ·  about %d hostiles" % [
+			op.get("name", ""), op.get("title", ""), op.get("city", ""), _campaign.WorldSim.region_name(str(op["region"])), th.get("name", ""), int(op.get("tangos", 0))]
+		_op_label.add_theme_color_override("font_color", GOLD)
 	if _notice != "":
 		_squad_label.text = _notice + "     " + _squad_label.text
 
@@ -394,10 +408,8 @@ func _set_tab(t: String) -> void:
 	_refresh()
 
 
-func _on_stand_down() -> void:
-	var finished: Array[String] = _campaign.stand_down()
-	_notice = "A quiet week." if finished.is_empty() else "Research complete: %s!" % ", ".join(finished)
-	_refresh()
+func _on_back_to_map() -> void:
+	get_tree().change_scene_to_file(_campaign.MAP_SCENE)
 
 
 func _on_recruit() -> void:
@@ -421,7 +433,7 @@ func _on_new_campaign() -> void:
 
 
 func _on_deploy() -> void:
-	if not _squad.is_empty():
+	if not _squad.is_empty() and not _campaign.current_op.is_empty():
 		_campaign.deploy(_squad.duplicate())
 
 

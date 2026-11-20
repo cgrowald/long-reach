@@ -30,6 +30,8 @@ func _ready() -> void:
 	var success: bool = bool(rep.get("success", false))
 	col.add_child(_label("%s   ·   %s" % [rep.get("date", ""), "OBJECTIVE COMPLETE" if success else "OBJECTIVE NOT COMPLETED"], 18,
 		Color(0.45, 0.9, 0.5) if success else Color(0.9, 0.35, 0.3)))
+	if rep.has("where"):
+		col.add_child(_label(str(rep["where"]), 15, Color.WHITE))
 
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -42,14 +44,24 @@ func _ready() -> void:
 
 	col.add_child(_label("Time passes. The calendar moves to %s; the wounded keep healing." % rep.get("next_date", ""), 14, DIM))
 	var gained: int = int(rep.get("funding_gained", 0))
-	col.add_child(_label("Funding this week: +$%dk%s" % [int(round(gained / 1000.0)), "  (includes success bonus)" if success else ""], 14, DIM))
+	var lost: int = int(rep.get("funding_lost", 0))
+	col.add_child(_label("Funding this week: %s$%dk%s%s" % ["+" if gained >= 0 else "-", absi(int(round(gained / 1000.0))),
+		"  (includes success bonus)" if success else "", "  (attack penalty -$%dk)" % int(lost / 1000.0) if lost > 0 else ""], 14, DIM))
 	for name in rep.get("research_finished", []):
 		col.add_child(_label("RESEARCH COMPLETE: %s" % name, 16, GOLD))
+	for line in rep.get("map_result", []):
+		col.add_child(_label("ON THE MAP: %s" % line, 15, GOLD))
+	var news: Array = rep.get("news", [])
+	if not news.is_empty():
+		col.add_child(_label("MEANWHILE, THE NETWORK:", 14, DIM))
+		for line in news:
+			var attack: bool = str(line).begins_with("ATTACK")
+			col.add_child(_label("   " + str(line), 14, Color(0.95, 0.4, 0.35) if attack else Color.WHITE))
 	var back := Button.new()
-	back.text = "Return to HQ"
+	back.text = "Return to the map"
 	back.custom_minimum_size = Vector2(220, 44)
 	back.add_theme_font_size_override("font_size", 18)
-	back.pressed.connect(func(): get_tree().change_scene_to_file(campaign.HQ_SCENE))
+	back.pressed.connect(func(): get_tree().change_scene_to_file(campaign.MAP_SCENE))
 	col.add_child(back)
 
 

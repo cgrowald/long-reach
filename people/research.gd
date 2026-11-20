@@ -7,7 +7,7 @@ const GameData := preload("res://sim/game_data.gd")
 ## How each effect key combines across finished projects.
 const MULTIPLY: Array[String] = ["accuracy", "hp", "recovery", "permanent_injury", "breach_radius"]
 const ADD: Array[String] = ["breach_charges"]
-const MAX: Array[String] = ["heartbeat_range", "heartbeat_all"]
+const MAX: Array[String] = ["heartbeat_range", "heartbeat_all", "global_intel"]
 const MIN: Array[String] = ["shot_noise"]
 
 

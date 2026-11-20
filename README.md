@@ -10,13 +10,20 @@ See [docs/GAME_DESIGN.md](docs/GAME_DESIGN.md) for the full design.
 3. Press **F5** (or the ▶ button top-right) to run.
 
 ## Campaign
-The game starts at **HQ**: your roster of operators (each with a name, agency, stats, traits and a service record).
-Click an operator to read their file; **Add to squad** (or double-click) up to 4, then **DEPLOY**.
-In the mission, **END OPERATION** (top right) brings everyone home and writes the after-action report:
-deaths go on the memorial wall, wounds take weeks to heal and can leave permanent injuries, survivors grow and earn traits.
-Each operation moves the calendar a week. The campaign saves automatically.
+The game starts on the **campaign map**: the real world split into 24 regions, the enemy network's strength in each (red pips),
+known attack plots (red "!3w" badges = weeks until it happens) and your **carrier**, whose dotted lines show where you can strike.
+Each week:
+1. Optionally move the carrier: click a blue ring at sea next to it, **Move the carrier here** (one zone per week).
+2. Click a region in range (or one under **Operations in range**), **Plan this operation**.
+3. **HQ: pick squad**: click an operator to read their file; **Add to squad** (or double-click) up to 4, then **DEPLOY**.
+4. In the mission, **END OPERATION** (top right) brings everyone home and writes the after-action report:
+   deaths go on the memorial wall, wounds take weeks to heal and can leave permanent injuries, survivors grow and earn traits,
+   and the map shows what your operation did and what the network did meanwhile.
 
-**Research** (HQ tab): spend funding on one project at a time; it finishes after its days pass (operations or **Stand down 1 week**).
+**END WEEK** on the map skips the operation. Plots you don't stop become attacks: they cut your budget and raise the threat level.
+The campaign saves automatically.
+
+**Research** (HQ tab): spend funding on one project at a time; it finishes after its days pass (each week).
 Finished tech changes missions right away, e.g. the heartbeat sensor shows hidden enemies through walls as red HEARTBEAT blips,
 suppressors make gunfire heard at 9 m instead of 20 m, trauma kits shorten recovery. Funding: weekly budget plus a bonus per successful operation.
 

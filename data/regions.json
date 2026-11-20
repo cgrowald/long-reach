@@ -1,0 +1,76 @@
+{
+	"_note": "Campaign map regions. lonlat = marker position. neighbors = links the enemy spreads along (land, short sea, or a busy air route). start = enemy strength at campaign start (randomized a little).",
+	"regions": {
+		"us_east": { "name": "US East Coast", "group": "Americas", "theater": "domestic", "lonlat": [-76, 40], "cities": ["New York", "Washington", "Boston"], "neighbors": ["us_gulf", "us_west", "caribbean", "w_europe"], "start": 0 },
+		"us_gulf": { "name": "US Gulf Coast & Florida", "group": "Americas", "theater": "domestic", "lonlat": [-88, 30], "cities": ["Houston", "New Orleans", "Miami"], "neighbors": ["us_east", "us_west", "mexico", "caribbean"], "start": 0 },
+		"us_west": { "name": "US West Coast", "group": "Americas", "theater": "domestic", "lonlat": [-120, 38], "cities": ["Los Angeles", "San Francisco", "Seattle"], "neighbors": ["us_east", "us_gulf", "mexico"], "start": 0 },
+		"mexico": { "name": "Mexico & Central America", "group": "Americas", "theater": "contested", "lonlat": [-99, 20], "cities": ["Mexico City", "Tijuana", "Guatemala City"], "neighbors": ["us_gulf", "us_west", "caribbean", "andes"], "start": 1 },
+		"caribbean": { "name": "Caribbean", "group": "Americas", "theater": "contested", "lonlat": [-72, 20], "cities": ["Port-au-Prince", "Santo Domingo", "Kingston"], "neighbors": ["us_gulf", "us_east", "mexico", "andes"], "start": 0 },
+		"andes": { "name": "Andes & Colombia", "group": "Americas", "theater": "contested", "lonlat": [-75, 3], "cities": ["Bogotá", "Cali", "Lima"], "neighbors": ["mexico", "caribbean", "triborder"], "start": 1 },
+		"triborder": { "name": "Tri-Border Area", "group": "Americas", "theater": "ungoverned", "lonlat": [-55, -25], "cities": ["Ciudad del Este", "Foz do Iguaçu", "Puerto Iguazú"], "neighbors": ["andes", "w_africa"], "start": 2 },
+
+		"w_europe": { "name": "Western Europe", "group": "Europe & Africa", "theater": "allied", "lonlat": [3, 49], "cities": ["Paris", "Brussels", "London", "Berlin"], "neighbors": ["balkans", "e_europe", "maghreb", "us_east"], "start": 1 },
+		"balkans": { "name": "Balkans", "group": "Europe & Africa", "theater": "allied", "lonlat": [20, 43], "cities": ["Sarajevo", "Belgrade", "Tirana"], "neighbors": ["w_europe", "e_europe", "caucasus"], "start": 1 },
+		"e_europe": { "name": "Eastern Europe", "group": "Europe & Africa", "theater": "allied", "lonlat": [28, 51], "cities": ["Kyiv", "Warsaw", "Minsk"], "neighbors": ["w_europe", "balkans", "caucasus"], "start": 0 },
+		"maghreb": { "name": "Maghreb", "group": "Europe & Africa", "theater": "contested", "lonlat": [3, 33], "cities": ["Algiers", "Tunis", "Casablanca", "Tripoli"], "neighbors": ["w_europe", "sahel", "levant"], "start": 2 },
+		"sahel": { "name": "Sahel", "group": "Europe & Africa", "theater": "ungoverned", "lonlat": [0, 17], "cities": ["Bamako", "Niamey", "Ouagadougou"], "neighbors": ["maghreb", "w_africa", "horn"], "start": 3 },
+		"w_africa": { "name": "West Africa", "group": "Europe & Africa", "theater": "contested", "lonlat": [5, 8], "cities": ["Lagos", "Abuja", "Accra"], "neighbors": ["sahel", "triborder"], "start": 1 },
+		"horn": { "name": "Horn of Africa", "group": "Europe & Africa", "theater": "ungoverned", "lonlat": [45, 6], "cities": ["Mogadishu", "Djibouti", "Hargeisa"], "neighbors": ["sahel", "e_africa", "yemen"], "start": 3 },
+		"e_africa": { "name": "East Africa", "group": "Europe & Africa", "theater": "allied", "lonlat": [36, -3], "cities": ["Nairobi", "Mombasa", "Dar es Salaam"], "neighbors": ["horn"], "start": 1 },
+
+		"levant": { "name": "Levant", "group": "Middle East & Asia", "theater": "contested", "lonlat": [36, 33], "cities": ["Beirut", "Damascus", "Amman"], "neighbors": ["maghreb", "mesopotamia", "caucasus", "arab_gulf"], "start": 3 },
+		"mesopotamia": { "name": "Mesopotamia", "group": "Middle East & Asia", "theater": "contested", "lonlat": [44, 33], "cities": ["Baghdad", "Mosul", "Basra"], "neighbors": ["levant", "caucasus", "iran", "arab_gulf"], "start": 2 },
+		"arab_gulf": { "name": "Arabian Gulf", "group": "Middle East & Asia", "theater": "allied", "lonlat": [50, 24], "cities": ["Doha", "Dubai", "Manama", "Riyadh"], "neighbors": ["levant", "mesopotamia", "yemen", "iran"], "start": 1 },
+		"yemen": { "name": "Yemen & Red Sea", "group": "Middle East & Asia", "theater": "ungoverned", "lonlat": [46, 15], "cities": ["Aden", "Sana'a", "Hodeidah"], "neighbors": ["arab_gulf", "horn"], "start": 3 },
+		"caucasus": { "name": "Caucasus & Turkey", "group": "Middle East & Asia", "theater": "allied", "lonlat": [37, 40], "cities": ["Istanbul", "Ankara", "Tbilisi"], "neighbors": ["balkans", "e_europe", "levant", "mesopotamia", "iran"], "start": 1 },
+		"iran": { "name": "Iran Plateau", "group": "Middle East & Asia", "theater": "denied", "lonlat": [54, 33], "cities": ["Tehran", "Mashhad", "Isfahan"], "neighbors": ["mesopotamia", "arab_gulf", "caucasus", "central_asia", "south_asia"], "start": 2 },
+		"central_asia": { "name": "Central Asia & Afghanistan", "group": "Middle East & Asia", "theater": "ungoverned", "lonlat": [67, 37], "cities": ["Kabul", "Kandahar", "Dushanbe"], "neighbors": ["iran", "south_asia"], "start": 3 },
+		"south_asia": { "name": "South Asia", "group": "Middle East & Asia", "theater": "contested", "lonlat": [74, 26], "cities": ["Karachi", "Lahore", "Mumbai", "Dhaka"], "neighbors": ["iran", "central_asia", "se_asia"], "start": 2 },
+		"se_asia": { "name": "Southeast Asia", "group": "Middle East & Asia", "theater": "contested", "lonlat": [112, 5], "cities": ["Manila", "Jakarta", "Kuala Lumpur", "Marawi"], "neighbors": ["south_asia"], "start": 1 }
+	},
+	"sea_zones": {
+		"north_atlantic": { "name": "North Atlantic", "lonlat": [-40, 42], "neighbors": ["caribbean_sea", "gulf_of_mexico", "mediterranean", "gulf_of_guinea", "south_atlantic"], "covers": ["us_east", "w_europe", "maghreb"] },
+		"gulf_of_mexico": { "name": "Gulf of Mexico", "lonlat": [-90, 25], "neighbors": ["north_atlantic", "caribbean_sea"], "covers": ["us_gulf", "us_east", "mexico", "caribbean"] },
+		"caribbean_sea": { "name": "Caribbean Sea", "lonlat": [-75, 14], "neighbors": ["north_atlantic", "gulf_of_mexico", "eastern_pacific", "south_atlantic"], "covers": ["caribbean", "mexico", "andes", "us_gulf"] },
+		"eastern_pacific": { "name": "Eastern Pacific", "lonlat": [-115, 15], "neighbors": ["caribbean_sea"], "covers": ["us_west", "mexico", "andes"] },
+		"south_atlantic": { "name": "South Atlantic", "lonlat": [-30, -25], "neighbors": ["north_atlantic", "caribbean_sea", "gulf_of_guinea"], "covers": ["triborder", "andes"] },
+		"mediterranean": { "name": "Mediterranean", "lonlat": [18, 35], "neighbors": ["north_atlantic", "red_sea"], "covers": ["w_europe", "balkans", "e_europe", "maghreb", "levant", "caucasus"] },
+		"gulf_of_guinea": { "name": "Gulf of Guinea", "lonlat": [0, 0], "neighbors": ["north_atlantic", "south_atlantic", "indian_ocean"], "covers": ["w_africa", "sahel"] },
+		"red_sea": { "name": "Red Sea", "lonlat": [38, 21], "neighbors": ["mediterranean", "arabian_sea", "indian_ocean"], "covers": ["levant", "yemen", "horn", "arab_gulf"] },
+		"arabian_sea": { "name": "Arabian Sea", "lonlat": [63, 16], "neighbors": ["red_sea", "indian_ocean"], "covers": ["arab_gulf", "iran", "mesopotamia", "yemen", "south_asia", "central_asia"] },
+		"indian_ocean": { "name": "Indian Ocean", "lonlat": [65, -10], "neighbors": ["red_sea", "arabian_sea", "gulf_of_guinea", "south_china_sea"], "covers": ["e_africa", "horn", "south_asia"] },
+		"south_china_sea": { "name": "South China Sea", "lonlat": [113, 14], "neighbors": ["indian_ocean"], "covers": ["se_asia", "south_asia"] }
+	},
+	"theaters": {
+		"domestic": { "name": "Domestic", "roe": "Strictest rules. Federal warrants, police liaison, zero collateral tolerance.", "reward": 1.5, "attack_cost": 2.0, "tango": { "accuracy": 0.9, "reaction": 1.15 } },
+		"allied": { "name": "Allied", "roe": "Joint operation with the host nation. Low collateral tolerance.", "reward": 1.2, "attack_cost": 1.4, "tango": { "accuracy": 0.95, "reaction": 1.05 } },
+		"contested": { "name": "Contested", "roe": "Host government is weak or unreliable. Moderate collateral tolerance.", "reward": 1.0, "attack_cost": 1.0, "tango": { "accuracy": 1.0, "reaction": 1.0 } },
+		"ungoverned": { "name": "Ungoverned", "roe": "No functioning government. Loosest rules; the enemy is well armed and alert.", "reward": 0.9, "attack_cost": 0.7, "tango": { "accuracy": 1.1, "reaction": 0.9 } },
+		"denied": { "name": "Denied", "roe": "Hostile state. Deniable operation: no support, no acknowledgement if it goes wrong.", "reward": 1.3, "attack_cost": 0.8, "tango": { "accuracy": 1.05, "reaction": 0.9 } }
+	},
+	"cell_types": {
+		"leadership": { "name": "Leadership", "op": "Capture or kill a cell commander", "growth": 0.02 },
+		"finance": { "name": "Finance", "op": "Raid a financier's office", "growth": 0.03 },
+		"logistics": { "name": "Logistics", "op": "Hit a smuggling depot", "spread": 0.08 },
+		"bomb_making": { "name": "Bomb-making", "op": "Raid a bomb workshop", "plot": 0.06 },
+		"recruitment": { "name": "Recruitment", "op": "Raid a recruitment safehouse", "growth": 0.05 }
+	},
+	"rules": {
+		"starting_zone": "mediterranean",
+		"growth_chance": 0.035,
+		"spread_chance": 0.06,
+		"spread_min_strength": 3,
+		"plot_chance_per_strength": 0.018,
+		"plot_min_strength": 3,
+		"plot_weeks_min": 3,
+		"plot_weeks_max": 5,
+		"lie_low_chance": 0.6,
+		"success_strength_drop": 2,
+		"failure_strength_gain": 1,
+		"attack_funding_cost": 120000,
+		"attack_threat": 10,
+		"threat_per_strength": 1.0,
+		"threat_decay": 2,
+		"tangos_by_strength": [3, 3, 3, 4, 5, 5]
+	}
+}

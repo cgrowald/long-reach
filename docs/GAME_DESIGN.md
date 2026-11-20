@@ -126,6 +126,16 @@ See section 6.
 
 **Screens:** the map becomes the main screen; HQ (roster, research, memorial) is a panel or tab from it.
 
+**M6 first slice as built (2026-11-19):**
+- Map screen is the start scene (`world/campaign_map`): pixel-art world (1 px = 1 degree, scaled 5x), regions tinted by enemy strength, strength pips, plot countdown badges, sea zones, the carrier and dotted lines to every region in its reach.
+- Data in `data/regions.json` (regions, 11 sea zones, theaters, cell types, tuning rules) and `data/world_land.json` (coastlines). Rules in `sim/world_sim.gd`.
+- An eleventh sea zone, **South Atlantic**, was added so the Tri-Border Area is reachable.
+- Week flow: optionally move the carrier one zone, pick one operation in range ("Plan this operation"), pick the squad at HQ, DEPLOY. Finishing the mission ends the week. **END WEEK** on the map skips the operation (HQ's old "Stand down" button is gone).
+- Operation: enemy count from region strength (3–5), enemy skill from the theater, success pays the bonus × theater reward, knocks strength down by 2 and stops a plot there. Failure raises strength by 1.
+- Intel: you see plots and cell types only in carrier range, for 4 weeks after an operation in a region, or everywhere once **Long-Range Heartbeat Tracking** is researched (it is now researchable).
+- Attacks that land cut the budget (scaled by theater; domestic hurts most) and raise threat. Threat = total enemy strength + recent attacks, 0–100. It does not end the campaign yet (still open).
+- Balance target (simulated over a year): an idle player loses badly (~50 attacks); a player who runs and mostly wins an operation every week slowly pushes the network back (~5–13 attacks a year still get through).
+
 
 - Built as a **graph of nodes** spread across regions. Node types:
   - Leadership, Financing, Logistics/Smuggling, Recruitment, Bomb-making, Training camp, Sleeper cell, Propaganda
@@ -369,7 +379,7 @@ Each milestone ends with something **playable**. Don't move on until it's fun.
 | M3.5 | **Classes & action wheel** | Only seeing/shooting automatic; doors block until ordered; right-click radial action wheel on doors and soldiers; Assaulter / Breacher / Marksman with different weapons, kit and options; breach charges |
 | M4 | **Characters you care about** ✅ (first slice) | Persistent roster with names, bios, portraits, stats, traits, service records, lasting injuries, permadeath + memorial wall; pick your squad before a mission; after-action report; save/load |
 | M5 | **Research & equipment** ✅ (first slice) | Tech tree over in-game years; projects take time, money and specialists; loadouts; first techs: heartbeat sensor, grappling hook, night vision, suppressors, scout drone |
-| M6 | **Campaign map** | Sector-based dynamic campaign (Gates of Hell conquest feel): move teams between sectors, choose battles, persistent forces, resources for reinforcements, enemy moves too; carrier as mobile HQ; in-game calendar |
+| M6 | **Campaign map** ✅ (first slice) | Sector-based dynamic campaign (Gates of Hell conquest feel): move teams between sectors, choose battles, persistent forces, resources for reinforcements, enemy moves too; carrier as mobile HQ; in-game calendar |
 | M7 | **Enemy network** | Node graph, intel leads, growth, adaptation, retaliation |
 | M8 | **Operations** | Multi-step operation templates (supply-chain op, HVT capture, etc.) |
 | M9 | **Training & aging** | Recruitment by agency, facilities, courses, aging, instructors |
@@ -409,6 +419,7 @@ The tactical layer only needs to be **good enough** (user feedback after M2: the
 | 2026-11-19 | "Open world" = go anywhere in the world, but a place becomes a playable 3D map only when you send a team there |
 | 2026-11-19 | M0 playtested and approved; M1 built |
 | 2026-11-19 | M1 playtested and approved. Personal project, not for release |
+| 2026-11-19 | M6 first slice built (user said "build M6"): map is the main screen, finishing an operation or END WEEK advances a week, long-range heartbeat gives worldwide intel, South Atlantic zone added for the Tri-Border Area |
 | 2026-11-19 | M6 campaign map: real world, weekly turns, 24 regions, carrier range (sea zones) decides where you can strike; one operation per week; enemy strength per region spreads along region links (see 4.4) |
 | 2026-11-19 | M4 + M5 first slices built while the user was away: persistent roster/HQ/memorial/AAR, and funding + research (heartbeat sensor, suppressors, optics, plates, frame charges, trauma kits; grappling hook and long-range heartbeat tracking wait for later milestones) |
 | 2026-11-19 | Pies are anchored: new move orders never drop an active or placed pie |

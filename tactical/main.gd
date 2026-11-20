@@ -152,11 +152,20 @@ func _spawn_units() -> void:
 		u.fired.connect(_on_unit_fired.bind(u))
 		friendlies.append(u)
 
-	var tangos: Array[Dictionary] = _map.tango_spawns
+	# Campaign operation: enemy count from the region's strength, skill from the theater.
+	var tangos: Array[Dictionary] = _map.tango_spawns.duplicate()
+	var tango_mods: Dictionary = {}
+	if _in_campaign() and not _campaign.current_op.is_empty():
+		var op: Dictionary = _campaign.current_op
+		tangos.shuffle()
+		tangos.resize(clampi(int(op.get("tangos", tangos.size())), 1, tangos.size()))
+		tango_mods = _campaign.WorldSim.theater_of(str(op.get("region", ""))).get("tango", {})
 	for i in tangos.size():
 		var t: Node3D = Unit.new()
 		t.name = "Tango%d" % (i + 1)
 		t.setup("TANGO-%d" % (i + 1), "tango", Unit.Team.RED)
+		if not tango_mods.is_empty():
+			t.apply_modifiers(tango_mods)
 		t.position = tangos[i]["pos"]
 		t.rotation.y = tangos[i]["yaw"]
 		map.add_child(t)

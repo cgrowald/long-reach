@@ -9,7 +9,7 @@ Covert counter-terror tactics + strategy game. **Read `docs/GAME_DESIGN.md` firs
 
 ## Tech
 - Godot 4.7, GDScript, Forward+ renderer. Project root = repo root.
-- Start scene: `res://hq/hq.tscn` (HQ). Mission scene: `res://tactical/main.tscn` (runs standalone with a test squad when nothing is deployed).
+- Start scene: `res://world/campaign_map.tscn` (campaign map; HQ `res://hq/hq.tscn` is reached from it). Mission scene: `res://tactical/main.tscn` (runs standalone with a test squad when nothing is deployed).
 - Autoload `Campaign` (people/campaign.gd) owns the roster + save (`user://campaign.json`). TESTS MUST set `Campaign.save_path` to a test file before writing, never touch the user's save.
 - Godot exe (use the `_console` one for headless runs):
   `C:\Users\Chandler\Tools\Godot\Godot_v4.7.2-stable_win64_console.exe`
@@ -40,7 +40,7 @@ Covert counter-terror tactics + strategy game. **Read `docs/GAME_DESIGN.md` firs
 ```
 data/                 game data: materials, weapons, unit_types (JSON)
 docs/                 design doc
-sim/                  pure rules: game_data.gd (JSON loader), combat_rules.gd
+sim/                  pure rules: game_data.gd (JSON loader), combat_rules.gd, world_sim.gd (campaign map state + weekly enemy phase)
 tactical/main.gd      mission orchestration, HUD, win/lose
 tactical/level/       test_map.gd (gray-box map + spawns), nav_builder.gd (runtime navmesh bake)
 tactical/units/       unit.gd (both teams: pathing, spotting, shooting, damage)
@@ -50,7 +50,7 @@ tactical/ui/          squad_panel, path_overlay, selection_box
 tactical/fx/          tracers, move markers
 people/               research (projects, status, effects), operator_record, recruiter, roster (calendar + save), portrait (procedural pixel faces), campaign (autoload: deploy, results, AAR data)
 hq/                   hq.gd (roster, detail, memorial, recruit, squad + deploy), aar.gd (after-action report)
-world/                (later milestones)
+world/                campaign_map.gd (main screen: header, briefing, region panel, ops), map_view.gd (pixel-art world render + markers + clicks)
 ```
 
 ## Testing
@@ -73,5 +73,6 @@ world/                (later milestones)
 - Simulated mouse input (root.push_input) only maps correctly in a windowed run, not --headless.
 - In test scripts count time with _physics_process (60/s game time); _process frame counts depend on FPS.
 - M4 characters (first slice) built and tested: persistent roster, HQ, memorial, deploy, stats affect missions, AAR with wounds/permanent injuries/growth/traits/service record. Awaiting user playtest.
-- M5 research (first slice) built and tested: funding (weekly budget, success bonus, recruit cost), research tab, one lab project at a time, Stand down 1 week, tech effects in missions (optics, plates, suppressors = shot noise, frame charges, trauma kits, heartbeat sensor with through-wall blips + HEARTBEAT tags). Data: data/research.json. Logic: people/research.gd. Next: M6 campaign map (ask the user about the sector map design first).
+- M5 research (first slice) built and tested: funding (weekly budget, success bonus, recruit cost), research tab, one lab project at a time, Stand down 1 week, tech effects in missions (optics, plates, suppressors = shot noise, frame charges, trauma kits, heartbeat sensor with through-wall blips + HEARTBEAT tags). Data: data/research.json. Logic: people/research.gd.
+- M6 campaign map (first slice) built and tested, awaiting user playtest: see design doc 4.4 "as built". Data: data/regions.json (regions, sea zones, theaters, cell types, tuning rules), data/world_land.json (coastline polygons). Campaign autoload holds `world` + `current_op` (saved in the same JSON; old saves get a fresh map). Balance was tuned with a headless 52-week simulation (idle vs. active player); rerun something similar after changing the rules. Next: M7 enemy network (ask the user first).
 - Long silent runs (battle regressions, screenshots): tell the user first, or run in background.

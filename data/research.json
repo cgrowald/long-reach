@@ -54,12 +54,11 @@
 		"long_range_heartbeat": {
 			"name": "Long-Range Heartbeat Tracking",
 			"branch": "Sensing",
-			"desc": "Picks out a single heartbeat signature from far away; inspired by recent reporting about how a person was found in Iran. Finds high-value targets from the campaign map.",
+			"desc": "Picks out a single heartbeat signature from far away; inspired by recent reporting about how a person was found in Iran. On the campaign map you get intel everywhere, not just where the carrier is: every attack plot and its countdown shows up worldwide.",
 			"cost": 900000,
 			"days": 120,
 			"requires": ["heartbeat_sensor_2"],
-			"needs_milestone": "Campaign map (M6)",
-			"effects": {}
+			"effects": { "global_intel": 1.0 }
 		},
 		"breaching_kit": {
 			"name": "Frame Charges",
