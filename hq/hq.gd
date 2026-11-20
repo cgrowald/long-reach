@@ -5,6 +5,7 @@ extends Control
 const Portrait := preload("res://people/portrait.gd")
 const GameData := preload("res://sim/game_data.gd")
 const Research := preload("res://people/research.gd")
+const UiTheme := preload("res://world/ui_theme.gd")
 const BRANCH_ORDER: Array[String] = ["Sensing", "Weapons & protection", "Entry & mobility", "Medical"]
 
 const GOLD := Color(1.0, 0.82, 0.3)
@@ -37,6 +38,7 @@ var _op_label: Label
 
 func _ready() -> void:
 	_campaign = get_node("/root/Campaign")
+	theme = UiTheme.make()
 	_build()
 	_refresh()
 
@@ -156,7 +158,9 @@ func _update_squad_footer() -> void:
 	var names: Array = _squad.map(func(id): return ro.get_by_id(id).callsign)
 	_squad_label.text = "Squad (%d/%d):  %s" % [_squad.size(), _campaign.SQUAD_SIZE, ", ".join(names) if not names.is_empty() else "click an operator, then Add to squad"]
 	var op: Dictionary = _campaign.current_op
-	_deploy_btn.disabled = _squad.is_empty() or op.is_empty()
+	# With an operation planned DEPLOY always works: an empty squad gets auto-picked.
+	_deploy_btn.disabled = op.is_empty()
+	_deploy_btn.text = "DEPLOY" if not _squad.is_empty() else "AUTO-PICK + DEPLOY"
 	if op.is_empty():
 		_op_label.text = "No operation picked this week. Choose one on the map (Back to map), then come back to pick the squad."
 		_op_label.add_theme_color_override("font_color", DIM)
@@ -191,6 +195,16 @@ func _card(r) -> Control:
 	col.add_child(_label("%s  ·  age %d" % [r.agency_name(), r.age(_campaign.roster.year())], 12, DIM))
 	col.add_child(_status_label(r))
 	col.add_child(_label("Operations %d  ·  Kills %d" % [r.missions, r.kills], 12, DIM))
+	if _tab == "roster":
+		var fill := Control.new()
+		fill.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		row.add_child(fill)
+		var sq := _button("- SQUAD" if in_squad else "+ SQUAD", func(): _toggle_squad(r.id))
+		sq.custom_minimum_size = Vector2(96, 34)
+		sq.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		sq.disabled = not in_squad and (not r.is_available() or _squad.size() >= _campaign.SQUAD_SIZE)
+		row.add_child(sq)
 	return card
 
 
@@ -432,7 +446,31 @@ func _on_new_campaign() -> void:
 	_refresh()
 
 
+## Fill empty squad slots with the fittest available people, one of each class first.
+func _auto_pick() -> void:
+	var ro = _campaign.roster
+	var pool: Array = ro.living().filter(func(r): return r.is_available() and not _squad.has(r.id))
+	pool.sort_custom(func(a, b): return _fitness(a) > _fitness(b))
+	for cls in ["assaulter", "breacher", "marksman", "assaulter"]:
+		for r in pool:
+			if _squad.size() < _campaign.SQUAD_SIZE and r.class_id == cls and not _squad.has(r.id):
+				_squad.append(r.id)
+				break
+	for r in pool:
+		if _squad.size() < _campaign.SQUAD_SIZE and not _squad.has(r.id):
+			_squad.append(r.id)
+
+
+func _fitness(r) -> int:
+	var t: int = 0
+	for key in STAT_LABELS:
+		t += r.stat(key)
+	return t
+
+
 func _on_deploy() -> void:
+	if _squad.is_empty():
+		_auto_pick()
 	if not _squad.is_empty() and not _campaign.current_op.is_empty():
 		_campaign.deploy(_squad.duplicate())
 

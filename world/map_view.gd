@@ -1,313 +1,467 @@
 extends Control
-## The campaign map: a pixel-art world (1 pixel = 1 degree, scaled up) with regions tinted by
-## enemy strength, the carrier and its reach, sea zones, and plot warnings. Presentation only;
-## reads the WorldSim and emits clicks.
+## The campaign map, drawn as crisp vectors: glowing coastlines, regions shaded by enemy
+## strength, the carrier and its reach, sea lanes, plot warnings, cities. Scroll to zoom,
+## drag to pan, click to select. Presentation only: reads the WorldSim, emits clicks.
 
 signal region_clicked(id: String)
 signal zone_clicked(id: String)
 
-const GameData := preload("res://sim/game_data.gd")
+const MapGeo := preload("res://world/map_geo.gd")
 const WorldSim := preload("res://sim/world_sim.gd")
-const LAND_PATH := "res://data/world_land.json"
-const REGION_RADIUS := 15.0      # degrees: land farther than this from any region center stays neutral
-const ZONE_PICK := 16.0          # px
 
-const OCEAN := Color(0.035, 0.07, 0.12)
-const OCEAN_B := Color(0.042, 0.078, 0.13)
-const SHALLOW := Color(0.13, 0.27, 0.36)
-const GRID := Color(0.06, 0.1, 0.16)
-const LAND_NEUTRAL := Color(0.3, 0.32, 0.26)
-const LAND := Color(0.42, 0.5, 0.34)
-const ENEMY := Color(0.7, 0.17, 0.12)
-const GOLD := Color(1.0, 0.82, 0.3)
-const PLOT_RED := Color(1.0, 0.3, 0.25)
-const ZONE_BLUE := Color(0.45, 0.7, 1.0)
+const ZOOM_MIN := 1.0
+const ZOOM_MAX := 5.0
+const DRAG_START := 6.0
+const ZONE_PICK := 30.0
+const MARKER_PICK := 16.0
 
-static var _mask_w: int = 0
-static var _mask_h: int = 0
-static var _land: PackedByteArray        # 1 = land
-static var _region_idx: PackedInt32Array # index into _region_ids, -1 = none
-static var _region_ids: Array[String] = []
+const LAND_NEUTRAL := Color(0.115, 0.14, 0.16)
+const WATER_FILL := Color(0.03, 0.075, 0.12)
+const COAST := Color(0.45, 0.72, 0.86, 0.8)
+const COAST_GLOW := Color(0.3, 0.62, 0.9, 0.13)
+const GRATICULE := Color(0.35, 0.55, 0.75, 0.07)
+const REGION_CALM := Color(0.17, 0.24, 0.25)
+const REGION_LOW := Color(0.36, 0.27, 0.19)
+const REGION_HIGH := Color(0.64, 0.14, 0.11)
+const BORDER := Color(0.04, 0.06, 0.07, 0.95)
+const GOLD := Color(1.0, 0.8, 0.32)
+const RED := Color(1.0, 0.3, 0.24)
+const SEA_TEXT := Color(0.45, 0.65, 0.82, 0.65)
+const ZONE_BLUE := Color(0.45, 0.75, 1.0)
+
+const OCEAN_SHADER := """
+shader_type canvas_item;
+uniform vec4 deep : source_color = vec4(0.012, 0.035, 0.065, 1.0);
+uniform vec4 light : source_color = vec4(0.045, 0.1, 0.155, 1.0);
+float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+void fragment() {
+	float d = distance(UV * vec2(1.6, 1.0), vec2(0.8, 0.48));
+	vec3 c = mix(light.rgb, deep.rgb, smoothstep(0.1, 0.95, d));
+	c += (hash(FRAGCOORD.xy) - 0.5) / 255.0 * 2.0;
+	COLOR = vec4(c, 1.0);
+}
+"""
 
 var world = null
 var global_intel: bool = false
 var selected_region: String = ""
 var selected_zone: String = ""
 var planned_region: String = ""
-var _tex: ImageTexture
-var _view: Dictionary
+var planned_city: String = ""
+
+var _zoom: float = 1.0
+var _k: float = 1.0                 # screen px per map unit
+var _origin: Vector2 = Vector2.ZERO # screen position of map unit (0, 0)
+var _layer: Node2D
+var _fx: Control
 var _hover: String = ""
+var _hover_zone: String = ""
 var _time: float = 0.0
+var _press_pos: Vector2
+var _pressing: int = 0              # mouse button held (0 = none)
+var _dragging: bool = false
+var _framed: bool = false
 
 
 func _ready() -> void:
-	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	MapGeo.build()
+	clip_contents = true
 	mouse_filter = Control.MOUSE_FILTER_STOP
-	_view = GameData.load_json(LAND_PATH).get("view", {})
-	_build_masks()
+	var ocean := ColorRect.new()
+	ocean.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ocean.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var mat := ShaderMaterial.new()
+	var sh := Shader.new()
+	sh.code = OCEAN_SHADER
+	mat.shader = sh
+	ocean.material = mat
+	add_child(ocean)
+	_layer = Node2D.new()
+	_layer.draw.connect(_draw_layer)
+	add_child(_layer)
+	_fx = Control.new()
+	_fx.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_fx.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_fx.draw.connect(_draw_fx)
+	add_child(_fx)
+	resized.connect(_on_resized)
 
 
 func _process(delta: float) -> void:
 	_time += delta
-	queue_redraw()
+	_fx.queue_redraw()
 
 
-# ---------------------------------------------------------------- geometry
-
-func _lon_span() -> float:
-	return float(_view["lon_max"]) - float(_view["lon_min"])
-
-
-func _lat_span() -> float:
-	return float(_view["lat_max"]) - float(_view["lat_min"])
-
-
-func to_screen(lonlat: Array) -> Vector2:
-	var u: float = (float(lonlat[0]) - float(_view["lon_min"])) / _lon_span()
-	var v: float = (float(_view["lat_max"]) - float(lonlat[1])) / _lat_span()
-	return Vector2(u * size.x, v * size.y)
-
-
-func _pixel_at(p: Vector2) -> Vector2i:
-	return Vector2i(int(p.x / size.x * _mask_w), int(p.y / size.y * _mask_h))
-
-
-func _build_masks() -> void:
-	if _mask_w > 0:
-		return
-	var land_data: Dictionary = GameData.load_json(LAND_PATH)
-	_mask_w = int(_lon_span())
-	_mask_h = int(_lat_span())
-	var lands: Array = _polys(land_data.get("land", []))
-	var waters: Array = _polys(land_data.get("water", []))
-	_land.resize(_mask_w * _mask_h)
-	_region_idx.resize(_mask_w * _mask_h)
-	_region_ids.clear()
-	var centers: Array[Vector2] = []
-	var regs: Dictionary = WorldSim.regions()
-	for id in regs:
-		_region_ids.append(id)
-		centers.append(Vector2(float(regs[id]["lonlat"][0]), float(regs[id]["lonlat"][1])))
-	for y in _mask_h:
-		for x in _mask_w:
-			var p := Vector2(float(_view["lon_min"]) + x + 0.5, float(_view["lat_max"]) - y - 0.5)
-			var is_land: bool = _inside_any(p, lands) and not _inside_any(p, waters)
-			var i: int = y * _mask_w + x
-			_land[i] = 1 if is_land else 0
-			_region_idx[i] = -1
-			if is_land:
-				var best: float = REGION_RADIUS
-				for k in centers.size():
-					var d: float = p.distance_to(centers[k])
-					if d < best:
-						best = d
-						_region_idx[i] = k
-
-
-func _polys(raw: Array) -> Array:
-	var out: Array = []
-	for poly in raw:
-		var pts := PackedVector2Array()
-		var lo := Vector2(INF, INF)
-		var hi := Vector2(-INF, -INF)
-		for q in poly:
-			var v := Vector2(float(q[0]), float(q[1]))
-			pts.append(v)
-			lo = Vector2(minf(lo.x, v.x), minf(lo.y, v.y))
-			hi = Vector2(maxf(hi.x, v.x), maxf(hi.y, v.y))
-		out.append({"pts": pts, "lo": lo, "hi": hi})
-	return out
-
-
-func _inside_any(p: Vector2, polys: Array) -> bool:
-	for poly in polys:
-		if p.x < poly["lo"].x or p.y < poly["lo"].y or p.x > poly["hi"].x or p.y > poly["hi"].y:
-			continue
-		if Geometry2D.is_point_in_polygon(p, poly["pts"]):
-			return true
-	return false
-
-
-# ---------------------------------------------------------------- texture
-
-## Repaint the map from the current world state. Call after anything changes.
+## Repaint after the world or selection changes.
 func refresh() -> void:
+	_layer.queue_redraw()
+
+
+# ---------------------------------------------------------------- view transform
+
+func _base_k() -> float:
+	var vr: Rect2 = MapGeo.view_rect
+	return maxf(size.x / vr.size.x, size.y / vr.size.y)
+
+
+func _on_resized() -> void:
+	if not _framed and size.x > 0.0:
+		_framed = true
+		_zoom = 1.0
+		_k = _base_k()
+		_origin = size * 0.5 - MapGeo.view_rect.get_center() * _k
+	_apply_view()
+
+
+func _apply_view() -> void:
+	# Keep the framed area covering the whole control.
+	var vr: Rect2 = MapGeo.view_rect
+	var lo: Vector2 = _origin + vr.position * _k
+	var hi: Vector2 = _origin + vr.end * _k
+	if lo.x > 0.0:
+		_origin.x -= lo.x
+	elif hi.x < size.x:
+		_origin.x += size.x - hi.x
+	if lo.y > 0.0:
+		_origin.y -= lo.y
+	elif hi.y < size.y:
+		_origin.y += size.y - hi.y
+	_layer.transform = Transform2D(0.0, Vector2(_k, _k), 0.0, _origin)
+	_layer.queue_redraw()
+
+
+func to_screen(map_p: Vector2) -> Vector2:
+	return _origin + map_p * _k
+
+
+func to_map(screen_p: Vector2) -> Vector2:
+	return (screen_p - _origin) / _k
+
+
+func lonlat_to_screen(lonlat: Array) -> Vector2:
+	return to_screen(MapGeo.project_arr(lonlat))
+
+
+func _zoom_at(screen_p: Vector2, factor: float) -> void:
+	var before: Vector2 = to_map(screen_p)
+	_zoom = clampf(_zoom * factor, ZOOM_MIN, ZOOM_MAX)
+	_k = _base_k() * _zoom
+	_origin = screen_p - before * _k
+	_apply_view()
+
+
+## Bring a region into view if it is off screen.
+func focus_region(id: String) -> void:
+	var c: Vector2 = lonlat_to_screen(WorldSim.region(id).get("lonlat", [0, 0]))
+	if c.x < 60.0 or c.y < 60.0 or c.x > size.x - 60.0 or c.y > size.y - 60.0:
+		_origin += size * 0.5 - c
+		_apply_view()
+
+
+# ---------------------------------------------------------------- static layer (map units)
+
+func _px(w: float) -> float:
+	return w / _k
+
+
+func _closed(p: PackedVector2Array) -> PackedVector2Array:
+	var c: PackedVector2Array = p.duplicate()
+	c.append(p[0])
+	return c
+
+
+func _region_color(id: String) -> Color:
+	var s: int = int(world.strength.get(id, 0))
+	var c: Color = REGION_CALM if s == 0 else REGION_LOW.lerp(REGION_HIGH, (s - 1) / 4.0)
+	if not world.in_range(id):
+		c = c.lerp(LAND_NEUTRAL, 0.45)
+	if id == selected_region:
+		c = c.lightened(0.22)
+	elif id == _hover:
+		c = c.lightened(0.1)
+	return c
+
+
+func _draw_layer() -> void:
 	if world == null:
 		return
-	var img := Image.create(_mask_w, _mask_h, false, Image.FORMAT_RGB8)
-	var covered: Array = world.covered()
-	var region_colors: Array[Color] = []
-	for id in _region_ids:
-		var s: int = int(world.strength.get(id, 0))
-		var c: Color = LAND.lerp(ENEMY, clampf(s / 5.0, 0.0, 1.0) * 0.9)
-		if not covered.has(id):
-			c = c.darkened(0.35)
-		if id == selected_region:
-			c = c.lightened(0.25)
-		region_colors.append(c)
-	for y in _mask_h:
-		for x in _mask_w:
-			var i: int = y * _mask_w + x
-			var c: Color
-			if _land[i] == 1:
-				var k: int = _region_idx[i]
-				c = LAND_NEUTRAL if k < 0 else region_colors[k]
-				if k >= 0 and _is_border(x, y, k):
-					c = c.darkened(0.45)
-			else:
-				c = OCEAN if (x + y) % 2 == 0 else OCEAN_B
-				if x % 15 == 10 or y % 15 == 4:
-					c = GRID
-				if _near_land(x, y):
-					c = SHALLOW
-			img.set_pixel(x, y, c)
-	if _tex == null:
-		_tex = ImageTexture.create_from_image(img)
-	else:
-		_tex.update(img)
-	queue_redraw()
+	var L := _layer
+	# Graticule every 15 degrees.
+	var vr: Rect2 = MapGeo.view_rect
+	for lon in range(-180, 181, 15):
+		L.draw_line(Vector2(lon, vr.position.y - 20), Vector2(lon, vr.end.y + 20), GRATICULE, _px(1.0))
+	for lat in range(-75, 76, 15):
+		var y: float = MapGeo.project(Vector2(0, lat)).y
+		L.draw_line(Vector2(-200, y), Vector2(200, y), GRATICULE, _px(1.0))
+	var eq: float = MapGeo.project(Vector2(0, 0)).y
+	L.draw_line(Vector2(-200, eq), Vector2(200, eq), Color(GRATICULE, 0.14), _px(1.0))
+
+	# Land, coast glow underneath.
+	for p in MapGeo.land:
+		L.draw_polyline(_closed(p), COAST_GLOW, _px(7.0), true)
+	for p in MapGeo.land:
+		L.draw_colored_polygon(p, LAND_NEUTRAL)
+
+	# Regions.
+	for id in MapGeo.regions:
+		var col: Color = _region_color(id)
+		for p in MapGeo.regions[id]:
+			L.draw_colored_polygon(p, col)
+	for id in MapGeo.regions:
+		for p in MapGeo.regions[id]:
+			L.draw_polyline(_closed(p), BORDER, _px(1.4), true)
+	# Carrier reach: gold outline on every region it covers.
+	for id in world.covered():
+		for p in MapGeo.regions.get(id, []):
+			L.draw_polyline(_closed(p), Color(GOLD, 0.55), _px(1.6), true)
+	if selected_region != "":
+		for p in MapGeo.regions.get(selected_region, []):
+			L.draw_polyline(_closed(p), Color(1, 1, 1, 0.95), _px(2.4), true)
+
+	# Coastline on top, then inland seas.
+	for p in MapGeo.land:
+		L.draw_polyline(_closed(p), COAST, _px(1.1), true)
+	for p in MapGeo.water:
+		L.draw_colored_polygon(p, WATER_FILL)
+		L.draw_polyline(_closed(p), COAST, _px(1.1), true)
 
 
-func _is_border(x: int, y: int, k: int) -> bool:
-	for d in [Vector2i(1, 0), Vector2i(0, 1)]:
-		var nx: int = x + d.x
-		var ny: int = y + d.y
-		if nx >= _mask_w or ny >= _mask_h:
-			continue
-		var j: int = ny * _mask_w + nx
-		if _land[j] == 1 and _region_idx[j] != k:
-			return true
-	return false
+# ---------------------------------------------------------------- dynamic overlay (screen space)
 
-
-func _near_land(x: int, y: int) -> bool:
-	for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
-		var nx: int = x + d.x
-		var ny: int = y + d.y
-		if nx < 0 or ny < 0 or nx >= _mask_w or ny >= _mask_h:
-			continue
-		if _land[ny * _mask_w + nx] == 1:
-			return true
-	return false
-
-
-# ---------------------------------------------------------------- drawing
-
-func _draw() -> void:
-	if _tex == null or world == null:
+func _draw_fx() -> void:
+	if world == null:
 		return
-	draw_texture_rect(_tex, Rect2(Vector2.ZERO, size), false)
+	var F := _fx
 	var font: Font = get_theme_default_font()
 	var zones: Dictionary = WorldSim.zones()
 	var regs: Dictionary = WorldSim.regions()
-	var carrier: Vector2 = to_screen(zones[world.carrier_zone]["lonlat"])
-	var pulse: float = 0.5 + 0.5 * sin(_time * 4.0)
+	var pulse: float = 0.5 + 0.5 * sin(_time * 3.5)
+	var carrier: Vector2 = lonlat_to_screen(zones[world.carrier_zone]["lonlat"])
 
-	# Carrier reach: dotted lines to every region it covers.
-	for r in world.covered():
-		_dotted(carrier, to_screen(regs[r]["lonlat"]), Color(GOLD, 0.45), 6.0)
-
-	# Sea zones (where the carrier could go next is highlighted).
+	# Sea zone names, written on the water like a chart.
 	for z in zones:
-		var p: Vector2 = to_screen(zones[z]["lonlat"])
 		if z == world.carrier_zone:
 			continue
+		var p: Vector2 = lonlat_to_screen(zones[z]["lonlat"])
 		var movable: bool = world.can_move_to(z)
-		var col: Color = Color(ZONE_BLUE, 0.9 if movable else 0.35)
+		var col: Color = SEA_TEXT
+		var label: String = str(zones[z]["name"]).to_upper()
+		var half: float = font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x * 0.5 + label.length() + 10.0
 		if movable:
-			_dotted(carrier, p, Color(ZONE_BLUE, 0.35 + 0.3 * pulse), 4.0)
-		draw_arc(p, 7.0, 0.0, TAU, 16, col, 2.0)
-		if z == selected_zone:
-			draw_arc(p, 11.0, 0.0, TAU, 16, Color.WHITE, 2.0)
-		_text(font, p + Vector2(0, 20), str(zones[z]["name"]), 11, col)
+			col = Color(ZONE_BLUE, 0.8 + 0.2 * pulse)
+			_flow_arc(F, carrier, p, Color(ZONE_BLUE, 0.55), 0.18, 1.6)
+			var box := Rect2(p + Vector2(-half, -12), Vector2(half * 2.0, 34))
+			F.draw_rect(box, Color(0.04, 0.12, 0.2, 0.55 + 0.2 * pulse))
+			F.draw_rect(box, Color(ZONE_BLUE, 0.5 + 0.4 * pulse), false, 1.0)
+		if z == selected_zone or z == _hover_zone:
+			F.draw_rect(Rect2(p + Vector2(-half - 3, -15), Vector2(half * 2.0 + 6, 40)), Color.WHITE, false, 1.5)
+		_spaced(F, font, p + Vector2(0, 4), label, 12, col, 2.0)
+		if movable:
+			_spaced(F, font, p + Vector2(0, 18), "SAIL HERE  >", 10, Color(ZONE_BLUE, 0.95), 1.5)
 
-	# Regions: strength pips, plot warnings, names.
+	# Carrier reach: flowing arcs to each covered region.
+	for r in world.covered():
+		_flow_arc(F, carrier, lonlat_to_screen(regs[r]["lonlat"]), Color(GOLD, 0.6), 0.22, 1.4)
+
+	# Cities (when zoomed in, or the planned target).
+	var show_cities: bool = _zoom >= 1.9
 	for r in regs:
-		var p: Vector2 = to_screen(regs[r]["lonlat"])
+		for c in regs[r].get("cities", []):
+			if not MapGeo.cities.has(c):
+				continue
+			var is_target: bool = r == planned_region and c == planned_city
+			if not show_cities and not is_target:
+				continue
+			var cp: Vector2 = to_screen(MapGeo.cities[c])
+			if is_target:
+				_reticle(F, cp, 9.0, GOLD, _time)
+			else:
+				F.draw_circle(cp, 2.5, Color(0.9, 0.93, 0.95, 0.85))
+			if show_cities:
+				_text(F, font, cp + Vector2(6, 4), c, 11, Color(0.85, 0.88, 0.9, 0.9), false)
+
+	# Region badges.
+	for r in regs:
+		var p: Vector2 = lonlat_to_screen(regs[r]["lonlat"])
 		var s: int = int(world.strength.get(r, 0))
 		var in_range: bool = world.in_range(r)
-		if s > 0:
-			var w: float = 5 * 6.0 + 2.0
-			draw_rect(Rect2(p + Vector2(-w * 0.5, -4), Vector2(w, 9)), Color(0, 0, 0, 0.75))
-			for k in 5:
-				var pip := Rect2(p + Vector2(-w * 0.5 + 2.0 + k * 6.0, -2), Vector2(4, 5))
-				draw_rect(pip, PLOT_RED if k < s else Color(0.3, 0.3, 0.3))
-		else:
-			draw_circle(p, 3.0, Color(0.6, 0.75, 0.6, 0.8))
+		_badge(F, font, p, s, in_range)
 		var plot: Dictionary = world.plot_in(r)
 		if not plot.is_empty() and world.has_intel(r, global_intel):
-			var bp := p + Vector2(24, -8)
-			draw_rect(Rect2(bp, Vector2(30, 16)), Color(PLOT_RED, 0.6 + 0.4 * pulse))
-			_text(font, bp + Vector2(15, 13), "!%dw" % int(plot["weeks"]), 12, Color.WHITE)
+			F.draw_arc(p, 17.0 + 7.0 * pulse, 0.0, TAU, 40, Color(RED, 0.9 - 0.6 * pulse), 2.0, true)
+			var tag: String = "ATTACK  %d WK" % int(plot["weeks"])
+			var tw: float = font.get_string_size(tag, HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x + 12.0
+			var tp: Vector2 = p + Vector2(18, -26)
+			F.draw_rect(Rect2(tp, Vector2(tw, 17)), Color(0.55, 0.06, 0.05, 0.92))
+			F.draw_rect(Rect2(tp, Vector2(tw, 17)), Color(RED, 0.9), false, 1.0)
+			F.draw_string(font, tp + Vector2(6, 13), tag, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color.WHITE)
 		if r == planned_region:
-			draw_arc(p, 16.0 + 2.0 * pulse, 0.0, TAU, 24, GOLD, 2.5)
-		if r == selected_region:
-			draw_arc(p, 22.0, 0.0, TAU, 24, Color.WHITE, 1.5)
-		if in_range or r == selected_region or r == _hover:
-			_text(font, p + Vector2(0, -10), str(regs[r]["name"]), 12, Color.WHITE if in_range else Color(0.75, 0.75, 0.75))
+			_reticle(F, p, 22.0, GOLD, _time * 0.6)
+		var show_name: bool = in_range or r == selected_region or r == _hover or _zoom >= 1.5
+		if show_name:
+			var ncol: Color = Color(0.95, 0.96, 0.97) if in_range else Color(0.7, 0.74, 0.78, 0.85)
+			if r == selected_region:
+				ncol = Color.WHITE
+			_spaced(F, font, p + Vector2(0, -19), str(regs[r]["name"]).to_upper(), 12, ncol, 1.2)
 
-	# The carrier.
-	var hull := PackedVector2Array([carrier + Vector2(-14, -4), carrier + Vector2(12, -4), carrier + Vector2(16, 0), carrier + Vector2(12, 4), carrier + Vector2(-14, 4)])
-	draw_colored_polygon(hull, GOLD)
-	draw_rect(Rect2(carrier + Vector2(2, -9), Vector2(5, 5)), GOLD)
-	draw_arc(carrier, 20.0 + 3.0 * pulse, 0.0, TAU, 24, Color(GOLD, 0.6), 1.5)
-	_text(font, carrier + Vector2(0, 26), "CARRIER · " + str(zones[world.carrier_zone]["name"]), 12, GOLD)
+	_draw_carrier(F, font, carrier, pulse)
 
-
-func _text(font: Font, center_bottom: Vector2, text: String, fs: int, col: Color) -> void:
-	var w: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
-	var pos := Vector2(center_bottom.x - w * 0.5, center_bottom.y)
-	draw_string_outline(font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 4, Color(0, 0, 0, 0.85))
-	draw_string(font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, col)
+	F.draw_string(font, Vector2(12, size.y - 12), "SCROLL  zoom      DRAG  pan      CLICK  select", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.6, 0.7, 0.8, 0.55))
 
 
-func _dotted(a: Vector2, b: Vector2, col: Color, dash: float) -> void:
-	var length: float = a.distance_to(b)
-	if length < 1.0:
+func _badge(F: Control, font: Font, p: Vector2, s: int, in_range: bool) -> void:
+	var a: float = 1.0 if in_range else 0.6
+	if s <= 0:
+		F.draw_circle(p, 4.0, Color(0.05, 0.07, 0.08, 0.8 * a))
+		F.draw_arc(p, 4.0, 0.0, TAU, 16, Color(0.5, 0.85, 0.7, 0.8 * a), 1.2, true)
 		return
-	var dir: Vector2 = (b - a) / length
-	var t: float = 0.0
-	while t < length:
-		draw_line(a + dir * t, a + dir * minf(t + dash, length), col, 2.0)
-		t += dash * 2.0
+	F.draw_circle(p, 12.0, Color(0.03, 0.04, 0.05, 0.9 * a))
+	var seg: float = TAU / 5.0
+	for k in 5:
+		var a0: float = -PI * 0.5 + k * seg + 0.09
+		var a1: float = -PI * 0.5 + (k + 1) * seg - 0.09
+		var col: Color = Color(RED, a) if k < s else Color(0.35, 0.38, 0.4, 0.6 * a)
+		F.draw_arc(p, 11.0, a0, a1, 8, col, 3.0, true)
+	var t: String = str(s)
+	var w: float = font.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x
+	F.draw_string(font, p + Vector2(-w * 0.5, 5), t, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(1, 1, 1, a))
+
+
+func _draw_carrier(F: Control, font: Font, c: Vector2, pulse: float) -> void:
+	for i in 6:
+		var x: float = -22.0 - i * 7.0
+		var wake: Color = Color(0.8, 0.9, 1.0, 0.35 - i * 0.05)
+		F.draw_line(c + Vector2(x, -3 - i), c + Vector2(x - 6, -4 - i), wake, 1.0, true)
+		F.draw_line(c + Vector2(x, 3 + i), c + Vector2(x - 6, 4 + i), wake, 1.0, true)
+	F.draw_circle(c, 26.0, Color(GOLD, 0.06 + 0.05 * pulse))
+	F.draw_arc(c, 24.0 + 3.0 * pulse, 0.0, TAU, 40, Color(GOLD, 0.45), 1.2, true)
+	# Top-down hull with angled flight deck and island.
+	var hull := PackedVector2Array([
+		c + Vector2(-20, -4), c + Vector2(10, -6), c + Vector2(20, -2), c + Vector2(22, 0),
+		c + Vector2(20, 2), c + Vector2(10, 5), c + Vector2(-20, 5)])
+	F.draw_colored_polygon(hull, Color(0.62, 0.66, 0.7))
+	F.draw_polyline(_closed(hull), GOLD, 1.3, true)
+	F.draw_line(c + Vector2(-16, 3), c + Vector2(4, -5), Color(1, 1, 1, 0.7), 1.0, true)
+	F.draw_line(c + Vector2(-2, 1), c + Vector2(18, 0), Color(1, 1, 1, 0.5), 1.0, true)
+	F.draw_rect(Rect2(c + Vector2(4, 2), Vector2(5, 3)), Color(0.25, 0.27, 0.3))
+	_spaced(F, font, c + Vector2(0, 38), "CARRIER GROUP", 11, GOLD, 2.0)
+
+
+## Gold crosshair that slowly turns.
+func _reticle(F: Control, p: Vector2, r: float, col: Color, t: float) -> void:
+	F.draw_arc(p, r, 0.0, TAU, 40, Color(col, 0.9), 1.5, true)
+	for k in 4:
+		var a: float = t + k * PI * 0.5
+		var d := Vector2(cos(a), sin(a))
+		F.draw_line(p + d * (r - 4.0), p + d * (r + 6.0), col, 2.0, true)
+
+
+## A curved dashed line whose dashes flow from a to b.
+func _flow_arc(F: Control, a: Vector2, b: Vector2, col: Color, bend: float, width: float) -> void:
+	var mid: Vector2 = (a + b) * 0.5
+	var n: Vector2 = (b - a).orthogonal().normalized()
+	if n.y > 0.0:
+		n = -n
+	var ctrl: Vector2 = mid + n * a.distance_to(b) * bend
+	var steps: int = 40
+	var phase: float = fmod(_time * 0.8, 1.0)
+	var prev: Vector2 = a
+	for i in range(1, steps + 1):
+		var t: float = float(i) / steps
+		var q: Vector2 = a.lerp(ctrl, t).lerp(ctrl.lerp(b, t), t)
+		if fmod(t * 10.0 - phase + 1.0, 1.0) < 0.55:
+			F.draw_line(prev, q, col, width, true)
+		prev = q
+
+
+func _text(F: Control, font: Font, pos: Vector2, text: String, fs: int, col: Color, centered: bool = true) -> void:
+	var p: Vector2 = pos
+	if centered:
+		p.x -= font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x * 0.5
+	F.draw_string_outline(font, p, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 4, Color(0, 0, 0, 0.8))
+	F.draw_string(font, p, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, col)
+
+
+## Letter-spaced caps, centered on pos.x (chart-style labels).
+func _spaced(F: Control, font: Font, pos: Vector2, text: String, fs: int, col: Color, spacing: float) -> void:
+	var widths: Array[float] = []
+	var total: float = 0.0
+	for ch in text:
+		var w: float = font.get_string_size(ch, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+		widths.append(w)
+		total += w + spacing
+	total -= spacing
+	var x0: float = pos.x - total * 0.5
+	var x: float = x0
+	for i in text.length():
+		F.draw_string_outline(font, Vector2(x, pos.y), text[i], HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 4, Color(0, 0, 0, 0.75))
+		x += widths[i] + spacing
+	x = x0
+	for i in text.length():
+		F.draw_string(font, Vector2(x, pos.y), text[i], HORIZONTAL_ALIGNMENT_LEFT, -1, fs, col)
+		x += widths[i] + spacing
 
 
 # ---------------------------------------------------------------- input
 
-func region_at(pos: Vector2) -> String:
-	# Markers first (they can sit over water), then the land pixel's region.
-	var regs: Dictionary = WorldSim.regions()
-	for r in regs:
-		if to_screen(regs[r]["lonlat"]).distance_to(pos) < 18.0:
-			return r
-	var px: Vector2i = _pixel_at(pos)
-	if px.x < 0 or px.y < 0 or px.x >= _mask_w or px.y >= _mask_h:
-		return ""
-	var k: int = _region_idx[px.y * _mask_w + px.x]
-	return _region_ids[k] if k >= 0 else ""
-
-
 func zone_at(pos: Vector2) -> String:
 	var zones: Dictionary = WorldSim.zones()
 	for z in zones:
-		if to_screen(zones[z]["lonlat"]).distance_to(pos) < ZONE_PICK:
+		if lonlat_to_screen(zones[z]["lonlat"]).distance_to(pos) < ZONE_PICK:
 			return z
 	return ""
 
 
+func region_at(pos: Vector2) -> String:
+	var regs: Dictionary = WorldSim.regions()
+	for r in regs:
+		if lonlat_to_screen(regs[r]["lonlat"]).distance_to(pos) < MARKER_PICK:
+			return r
+	return MapGeo.region_at(to_map(pos))
+
+
 func _gui_input(event: InputEvent) -> void:
-	if event is InputEventMouseMotion:
-		var h: String = region_at((event as InputEventMouseMotion).position)
-		if h != _hover:
-			_hover = h
-			tooltip_text = WorldSim.region_name(h) if h != "" else ""
-	elif event is InputEventMouseButton:
+	if event is InputEventMouseButton:
 		var mb := event as InputEventMouseButton
-		if mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT:
-			var z: String = zone_at(mb.position)
-			if z != "":
-				zone_clicked.emit(z)
+		if mb.button_index == MOUSE_BUTTON_WHEEL_UP and mb.pressed:
+			_zoom_at(mb.position, 1.15)
+			accept_event()
+		elif mb.button_index == MOUSE_BUTTON_WHEEL_DOWN and mb.pressed:
+			_zoom_at(mb.position, 1.0 / 1.15)
+			accept_event()
+		elif mb.button_index in [MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT, MOUSE_BUTTON_MIDDLE]:
+			if mb.pressed:
+				_pressing = mb.button_index
+				_press_pos = mb.position
+				_dragging = false
+			elif mb.button_index == _pressing:
+				if not _dragging and mb.button_index == MOUSE_BUTTON_LEFT:
+					_click(mb.position)
+				_pressing = 0
+				_dragging = false
+	elif event is InputEventMouseMotion:
+		var mm := event as InputEventMouseMotion
+		if _pressing != 0:
+			if not _dragging and mm.position.distance_to(_press_pos) > DRAG_START:
+				_dragging = true
+			if _dragging:
+				_origin += mm.relative
+				_apply_view()
 				return
-			var r: String = region_at(mb.position)
-			if r != "":
-				region_clicked.emit(r)
+		var hz: String = zone_at(mm.position)
+		var h: String = "" if hz != "" else region_at(mm.position)
+		if h != _hover or hz != _hover_zone:
+			_hover = h
+			_hover_zone = hz
+			mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if (h != "" or hz != "") else Control.CURSOR_ARROW
+			_layer.queue_redraw()
+
+
+func _click(pos: Vector2) -> void:
+	var z: String = zone_at(pos)
+	if z != "":
+		zone_clicked.emit(z)
+		return
+	var r: String = region_at(pos)
+	if r != "":
+		region_clicked.emit(r)

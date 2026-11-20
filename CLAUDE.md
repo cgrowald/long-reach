@@ -50,7 +50,7 @@ tactical/ui/          squad_panel, path_overlay, selection_box
 tactical/fx/          tracers, move markers
 people/               research (projects, status, effects), operator_record, recruiter, roster (calendar + save), portrait (procedural pixel faces), campaign (autoload: deploy, results, AAR data)
 hq/                   hq.gd (roster, detail, memorial, recruit, squad + deploy), aar.gd (after-action report)
-world/                campaign_map.gd (main screen: header, briefing, region panel, ops), map_view.gd (pixel-art world render + markers + clicks)
+world/                campaign_map.gd (main screen), map_view.gd (vector map: zoom/pan, glow coasts, badges, carrier, clicks), map_geo.gd (smoothed coastlines, regions = areas clipped to coast, Miller projection), ui_theme.gd (Bahnschrift font + button styles for map/HQ/AAR)
 ```
 
 ## Testing
@@ -74,5 +74,5 @@ world/                campaign_map.gd (main screen: header, briefing, region pan
 - In test scripts count time with _physics_process (60/s game time); _process frame counts depend on FPS.
 - M4 characters (first slice) built and tested: persistent roster, HQ, memorial, deploy, stats affect missions, AAR with wounds/permanent injuries/growth/traits/service record. Awaiting user playtest.
 - M5 research (first slice) built and tested: funding (weekly budget, success bonus, recruit cost), research tab, one lab project at a time, Stand down 1 week, tech effects in missions (optics, plates, suppressors = shot noise, frame charges, trauma kits, heartbeat sensor with through-wall blips + HEARTBEAT tags). Data: data/research.json. Logic: people/research.gd.
-- M6 campaign map (first slice) built and tested, awaiting user playtest: see design doc 4.4 "as built". Data: data/regions.json (regions, sea zones, theaters, cell types, tuning rules), data/world_land.json (coastline polygons). Campaign autoload holds `world` + `current_op` (saved in the same JSON; old saves get a fresh map). Balance was tuned with a headless 52-week simulation (idle vs. active player); rerun something similar after changing the rules. Next: M7 enemy network (ask the user first).
+- M6 campaign map (first slice) built and tested, awaiting user playtest: see design doc 4.4 "as built". Data: data/regions.json (regions, sea zones, theaters, cell types, tuning rules), data/world_land.json (hand-drawn coastline polygons, must stay non-self-intersecting), data/region_areas.json (region border areas + city positions). User declined downloading Natural Earth data; geography is hand-authored. Campaign autoload holds `world` + `current_op` (saved in the same JSON; old saves get a fresh map). Balance was tuned with a headless 52-week simulation (idle vs. active player); rerun something similar after changing the rules. Next: M7 enemy network (ask the user first).
 - Long silent runs (battle regressions, screenshots): tell the user first, or run in background.

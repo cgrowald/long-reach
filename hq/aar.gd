@@ -2,6 +2,7 @@ extends Control
 ## After-action report: what happened to each person on the operation.
 
 const Portrait := preload("res://people/portrait.gd")
+const UiTheme := preload("res://world/ui_theme.gd")
 
 const GOLD := Color(1.0, 0.82, 0.3)
 const DIM := Color(0.62, 0.66, 0.7)
@@ -10,6 +11,7 @@ const OUTCOME_COLORS := {"OK": Color(0.45, 0.9, 0.5), "WOUNDED": Color(1.0, 0.6,
 
 func _ready() -> void:
 	var campaign = get_node("/root/Campaign")
+	theme = UiTheme.make()
 	var rep: Dictionary = campaign.last_report
 
 	var bg := ColorRect.new()

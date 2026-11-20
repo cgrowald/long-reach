@@ -5,12 +5,13 @@ extends Control
 const MapView := preload("res://world/map_view.gd")
 const WorldSim := preload("res://sim/world_sim.gd")
 const Research := preload("res://people/research.gd")
+const UiTheme := preload("res://world/ui_theme.gd")
 
 const GOLD := Color(1.0, 0.82, 0.3)
 const DIM := Color(0.62, 0.66, 0.7)
 const RED := Color(0.95, 0.4, 0.35)
 const OK_GREEN := Color(0.45, 0.9, 0.5)
-const MAP_SIZE := Vector2(1565, 520)   # 313 x 104 degrees at 5 px per degree
+const MAP_SIZE := Vector2(0, 515)
 const COL_W := 470.0
 
 var _campaign
@@ -29,6 +30,7 @@ var _notice: String = ""
 
 func _ready() -> void:
 	_campaign = get_node("/root/Campaign")
+	theme = UiTheme.make()
 	_build()
 	_map.world = _campaign.world
 	if not _campaign.current_op.is_empty():
@@ -54,7 +56,8 @@ func _build() -> void:
 	var header := HBoxContainer.new()
 	header.add_theme_constant_override("separation", 14)
 	root.add_child(header)
-	header.add_child(_label("LONG REACH", 24, GOLD))
+	header.add_child(_label("LONG REACH", 26, GOLD))
+	header.add_child(_label("//  GLOBAL OPERATIONS", 15, DIM))
 	_date_label = _label("", 16, Color.WHITE)
 	header.add_child(_date_label)
 	var sp := Control.new()
@@ -80,7 +83,7 @@ func _build() -> void:
 
 	_map = MapView.new()
 	_map.custom_minimum_size = MAP_SIZE
-	_map.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_map.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_map.region_clicked.connect(_on_region_clicked)
 	_map.zone_clicked.connect(_on_zone_clicked)
 	root.add_child(_map)
@@ -117,6 +120,7 @@ func _refresh() -> void:
 	var w = _campaign.world
 	_map.global_intel = _campaign.has_global_intel()
 	_map.planned_region = str(_campaign.current_op.get("region", ""))
+	_map.planned_city = str(_campaign.current_op.get("city", ""))
 	_map.refresh()
 	_date_label.text = "%s  ·  week %d  ·  Funding %s  ·  Operations %d  ·  Fallen %d" % [
 		ro.date_string(), w.week + 1, _money(ro.funding), ro.missions_run, ro.fallen().size()]
@@ -160,7 +164,7 @@ func _build_panel() -> void:
 	elif _map.selected_region != "":
 		_region_panel(_map.selected_region)
 	else:
-		_panel.add_child(_wrap("Click a region to see the enemy there. Click a blue ring at sea to move the carrier (one sea zone per week).", 15, DIM, COL_W))
+		_overview_panel()
 
 	var op: Dictionary = _campaign.current_op
 	if not op.is_empty():
@@ -184,6 +188,7 @@ func _build_panel() -> void:
 		var b := _button("%s  ·  %s" % [WorldSim.region_name(str(o["region"])), what], func():
 			_map.selected_zone = ""
 			_map.selected_region = str(o["region"])
+			_map.focus_region(str(o["region"]))
 			_refresh())
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		b.clip_text = true
@@ -200,20 +205,19 @@ func _region_panel(r: String) -> void:
 	_panel.add_child(_label(str(reg.get("name", r)), 20, GOLD))
 	_panel.add_child(_wrap("%s theater: %s" % [th.get("name", ""), th.get("roe", "")], 13, DIM, COL_W))
 	_panel.add_child(_wrap("Cities: " + ", ".join(reg.get("cities", [])), 13, Color.WHITE, COL_W))
-	_panel.add_child(_label("Enemy strength: %d / 5" % s if s > 0 else "No known enemy presence", 16, RED if s > 0 else OK_GREEN))
+	var status: String = "No known enemy presence"
 	if s > 0:
-		var cell: String = str(w.cells.get(r, ""))
-		var cell_name: String = str(WorldSim.cell_types().get(cell, {}).get("name", "unknown"))
-		_panel.add_child(_label("Cell type: %s" % (cell_name if intel else "unknown (no intel)"), 14, Color.WHITE))
+		var cell_name: String = str(WorldSim.cell_types().get(str(w.cells.get(r, "")), {}).get("name", "unknown"))
+		status = "Enemy strength %d / 5  ·  %s cell" % [s, cell_name if intel else "unknown"]
+	_panel.add_child(_label(status + ("   ·   IN RANGE" if w.in_range(r) else ""), 16, RED if s > 0 else OK_GREEN))
 	var plot: Dictionary = w.plot_in(r)
 	if not plot.is_empty() and intel:
 		_panel.add_child(_wrap("ATTACK PLOT: %s, %d week%s left." % [plot["city"], int(plot["weeks"]), "" if int(plot["weeks"]) == 1 else "s"], 15, RED, COL_W))
 	if w.in_range(r):
-		_panel.add_child(_label("In carrier range", 14, OK_GREEN))
 		var op: Dictionary = w.operation_for(r)
 		if not op.is_empty():
-			_panel.add_child(_section("OPERATION"))
-			_panel.add_child(_wrap("%s in %s" % [op["title"], op["city"]], 16, Color.WHITE, COL_W))
+
+			_panel.add_child(_wrap("OPERATION:  %s in %s" % [op["title"], op["city"]], 16, GOLD, COL_W))
 			_panel.add_child(_label("About %d hostiles  ·  success pays %s" % [int(op["tangos"]), _money(int(Research.funding_rule("success_bonus") * float(th.get("reward", 1.0))))], 13, DIM))
 			if str(_campaign.current_op.get("region", "")) == r:
 				_panel.add_child(_label("Planned for this week.", 14, GOLD))
@@ -337,3 +341,19 @@ func _box(bg: Color, border: Color, width: int = 1) -> StyleBoxFlat:
 	s.set_corner_radius_all(4)
 	s.set_content_margin_all(10 if width > 0 else 0)
 	return s
+
+
+## Default middle panel: the big picture plus how to play a week.
+func _overview_panel() -> void:
+	var w = _campaign.world
+	var intel: bool = _campaign.has_global_intel()
+	_panel.add_child(_label("GLOBAL PICTURE", 14, GOLD))
+	_panel.add_child(_label("Network active in %d of 24 regions  ·  total strength %d" % [w.active_regions().size(), w.total_strength()], 15, Color.WHITE))
+	var known: int = w.plots.filter(func(p): return w.has_intel(str(p["region"]), intel)).size()
+	_panel.add_child(_label("Attack plots known: %d  ·  suspected: %d" % [known, w.plots.size() - known], 15, RED if known > 0 else Color.WHITE))
+	_panel.add_child(_label("Attacks landed: %d  ·  plots stopped: %d" % [w.attacks_landed, w.plots_foiled], 15, Color.WHITE))
+	_panel.add_child(_label("Carrier: %s  ·  reaches %d regions" % [w.zone_name(w.carrier_zone), w.covered().size()], 15, GOLD))
+	_panel.add_child(_section("THIS WEEK"))
+	_panel.add_child(_wrap("1.  Move the carrier if you want: click a glowing SAIL HERE box at sea.", 14, DIM, COL_W))
+	_panel.add_child(_wrap("2.  Click a region inside the gold lines, then Plan this operation.", 14, DIM, COL_W))
+	_panel.add_child(_wrap("3.  Pick the squad at HQ and deploy. Or END WEEK to skip.", 14, DIM, COL_W))

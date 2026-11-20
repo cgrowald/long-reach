@@ -419,6 +419,7 @@ The tactical layer only needs to be **good enough** (user feedback after M2: the
 | 2026-11-19 | "Open world" = go anywhere in the world, but a place becomes a playable 3D map only when you send a team there |
 | 2026-11-19 | M0 playtested and approved; M1 built |
 | 2026-11-19 | M1 playtested and approved. Personal project, not for release |
+| 2026-11-19 | Map art overhaul after user feedback ("looks like the 90s"): vector map with smoothed glowing coastlines, region borders, zoom/pan, city markers, Bahnschrift UI font. No downloaded map data (user declined); geography hand-authored. HQ: + SQUAD button per card; DEPLOY auto-picks a squad when none is chosen |
 | 2026-11-19 | M6 first slice built (user said "build M6"): map is the main screen, finishing an operation or END WEEK advances a week, long-range heartbeat gives worldwide intel, South Atlantic zone added for the Tri-Border Area |
 | 2026-11-19 | M6 campaign map: real world, weekly turns, 24 regions, carrier range (sea zones) decides where you can strike; one operation per week; enemy strength per region spreads along region links (see 4.4) |
 | 2026-11-19 | M4 + M5 first slices built while the user was away: persistent roster/HQ/memorial/AAR, and funding + research (heartbeat sensor, suppressors, optics, plates, frame charges, trauma kits; grappling hook and long-range heartbeat tracking wait for later milestones) |
