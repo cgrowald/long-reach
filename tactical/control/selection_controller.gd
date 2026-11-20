@@ -50,6 +50,8 @@ var _right_start: Vector2 = Vector2.ZERO
 var _right_down: bool = false
 var _pending_throw: String = ""
 var _drawing: bool = false
+var _draw_origin: Vector2 = Vector2.ZERO
+var _draw_unit = null  # soldier the left-drag started on
 var _draw_screen := PackedVector2Array()
 var _draw_world := PackedVector3Array()
 var _focus_pick: Dictionary = {}  # {"unit", "anchor"} while choosing a look point
@@ -117,8 +119,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		var pos: Vector2 = (event as InputEventMouseMotion).position
 		if _dragging:
 			_box.show_rect(_drag_start, pos)
-		elif _right_down and (_drawing or pos.distance_to(_right_start) > FACE_DRAG_THRESHOLD):
+		elif _draw_unit != null and (_drawing or pos.distance_to(_draw_origin) > BOX_THRESHOLD):
 			_extend_drawing(pos)
+		elif _right_down and pos.distance_to(_right_start) > FACE_DRAG_THRESHOLD:
+			_box.show_arrow(_right_start, pos)
 	elif event is InputEventKey:
 		_handle_key(event as InputEventKey)
 
@@ -152,8 +156,31 @@ func _handle_left(mb: InputEventMouseButton) -> void:
 				follow(picked)
 			_dragging = false
 			return
+		var on_unit = _pick_unit(mb.position)
+		if on_unit != null:
+			_draw_unit = on_unit  # click = select him, drag = draw his route
+			_draw_origin = mb.position
+			_drawing = false
+			return
 		_drag_start = mb.position
 		_dragging = true
+	elif _draw_unit != null:
+		var unit = _draw_unit
+		_draw_unit = null
+		if _drawing:
+			_drawing = false
+			_box.hide_line()
+			var group: Array = selected.duplicate() if selected.has(unit) else [unit]
+			if not selected.has(unit):
+				select_only(unit)
+			if _draw_world.size() >= 2:
+				for u in group:
+					u.order_path(_draw_world, mb.shift_pressed, mb.ctrl_pressed)
+				Fx.move_marker(_world, _draw_world[_draw_world.size() - 1], MARKER_COLOR)
+		elif mb.shift_pressed:
+			toggle(unit)
+		else:
+			select_only(unit)
 	elif _dragging:
 		_dragging = false
 		_box.hide_rect()
@@ -181,21 +208,12 @@ func _handle_right(mb: InputEventMouseButton) -> void:
 			return
 		_right_start = mb.position
 		_right_down = true
-		_drawing = false
 		return
 	if not _right_down:
 		return
 	_right_down = false
 	_box.hide_arrow()
-	if _drawing:
-		_drawing = false
-		_box.hide_line()
-		if _draw_world.size() >= 2 and not selected.is_empty():
-			for u in selected:
-				u.order_path(_draw_world, mb.shift_pressed, mb.ctrl_pressed)
-			Fx.move_marker(_world, _draw_world[_draw_world.size() - 1], MARKER_COLOR)
-		return
-	var dragged: bool = false
+	var dragged: bool = mb.position.distance_to(_right_start) > FACE_DRAG_THRESHOLD
 
 	if not dragged and not mb.alt_pressed:
 		var unit = _pick_unit(_right_start)
@@ -363,11 +381,8 @@ func _issue_pie(screen_pos: Vector2, queue: bool) -> void:
 func _extend_drawing(pos: Vector2) -> void:
 	if not _drawing:
 		_drawing = true
-		_draw_screen = PackedVector2Array([_right_start])
-		_draw_world = PackedVector3Array()
-		var s: Variant = _ground_point(_right_start)
-		if s != null:
-			_draw_world.append(s)
+		_draw_screen = PackedVector2Array([_draw_origin])
+		_draw_world = PackedVector3Array([_draw_unit.global_position])
 	var g: Variant = _ground_point(pos)
 	if g == null:
 		return

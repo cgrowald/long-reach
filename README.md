@@ -14,9 +14,10 @@ Only seeing and shooting are automatic. Everything else is an order you give.
 
 | Input | Action |
 |---|---|
-| Left click / drag box | Select operators (Shift adds) |
+| Left **drag from a soldier** | Draw his route freehand (from a selected soldier, the whole selection follows it). Shift = add to plan, Ctrl = wait for GO at the end |
+| Left click / drag box on empty ground | Select operators (Shift adds) |
 | Right click ground | Move (Shift = queue waypoint, Ctrl = move and wait for GO) |
-| Right **drag** | Draw a route freehand (Shift = add to the plan, Ctrl = wait for GO at the end) |
+| Right **drag** | Move, then face the drag direction |
 | Shift + left click the **ground** (a corner or doorway) | **Pie it**: rifle up, slow arc around that point keeping it covered, revealing what is behind it slice by slice. Faster reactions while pieing. Shift + Ctrl = after the current plan |
 | Shift + left click on a **route**, then click a point | From that spot on the route, the soldier watches that point while he walks (pie it). Add several; each one switches his focus. Right-click instead of the second click = back to looking where he walks |
 | Right click a **door** | Door wheel: Open, Kick, Breach charge, Open + flash, Kick + flash, Stack up (open doors: Flash in, Frag in). Hold Ctrl to do it on GO, Shift to queue it |
