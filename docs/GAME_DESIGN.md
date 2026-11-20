@@ -259,7 +259,8 @@ The stress moves from *hiding* to *running everything*:
 ## 16. Win, loss, endings
 
 - **Win:** storm the capital and kill (or capture) the leader. It takes an army.
-- **Lose:** arrested early with no way out, or killed (later: open question whether the movement can go on without you).
+- **Lose:** arrested early with no way out, or killed.
+- **Successor:** late in the game you can anoint a second in command. If you die, they take over and play continues, but the movement takes a hit (sympathy, loyalty, some cells break away).
 - **Epilogue:** what you became (liberator, strongman, new tyrant), what happened to your family, your circle and the person who was taken from you.
 
 ---
@@ -308,8 +309,8 @@ Each milestone ends playable.
 ## 19. Open questions
 
 - [ ] Working title ("Uprising" is a placeholder).
-- [ ] The movement's ideology: chosen, emergent, or left out?
-- [ ] Can the movement continue if you die (a successor)?
+- [x] The movement's ideology (2026-11-20): chosen at the start, or later when it unlocks.
+- [x] Successor (2026-11-20): late in the game, after long investment, you can anoint a second in command who takes over if you die; the movement takes a hit. Before that, your death ends the game.
 - [ ] How each cover job's minigame plays (decide at U6).
 - [ ] How the late-game day loop compresses (decide at U9).
 - [ ] Free walking in the room/base later (Iron Nest-like)?
@@ -320,6 +321,7 @@ Each milestone ends playable.
 
 | Date | Decision |
 |---|---|
+| 2026-11-20 | Successor: late game, you can anoint a second in command who takes over if you die (the movement takes a hit). Ideology: chosen at the start, or when it unlocks. First gameplay to build = the terminal on its own, to make sure it's fun to use; it should have its own quirks and secrets. |
 | 2026-11-20 | Planning before building: the user wants the full picture before starting a milestone. |
 | 2026-11-20 | Core loop = one day: morning laptop (news, messages, daily new rule) → cover job → evening home/family → night in the room (laptop + workbench) → overnight map resolution. Juggling is the fun, but systems unlock gradually. |
 | 2026-11-20 | Seated first person in one room (laptop, bench, door, window), pixel-art 3D, in Godot (no Unity). Cozy repair-game bench feel (user reference ReStroy). Free walking maybe later. Missions top-down. |
