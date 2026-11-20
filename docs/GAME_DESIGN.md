@@ -83,9 +83,49 @@ Operations come from **templates** (supply-chain sabotage, high-value capture, f
 ### 4.3 Mission layer (tactical)
 See section 6.
 
----
+### 4.4 Campaign map design (M6) — decided 2026-11-19
+**Decisions:** real world · weekly turns · ~24 regions · carrier range decides where you can strike.
 
-## 5. The Enemy Network
+**The map**
+- A stylized pixel-art world map (simplified continent outlines, not satellite detail). Real countries and cities; the enemy organization is fictional.
+- **24 regions**, each a clickable area with 2–4 real cities as operation locations:
+
+| Americas | Europe & Africa | Middle East & Asia |
+|---|---|---|
+| US East Coast | Western Europe | Levant |
+| US Gulf Coast & Florida | Balkans | Mesopotamia |
+| US West Coast | Eastern Europe | Arabian Gulf |
+| Mexico & Central America | Maghreb (North Africa) | Yemen & Red Sea |
+| Caribbean | Sahel | Caucasus & Turkey |
+| Andes & Colombia | West Africa | Iran Plateau |
+| Tri-Border Area (South America) | Horn of Africa | Central Asia & Afghanistan |
+| | East Africa | South Asia / Southeast Asia |
+
+- Each region has a **theater** (section 8): rules of engagement, collateral tolerance, what support you get. US regions are the strictest.
+- Regions are linked to their neighbors (land and short sea crossings). The enemy spreads along those links.
+
+**The carrier (your reach)**
+- The carrier sits in one of ~10 **sea zones**: North Atlantic, Caribbean, Gulf of Mexico, Eastern Pacific, Mediterranean, Gulf of Guinea, Red Sea, Arabian Sea, Indian Ocean, South China Sea.
+- Each sea zone covers the regions within range. **You can only launch operations in regions the carrier covers.**
+- Moving the carrier: one zone per weekly turn, to an adjacent zone. While it moves, it can still launch operations from where it ends up. Moving is visible; the network notices (cells near the new position lie low a little).
+- Planning where to park the carrier is the core strategic choice: chase the biggest threat, or stay where your people know the ground.
+
+**A weekly turn**
+1. **Briefing:** the news ticker and intel reports summarize what the enemy did last week.
+2. **Your moves:** move the carrier (optional); recruit, research, heal at HQ; pick **one operation** this week from the regions in range. Operations come from known enemy cells: raid a safehouse, capture a financier, hit a bomb workshop, rescue hostages. Each shows difficulty, theater and rewards.
+3. **Play the operation** on the tactical map, or skip it (stand down).
+4. **Enemy phase:** cells grow, spread to neighboring regions, open new cells, and plan attacks. An attack in preparation shows a countdown if you have intel on it; if it hits, you lose funding and standing, and the news reports it.
+5. Calendar +1 week: budget, research progress, recovery.
+
+**Enemy presence (M6 version; the full network graph is M7)**
+- Each region has an enemy **strength** of 0–5 (shown as pips) and possibly a **cell type**: leadership, finance, logistics, bomb-making, recruitment.
+- Successful operations knock strength down; failed or skipped ones let it grow. Strength spreads to linked regions over time.
+- A global **threat level** rises with total enemy strength and successful attacks. *(Open: whether high threat can end the campaign.)*
+
+**Tactical maps in M6:** operations still use the current test building, varied by theater (enemy count and weapons, time of day later). Real map variety and generation comes in M10.
+
+**Screens:** the map becomes the main screen; HQ (roster, research, memorial) is a panel or tab from it.
+
 
 - Built as a **graph of nodes** spread across regions. Node types:
   - Leadership, Financing, Logistics/Smuggling, Recruitment, Bomb-making, Training camp, Sleeper cell, Propaganda
@@ -345,7 +385,7 @@ The tactical layer only needs to be **good enough** (user feedback after M2: the
 ## 14. Open Questions
 
 - [ ] **Real-world news:** fictional generated world (recommended), or a world inspired by real regions and events? Pulling live real news is not planned.
-- [ ] **Setting:** real countries and cities, or fictionalized versions? Real is more immersive; fictional gives more freedom.
+- [x] **Setting:** real countries and cities (decided 2026-11-19). The enemy organization stays fictional.
 - [ ] **Enemy org identity:** name, ideology and look. Fictional is recommended.
 - [ ] **Interrogation / informants:** a mechanic, or abstracted?
 - [ ] **Failure state:** can the campaign be lost (funding pulled, a major attack succeeds)? Or is it endless/sandbox?
@@ -369,6 +409,7 @@ The tactical layer only needs to be **good enough** (user feedback after M2: the
 | 2026-11-19 | "Open world" = go anywhere in the world, but a place becomes a playable 3D map only when you send a team there |
 | 2026-11-19 | M0 playtested and approved; M1 built |
 | 2026-11-19 | M1 playtested and approved. Personal project, not for release |
+| 2026-11-19 | M6 campaign map: real world, weekly turns, 24 regions, carrier range (sea zones) decides where you can strike; one operation per week; enemy strength per region spreads along region links (see 4.4) |
 | 2026-11-19 | M4 + M5 first slices built while the user was away: persistent roster/HQ/memorial/AAR, and funding + research (heartbeat sensor, suppressors, optics, plates, frame charges, trauma kits; grappling hook and long-range heartbeat tracking wait for later milestones) |
 | 2026-11-19 | Pies are anchored: new move orders never drop an active or placed pie |
 | 2026-11-19 | Mouse scheme: left = feet (move, draw routes freehand, select), right = eyes (look, watch points along routes), Shift+right = pie (dotted line + pie icon: rifle up, slow, covering that point). Pieing is separate from walking |
