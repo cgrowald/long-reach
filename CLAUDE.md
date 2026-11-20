@@ -7,6 +7,8 @@ Underground resistance game: a reluctant parent in a generated country builds a 
 - Do as much as possible without asking, BUT before each milestone **list the gaps you will run into and ask** (user request 2026-11-20): things an LLM tends to gloss over (saves, pacing, tone limits, audio/art sourcing, what "fun" means minute to minute).
 - Plan before building: the user wants the full picture first. Every milestone ends playable; tell the user exactly what to try.
 - Cybersecurity in the game is fully gamified: fun toys and learnable "angles", never real procedures. Same for weapon building (stylized minigames).
+- Old counter-terror code: delete each part once its replacement exists (user 2026-11-20).
+- Art: Claude makes Blender models, the user tweaks them (docs/ART_GUIDE.md). Ask the user for reference screenshots before deciding a look.
 - Downloads need explicit user permission. Never kill the user's Godot editor. Warn before long silent runs.
 
 ## Tech

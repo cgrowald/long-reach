@@ -222,6 +222,21 @@ The main interface for the underground: our own fun fake OS.
 
 ---
 
+## 13A. The middle game (decided 2026-11-20)
+
+A mix of the beginning and the end:
+- **Making equipment for your growing army** is the backbone: the workbench grows into workshops, and output goes out to your fighters.
+- **Routine work:** recruiting, vetting, keeping cells supplied and hidden. It's still hands-on, but it gets more and more delegated.
+- **Small-unit attacks** (missions or auto-resolve):
+  - on **infrastructure**: cameras, power, comms;
+  - on the **regime's logistics**: convoys, depots, fuel.
+- **Building your own logistics:** routes, caches, couriers, safehouses.
+- **Moving into the late game:** small-unit tactics and routine work fade, because you've recruited people to do them. What remains is commanding the army in large engagements on the way to the capital.
+
+Large-scale battle command is the weakest-defined part. Design it at U9.
+
+---
+
 ## 14. Late game: running a war (logistics)
 
 The stress moves from *hiding* to *running everything*:
@@ -262,6 +277,21 @@ The stress moves from *hiding* to *running everything*:
 - **Lose:** arrested early with no way out, or killed.
 - **Successor:** late in the game you can anoint a second in command. If you die, they take over and play continues, but the movement takes a hit (sympathy, loyalty, some cells break away).
 - **Epilogue:** what you became (liberator, strongman, new tyrant), what happened to your family, your circle and the person who was taken from you.
+
+## 16A. Saves, scope and tone (decided 2026-11-20)
+
+- **Saves:** the game saves when you **sleep** (end of each day). You can reload the last morning. **Ironman** is an optional mode (one save, nothing undone). Game overs only stick in ironman. Hard permadeath for everyone would push players away.
+- **Scope:**
+  - first aim for a **finishable ~10-hour campaign** as proof of concept;
+  - expand toward a ~60-hour campaign later, so Hearts of Iron players will love it;
+  - polish only after the small game works end to end.
+- **Violence:**
+  - torture can be part of the game;
+  - **only adults can be hurt**;
+  - **civilians can be killed, but it hits you hard**: they're who you're fighting for, even the ones who aren't on your side (sympathy, recruits, grudges, morale, neighbors).
+- **Writing voice:**
+  - the main game, the regime and the news are **bleak and dark**;
+  - **your own side is darkly funny**: chats, dinner scenes, the people in your movement. You should like your people, and they lighten the mood.
 
 ---
 
@@ -321,6 +351,7 @@ Each milestone ends playable.
 
 | Date | Decision |
 |---|---|
+| 2026-11-20 | Middle game = making equipment for the army + routine recruiting + small-unit attacks on infrastructure and regime logistics + building your own logistics; small-unit tactics and routine fade in the late game (delegated), leaving large-engagement command. Saves when you sleep, optional ironman. ~10 h finishable proof of concept first, ~60 h later. Torture allowed, only adults hurt, civilian deaths possible but punishing. Bleak regime/news, darkly funny own side. Free sound packs OK (user wants to learn to make sounds later). Blender art made by Claude, then the user tweaks it to remove the "AI look" (Claude teaches what to change; see docs/ART_GUIDE.md); user will share reference screenshots for the look. Delete old counter-terror code once its replacement exists. |
 | 2026-11-20 | T1 built (terminal on its own, days 1-4 of FIRST_WEEK.md). Cybersecurity is fully gamified (fun angles, not real procedures). Workflow: lean CLAUDE.md + a `godot-verify` project skill; Claude asks gap questions before each milestone. |
 | 2026-11-20 | Successor: late game, you can anoint a second in command who takes over if you die (the movement takes a hit). Ideology: chosen at the start, or when it unlocks. First gameplay to build = the terminal on its own, to make sure it's fun to use; it should have its own quirks and secrets. |
 | 2026-11-20 | Planning before building: the user wants the full picture before starting a milestone. |
