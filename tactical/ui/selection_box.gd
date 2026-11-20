@@ -11,6 +11,9 @@ var _rect_active: bool = false
 var _arrow_from: Vector2 = Vector2.ZERO
 var _arrow_to: Vector2 = Vector2.ZERO
 var _arrow_active: bool = false
+var _line := PackedVector2Array()
+
+const LINE := Color(0.4, 0.85, 1.0, 0.9)
 
 
 func _ready() -> void:
@@ -41,7 +44,19 @@ func hide_arrow() -> void:
 	queue_redraw()
 
 
+func show_line(points: PackedVector2Array) -> void:
+	_line = points
+	queue_redraw()
+
+
+func hide_line() -> void:
+	_line = PackedVector2Array()
+	queue_redraw()
+
+
 func _draw() -> void:
+	if _line.size() >= 2:
+		draw_polyline(_line, LINE, 3.0, true)
 	if _rect_active:
 		draw_rect(_rect, FILL, true)
 		draw_rect(_rect, EDGE, false, 1.0)

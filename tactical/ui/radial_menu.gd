@@ -39,6 +39,10 @@ func open(center: Vector2, title: String, options: Array, context: Dictionary) -
 	_options = options
 	_context = context
 	_hover = -1
+	# Cover the whole window so every click lands here while open
+	# (full-rect anchors don't size a Control whose parent is a CanvasLayer).
+	position = Vector2.ZERO
+	size = get_viewport_rect().size
 	visible = true
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	queue_redraw()

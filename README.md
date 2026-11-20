@@ -9,14 +9,15 @@ See [docs/GAME_DESIGN.md](docs/GAME_DESIGN.md) for the full design.
 2. Open Godot → **Import** → select `project.godot` in this folder → **Import & Edit**.
 3. Press **F5** (or the ▶ button top-right) to run.
 
-## Controls (M3.5)
+## Controls (M3.6)
 Only seeing and shooting are automatic. Everything else is an order you give.
 
 | Input | Action |
 |---|---|
 | Left click / drag box | Select operators (Shift adds) |
 | Right click ground | Move (Shift = queue waypoint, Ctrl = move and wait for GO) |
-| Right **drag** | Move, then face the drag direction |
+| Right **drag** | Draw a route freehand (Shift = add to the plan, Ctrl = wait for GO at the end) |
+| Shift + left click on a **route**, then click a point | From that spot on the route, the soldier watches that point while he walks (pie it). Add several; each one switches his focus. Right-click instead of the second click = back to looking where he walks |
 | Right click a **door** | Door wheel: Open, Kick, Breach charge, Open + flash, Kick + flash, Stack up (open doors: Flash in, Frag in). Hold Ctrl to do it on GO, Shift to queue it |
 | Right click a **soldier** | Soldier wheel: Crouch/Stand, Walk/Run, Hold fire/Weapons free, Flashbang, Frag, Stop |
 | Alt + right click | Look toward a point |

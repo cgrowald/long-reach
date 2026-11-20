@@ -84,6 +84,10 @@ var _action: Dictionary = {}  # current door / throw action
 var _action_timer: float = 0.0
 var _move_yaw: float = 0.0
 var _idle_yaw: float = 0.0
+## Focus (look/pie) points along the route: [{"pos": anchor on route, "focus": Vector3 or null}],
+## in route order. When the soldier reaches an anchor, his eyes switch to that focus point.
+var _focus_marks: Array[Dictionary] = []
+var _focus: Variant = null  # point currently being watched (null = look where walking)
 
 var _scan_timer: float = 0.0
 var _reaction_timer: float = 0.0
@@ -165,6 +169,46 @@ func order_move(destination: Vector3, queue: bool, face_yaw: float = NAN, hold: 
 	_enqueue({"pos": destination, "face": face_yaw, "hold": hold, "action": {}}, queue)
 
 
+## Follow a hand-drawn line: samples are ground points along the drawn stroke.
+## Each stretch between samples is routed on the navmesh, so the line hugs what you drew
+## but never goes through walls.
+func order_path(samples: PackedVector3Array, queue: bool, hold: bool = false) -> void:
+	if samples.is_empty():
+		return
+	var map: RID = get_world_3d().navigation_map
+	var prev: Vector3 = _planned_end() if queue else global_position
+	var path := PackedVector3Array()
+	for s in samples:
+		var p: Vector3 = NavigationServer3D.map_get_closest_point(map, s)
+		var seg: PackedVector3Array = NavigationServer3D.map_get_path(map, prev, p, true)
+		for i in seg.size():
+			if path.is_empty() or path[path.size() - 1].distance_to(seg[i]) > 0.05:
+				path.append(seg[i])
+		prev = p
+	if path.is_empty():
+		return
+	_enqueue({"pos": path[path.size() - 1], "face": NAN, "hold": hold, "action": {}, "path": path}, queue)
+
+
+## Add a focus point: from nchor (a point on the planned route) onward, watch ocus.
+## focus = null means go back to looking where you walk.
+func add_focus_mark(anchor: Vector3, focus: Variant) -> void:
+	var mark: Dictionary = {"pos": anchor, "focus": focus, "at": _route_distance(anchor)}
+	var i: int = 0
+	while i < _focus_marks.size() and float(_focus_marks[i]["at"]) <= float(mark["at"]):
+		i += 1
+	_focus_marks.insert(i, mark)
+
+
+## For the overlay: pending marks plus the point currently watched.
+func get_focus_marks() -> Array[Dictionary]:
+	return _focus_marks
+
+
+func get_active_focus() -> Variant:
+	return _focus
+
+
 ## Door orders: walk to this side of the door, then do the verb.
 ## verb: open | kick | breach | flash_in | frag_in | stack.  index: place in a stack line.
 func order_door(verb: String, door, queue: bool, hold: bool, index: int = 0) -> void:
@@ -200,6 +244,7 @@ func order_face(point: Vector3) -> void:
 	elif _moving:
 		_leg["face"] = _yaw_toward(point - (_leg["pos"] as Vector3))
 	else:
+		_focus = null
 		_idle_yaw = _yaw_toward(point - global_position)
 
 
@@ -221,6 +266,8 @@ func stop() -> void:
 	_action = {}
 	_leg = {}
 	_blocked_by = null
+	_focus_marks.clear()
+	_focus = null
 	_idle_yaw = rotation.y
 
 
@@ -337,7 +384,12 @@ func get_planned_points() -> Array[Vector3]:
 		for i in range(_path_index, _path.size()):
 			pts.append(_path[i])
 	for w in _waypoints:
-		pts.append(w["pos"])
+		var wp: PackedVector3Array = w.get("path", PackedVector3Array())
+		if wp.is_empty():
+			pts.append(w["pos"])
+		else:
+			for p in wp:
+				pts.append(p)
 	return pts
 
 
@@ -467,9 +519,17 @@ func _physics_process(delta: float) -> void:
 func _enqueue(leg: Dictionary, queue: bool) -> void:
 	if is_dead:
 		return
-	if queue and (_moving or _holding or not _action.is_empty() or not _waypoints.is_empty()):
+	var queued: bool = queue and (_moving or _holding or not _action.is_empty() or not _waypoints.is_empty())
+	if not leg.has("path"):
+		var map: RID = get_world_3d().navigation_map
+		var from: Vector3 = _planned_end() if queued else global_position
+		leg["path"] = NavigationServer3D.map_get_path(map, from, leg["pos"], true)
+	if queued:
 		_waypoints.append(leg)
 		return
+	if not queue:
+		_focus_marks.clear()
+		_focus = null
 	_waypoints.clear()
 	_holding = false
 	_action = {}
@@ -496,8 +556,12 @@ func _planned_end() -> Vector3:
 
 func _start_leg(leg: Dictionary) -> void:
 	_leg = leg
-	var map: RID = get_world_3d().navigation_map
-	_path = NavigationServer3D.map_get_path(map, global_position, leg["pos"], true)
+	var stored: PackedVector3Array = leg.get("path", PackedVector3Array())
+	if not stored.is_empty() and stored[0].distance_to(global_position) < 1.5:
+		_path = stored
+	else:
+		var map: RID = get_world_3d().navigation_map
+		_path = NavigationServer3D.map_get_path(map, global_position, leg["pos"], true)
 	_path_index = 0
 	_moving = not _path.is_empty()
 	if not _moving:
@@ -509,6 +573,8 @@ func _arrive() -> void:
 	_blocked_by = null
 	var face: float = float(_leg.get("face", NAN))
 	_idle_yaw = rotation.y if is_nan(face) else face
+	if not is_nan(face):
+		_focus = null
 	var leg: Dictionary = _leg
 	_leg = {}
 	var action: Dictionary = leg.get("action", {})
@@ -540,6 +606,7 @@ func _update_movement(delta: float) -> void:
 		_path_index += 1
 		return
 	var dir: Vector3 = to_point / dist
+	_check_focus_marks()
 	_blocked_by = _closed_door_ahead(dir)
 	if _blocked_by != null:
 		_idle_yaw = _yaw_toward(_blocked_by.center - global_position)
@@ -554,6 +621,37 @@ func _update_movement(delta: float) -> void:
 	pos.y = 0.0
 	global_position = pos
 	_move_yaw = _yaw_toward(to_point)
+
+
+const FOCUS_TRIGGER_DIST := 0.6
+
+
+func _check_focus_marks() -> void:
+	while not _focus_marks.is_empty():
+		var m: Dictionary = _focus_marks[0]
+		var p: Vector3 = m["pos"]
+		if Vector2(p.x - global_position.x, p.z - global_position.z).length() > FOCUS_TRIGGER_DIST:
+			return
+		_focus = m["focus"]
+		_focus_marks.pop_front()
+
+
+## Distance along the planned route to the point on it closest to p.
+func _route_distance(p: Vector3) -> float:
+	var pts: Array[Vector3] = get_planned_points()
+	var best_d: float = INF
+	var best_at: float = 0.0
+	var walked: float = 0.0
+	for i in pts.size() - 1:
+		var a: Vector3 = pts[i]
+		var b: Vector3 = pts[i + 1]
+		var q: Vector3 = Geometry3D.get_closest_point_to_segment(p, a, b)
+		var d: float = q.distance_to(p)
+		if d < best_d:
+			best_d = d
+			best_at = walked + a.distance_to(q)
+		walked += a.distance_to(b)
+	return best_at
 
 
 func _closed_door_ahead(dir: Vector3):
@@ -679,6 +777,8 @@ func _update_facing(delta: float) -> void:
 		desired = _yaw_toward(target.global_position - global_position)
 	elif not _action.is_empty():
 		desired = _yaw_toward(_action["door"].center - global_position)
+	elif _focus != null:
+		desired = _yaw_toward((_focus as Vector3) - global_position)
 	elif _moving and _blocked_by == null:
 		desired = _move_yaw
 	var rate: float = turn_rate

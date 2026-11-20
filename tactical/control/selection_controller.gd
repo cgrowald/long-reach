@@ -4,7 +4,9 @@ extends Node
 ##
 ##   Left click / drag        select (Shift adds)        Double-click   select + follow
 ##   Right click ground       move selected (Shift = queue waypoint, Ctrl = wait for GO)
-##   Right drag               move, then face the drag direction
+##   Right DRAG               draw a route freehand (Shift = add to plan, Ctrl = wait for GO at the end)
+##   Shift + left click ROUTE then click a point: from there on, watch that point (pie it)
+##                            (right-click instead = go back to looking where you walk)
 ##   Alt + right click        look toward point
 ##   Right click a DOOR       door wheel: open / kick / breach / stack up / flash in / frag in
 ##                            (Shift = queue it, Ctrl = do it on GO)
@@ -17,6 +19,8 @@ const Fx := preload("res://tactical/fx/fx.gd")
 const Unit := preload("res://tactical/units/unit.gd")
 const BOX_THRESHOLD := 6.0
 const FACE_DRAG_THRESHOLD := 14.0
+const DRAW_SAMPLE_DIST := 0.5
+const ROUTE_PICK_PX := 14.0
 const PICK_RADIUS_PX := 32.0
 const DOOR_PICK_RADIUS_PX := 45.0
 const FORMATION_SPACING := 1.1
@@ -44,6 +48,10 @@ var _dragging: bool = false
 var _right_start: Vector2 = Vector2.ZERO
 var _right_down: bool = false
 var _pending_throw: String = ""
+var _drawing: bool = false
+var _draw_screen := PackedVector2Array()
+var _draw_world := PackedVector3Array()
+var _focus_pick: Dictionary = {}  # {"unit", "anchor"} while choosing a look point
 
 
 func setup(rig, friendly_units: Array, box, world: Node3D, wheel, hint: Label) -> void:
@@ -86,7 +94,9 @@ func _process(_delta: float) -> void:
 	var alive: Array = selected.filter(func(u): return not u.is_dead)
 	if alive.size() != selected.size():
 		_set_selection(alive)
-	if _pending_throw != "":
+	if not _focus_pick.is_empty():
+		_hint.text = "Click the point %s should watch from here   (right-click: look where walking, Esc: cancel)" % _focus_pick["unit"].callsign
+	elif _pending_throw != "":
 		_hint.text = "Left-click where to throw the %s   (right-click to cancel)" % \
 			("flashbang" if _pending_throw == "flashbang" else "frag grenade")
 	else:
@@ -106,8 +116,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		var pos: Vector2 = (event as InputEventMouseMotion).position
 		if _dragging:
 			_box.show_rect(_drag_start, pos)
-		elif _right_down and pos.distance_to(_right_start) > FACE_DRAG_THRESHOLD:
-			_box.show_arrow(_right_start, pos)
+		elif _right_down and (_drawing or pos.distance_to(_right_start) > FACE_DRAG_THRESHOLD):
+			_extend_drawing(pos)
 	elif event is InputEventKey:
 		_handle_key(event as InputEventKey)
 
@@ -115,6 +125,18 @@ func _unhandled_input(event: InputEvent) -> void:
 # ---------------------------------------------------------------- mouse
 
 func _handle_left(mb: InputEventMouseButton) -> void:
+	if mb.pressed and not _focus_pick.is_empty():
+		var look: Variant = _ground_point(mb.position)
+		if look != null:
+			_focus_pick["unit"].add_focus_mark(_focus_pick["anchor"], look)
+			Fx.move_marker(_world, look, FACE_MARKER_COLOR)
+		_focus_pick = {}
+		return
+	if mb.pressed and mb.shift_pressed and _pick_unit(mb.position) == null:
+		var hit: Dictionary = _pick_route(mb.position)
+		if not hit.is_empty():
+			_focus_pick = hit
+			return
 	if mb.pressed and _pending_throw != "":
 		var point: Variant = _ground_point(mb.position)
 		if point != null:
@@ -147,17 +169,30 @@ func _handle_left(mb: InputEventMouseButton) -> void:
 
 func _handle_right(mb: InputEventMouseButton) -> void:
 	if mb.pressed:
+		if not _focus_pick.is_empty():
+			_focus_pick["unit"].add_focus_mark(_focus_pick["anchor"], null)
+			_focus_pick = {}
+			return
 		if _pending_throw != "":
 			_pending_throw = ""
 			return
 		_right_start = mb.position
 		_right_down = true
+		_drawing = false
 		return
 	if not _right_down:
 		return
 	_right_down = false
 	_box.hide_arrow()
-	var dragged: bool = mb.position.distance_to(_right_start) > FACE_DRAG_THRESHOLD
+	if _drawing:
+		_drawing = false
+		_box.hide_line()
+		if _draw_world.size() >= 2 and not selected.is_empty():
+			for u in selected:
+				u.order_path(_draw_world, mb.shift_pressed, mb.ctrl_pressed)
+			Fx.move_marker(_world, _draw_world[_draw_world.size() - 1], MARKER_COLOR)
+		return
+	var dragged: bool = false
 
 	if not dragged and not mb.alt_pressed:
 		var unit = _pick_unit(_right_start)
@@ -301,6 +336,9 @@ func _handle_key(key: InputEventKey) -> void:
 	elif code == KEY_TAB:
 		_cycle_follow()
 	elif code == KEY_ESCAPE:
+		if not _focus_pick.is_empty():
+			_focus_pick = {}
+			return
 		if _pending_throw != "":
 			_pending_throw = ""
 			return
@@ -309,6 +347,53 @@ func _handle_key(key: InputEventKey) -> void:
 
 
 # ---------------------------------------------------------------- helpers
+
+func _extend_drawing(pos: Vector2) -> void:
+	if not _drawing:
+		_drawing = true
+		_draw_screen = PackedVector2Array([_right_start])
+		_draw_world = PackedVector3Array()
+		var s: Variant = _ground_point(_right_start)
+		if s != null:
+			_draw_world.append(s)
+	var g: Variant = _ground_point(pos)
+	if g == null:
+		return
+	if _draw_world.is_empty() or _draw_world[_draw_world.size() - 1].distance_to(g) >= DRAW_SAMPLE_DIST:
+		_draw_world.append(g)
+		_draw_screen.append(pos)
+		_box.show_line(_draw_screen)
+
+
+## Closest point on any friendly's planned route under the mouse (selected soldiers first).
+func _pick_route(screen_pos: Vector2) -> Dictionary:
+	var cam: Camera3D = _rig.camera
+	var best: Dictionary = {}
+	var best_d: float = ROUTE_PICK_PX
+	var order: Array = selected.duplicate()
+	for u in _units:
+		if not order.has(u):
+			order.append(u)
+	for u in order:
+		if u.is_dead:
+			continue
+		var pts: Array[Vector3] = u.get_planned_points()
+		for i in pts.size() - 1:
+			var a: Vector3 = pts[i]
+			var b: Vector3 = pts[i + 1]
+			if cam.is_position_behind(a) or cam.is_position_behind(b):
+				continue
+			var sa: Vector2 = cam.unproject_position(a)
+			var sb: Vector2 = cam.unproject_position(b)
+			var q: Vector2 = Geometry2D.get_closest_point_to_segment(screen_pos, sa, sb)
+			var d: float = q.distance_to(screen_pos)
+			if d < best_d:
+				best_d = d
+				var seg_len: float = sa.distance_to(sb)
+				var t: float = 0.0 if seg_len < 0.001 else sa.distance_to(q) / seg_len
+				best = {"unit": u, "anchor": a.lerp(b, t)}
+	return best
+
 
 func _set_selection(units: Array) -> void:
 	for u in selected:

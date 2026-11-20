@@ -11,6 +11,9 @@ const COLOR_FACE_DIM := Color(1.0, 0.85, 0.3, 0.35)
 const FACE_LEN := 1.4
 const COLOR_HOLD := Color(1.0, 0.4, 0.3, 0.95)
 const HOLD_MARK := 0.4
+const COLOR_FOCUS := Color(1.0, 0.85, 0.3, 0.95)
+const COLOR_FOCUS_DIM := Color(1.0, 0.85, 0.3, 0.35)
+const DIAMOND := 0.3
 
 var _units: Array = []
 var _selection
@@ -57,6 +60,29 @@ func _process(_delta: float) -> void:
 			verts.append(end + d)
 			cols.append(color)
 			cols.append(color)
+		# Focus (pie) points: diamond on the route + sight line to the watched point.
+		var bright: bool = _selection.is_selected(u)
+		var fc: Color = COLOR_FOCUS if bright else COLOR_FOCUS_DIM
+		for m in u.get_focus_marks():
+			var a: Vector3 = (m["pos"] as Vector3) + LIFT
+			for k in 4:
+				var d0 := Vector3(DIAMOND, 0, 0).rotated(Vector3.UP, PI * 0.5 * k)
+				var d1 := Vector3(DIAMOND, 0, 0).rotated(Vector3.UP, PI * 0.5 * (k + 1))
+				verts.append(a + d0)
+				verts.append(a + d1)
+				cols.append(fc)
+				cols.append(fc)
+			if m["focus"] != null:
+				verts.append(a)
+				verts.append((m["focus"] as Vector3) + LIFT)
+				cols.append(Color(fc, fc.a * 0.6))
+				cols.append(Color(fc, fc.a * 0.6))
+		var active: Variant = u.get_active_focus()
+		if active != null and bright:
+			verts.append(u.global_position + LIFT)
+			verts.append((active as Vector3) + LIFT)
+			cols.append(Color(COLOR_FOCUS, 0.5))
+			cols.append(Color(COLOR_FOCUS, 0.5))
 		# Go-code hold points: a box around the spot.
 		for h in u.get_planned_holds():
 			var c: Vector3 = h + LIFT
