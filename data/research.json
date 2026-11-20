@@ -1,0 +1,93 @@
+{
+	"funding": {
+		"starting": 600000,
+		"weekly_budget": 90000,
+		"success_bonus": 150000,
+		"recruit_cost": 60000
+	},
+	"projects": {
+		"suppressors": {
+			"name": "Suppressors",
+			"branch": "Weapons & protection",
+			"desc": "Suppressed rifles. Gunfire is heard at 9 m instead of 20 m, so a fight in one room doesn't wake the whole building.",
+			"cost": 120000,
+			"days": 14,
+			"requires": [],
+			"effects": { "shot_noise": 9.0 }
+		},
+		"optics": {
+			"name": "Combat Optics",
+			"branch": "Weapons & protection",
+			"desc": "Better red dots and magnified sights. +8% accuracy for everyone.",
+			"cost": 90000,
+			"days": 10,
+			"requires": [],
+			"effects": { "accuracy": 1.08 }
+		},
+		"plates": {
+			"name": "Level IV Plate Carriers",
+			"branch": "Weapons & protection",
+			"desc": "Heavier plates that stop rifle rounds. +25% toughness for everyone.",
+			"cost": 160000,
+			"days": 21,
+			"requires": ["optics"],
+			"effects": { "hp": 1.25 }
+		},
+		"heartbeat_sensor": {
+			"name": "Heartbeat Sensor (prototype)",
+			"branch": "Sensing",
+			"desc": "Handheld sensor that picks up heartbeats through walls within 10 m. Your lead Assaulter carries it: hidden enemies show as pulsing blips before you breach.",
+			"cost": 200000,
+			"days": 28,
+			"requires": [],
+			"effects": { "heartbeat_range": 10.0 }
+		},
+		"heartbeat_sensor_2": {
+			"name": "Heartbeat Sensor Mk II",
+			"branch": "Sensing",
+			"desc": "Production model with a longer reach: 16 m, and every Assaulter carries one.",
+			"cost": 180000,
+			"days": 21,
+			"requires": ["heartbeat_sensor"],
+			"effects": { "heartbeat_range": 16.0, "heartbeat_all": 1.0 }
+		},
+		"long_range_heartbeat": {
+			"name": "Long-Range Heartbeat Tracking",
+			"branch": "Sensing",
+			"desc": "Picks out a single heartbeat signature from far away; inspired by recent reporting about how a person was found in Iran. Finds high-value targets from the campaign map.",
+			"cost": 900000,
+			"days": 120,
+			"requires": ["heartbeat_sensor_2"],
+			"needs_milestone": "Campaign map (M6)",
+			"effects": {}
+		},
+		"breaching_kit": {
+			"name": "Frame Charges",
+			"branch": "Entry & mobility",
+			"desc": "Purpose-built breaching charges. Breachers carry +1 charge and the blast stuns farther.",
+			"cost": 80000,
+			"days": 10,
+			"requires": [],
+			"effects": { "breach_charges": 1.0, "breach_radius": 1.3 }
+		},
+		"grappling_hook": {
+			"name": "Grappling Hook & Rope",
+			"branch": "Entry & mobility",
+			"desc": "Enter from roofs and upper floors instead of the front door.",
+			"cost": 140000,
+			"days": 21,
+			"requires": [],
+			"needs_milestone": "Multi-story maps",
+			"effects": {}
+		},
+		"trauma_kits": {
+			"name": "Advanced Trauma Kits",
+			"branch": "Medical",
+			"desc": "Better field care. Wounds heal 30% faster and permanent injuries are half as likely.",
+			"cost": 110000,
+			"days": 14,
+			"requires": [],
+			"effects": { "recovery": 0.7, "permanent_injury": 0.5 }
+		}
+	}
+}

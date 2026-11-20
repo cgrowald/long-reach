@@ -16,6 +16,10 @@ In the mission, **END OPERATION** (top right) brings everyone home and writes th
 deaths go on the memorial wall, wounds take weeks to heal and can leave permanent injuries, survivors grow and earn traits.
 Each operation moves the calendar a week. The campaign saves automatically.
 
+**Research** (HQ tab): spend funding on one project at a time; it finishes after its days pass (operations or **Stand down 1 week**).
+Finished tech changes missions right away, e.g. the heartbeat sensor shows hidden enemies through walls as red HEARTBEAT blips,
+suppressors make gunfire heard at 9 m instead of 20 m, trauma kits shorten recovery. Funding: weekly budget plus a bonus per successful operation.
+
 ## Controls
 Only seeing and shooting are automatic. Everything else is an order you give.
 **Left mouse = feet. Right mouse = eyes.**

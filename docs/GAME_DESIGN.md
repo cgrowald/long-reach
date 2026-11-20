@@ -328,7 +328,7 @@ Each milestone ends with something **playable**. Don't move on until it's fun.
 | M3 | **CQB bare bones** ✅ | Doors, go-code, flashbangs + frags, crouch with exposure-based hits, slower pace + game speed control, pixel-art look |
 | M3.5 | **Classes & action wheel** | Only seeing/shooting automatic; doors block until ordered; right-click radial action wheel on doors and soldiers; Assaulter / Breacher / Marksman with different weapons, kit and options; breach charges |
 | M4 | **Characters you care about** ✅ (first slice) | Persistent roster with names, bios, portraits, stats, traits, service records, lasting injuries, permadeath + memorial wall; pick your squad before a mission; after-action report; save/load |
-| M5 | **Research & equipment** | Tech tree over in-game years; projects take time, money and specialists; loadouts; first techs: heartbeat sensor, grappling hook, night vision, suppressors, scout drone |
+| M5 | **Research & equipment** ✅ (first slice) | Tech tree over in-game years; projects take time, money and specialists; loadouts; first techs: heartbeat sensor, grappling hook, night vision, suppressors, scout drone |
 | M6 | **Campaign map** | Sector-based dynamic campaign (Gates of Hell conquest feel): move teams between sectors, choose battles, persistent forces, resources for reinforcements, enemy moves too; carrier as mobile HQ; in-game calendar |
 | M7 | **Enemy network** | Node graph, intel leads, growth, adaptation, retaliation |
 | M8 | **Operations** | Multi-step operation templates (supply-chain op, HVT capture, etc.) |
@@ -369,6 +369,8 @@ The tactical layer only needs to be **good enough** (user feedback after M2: the
 | 2026-11-19 | "Open world" = go anywhere in the world, but a place becomes a playable 3D map only when you send a team there |
 | 2026-11-19 | M0 playtested and approved; M1 built |
 | 2026-11-19 | M1 playtested and approved. Personal project, not for release |
+| 2026-11-19 | M4 + M5 first slices built while the user was away: persistent roster/HQ/memorial/AAR, and funding + research (heartbeat sensor, suppressors, optics, plates, frame charges, trauma kits; grappling hook and long-range heartbeat tracking wait for later milestones) |
+| 2026-11-19 | Pies are anchored: new move orders never drop an active or placed pie |
 | 2026-11-19 | Mouse scheme: left = feet (move, draw routes freehand, select), right = eyes (look, watch points along routes), Shift+right = pie (dotted line + pie icon: rifle up, slow, covering that point). Pieing is separate from walking |
 | 2026-11-19 | After M3: only seeing and shooting are automatic; every other action is chosen through a right-click action wheel; classes define weapons, kit and wheel options. Campaign map should feel like Gates of Hell's dynamic conquest mode |
 | 2026-11-19 | After M2: tactical layer only needs to be good enough. Focus moves to characters you care about, XCOM-style research over years, and the world. Pixel-art low-poly look. Combat pace was too fast: slow it down and add game speed control |

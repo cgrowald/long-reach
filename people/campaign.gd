@@ -4,6 +4,7 @@ extends Node
 
 const Roster := preload("res://people/roster.gd")
 const GameData := preload("res://sim/game_data.gd")
+const Research := preload("res://people/research.gd")
 
 const STARTING_OPERATORS := 10
 const SQUAD_SIZE := 4
@@ -32,8 +33,10 @@ func _ready() -> void:
 func new_campaign() -> void:
 	roster = Roster.new()
 	roster.rng_seed = rng.randi()
+	roster.funding = Research.funding_rule("starting")
 	for i in STARTING_OPERATORS:
 		roster.recruit(rng)
+	roster.add_event("The program is stood up with %d operators." % STARTING_OPERATORS)
 	deployment.clear()
 	last_report = {}
 	save_game()
@@ -57,11 +60,38 @@ func load_game() -> bool:
 	return true
 
 
+func recruit_cost() -> int:
+	return Research.funding_rule("recruit_cost")
+
+
 func recruit():
+	if roster.funding < recruit_cost():
+		return null
 	var r = roster.recruit(rng)
 	if r != null:
+		roster.funding -= recruit_cost()
+		roster.add_event("Recruited %s from %s." % [r.full_name(), r.agency_name()])
 		save_game()
 	return r
+
+
+func start_research(id: String) -> bool:
+	var ok: bool = Research.start(roster, id)
+	if ok:
+		roster.add_event("Research started: %s." % Research.projects()[id].get("name", id))
+		save_game()
+	return ok
+
+
+## A quiet week at home: the wounded heal, money comes in, research moves on.
+func stand_down() -> Array[String]:
+	var finished: Array[String] = roster.advance_days(DAYS_PER_MISSION)
+	save_game()
+	return finished
+
+
+func tech_effects() -> Dictionary:
+	return Research.effects(roster)
 
 
 func is_deployed() -> bool:
@@ -99,6 +129,11 @@ func apply_results(results: Array, success: bool) -> Dictionary:
 	var any_dead: bool = results.any(func(x): return not bool(x["alive"]))
 	var report: Dictionary = {"operation": operation_name, "date": date, "success": success, "entries": []}
 	roster.missions_run += 1
+	var tech: Dictionary = tech_effects()
+	var funding_before: int = roster.funding
+	if success:
+		roster.funding += Research.funding_rule("success_bonus")
+	roster.add_event("%s: %s." % [operation_name, "objective complete" if success else "objective not completed"])
 
 	for res in results:
 		var r = roster.get_by_id(int(res["id"]))
@@ -123,14 +158,14 @@ func apply_results(results: Array, success: bool) -> Dictionary:
 			var hp: float = float(res.get("hp", max_hp))
 			if hp < max_hp - 0.5:
 				var place: String = str(inj["wound_places"][rng.randi() % inj["wound_places"].size()])
-				var days: int = maxi(3, ceili((max_hp - hp) * float(inj.get("recovery_days_per_damage", 0.35))))
+				var days: int = maxi(3, ceili((max_hp - hp) * float(inj.get("recovery_days_per_damage", 0.35)) * float(tech.get("recovery", 1.0))))
 				r.status = "recovering"
 				r.recovery_days = days
 				outcome = "WOUNDED"
 				notes.append("Wounded (%s), out %d days" % [place, days])
 				r.add_log(date, "%s.%s Wounded (%s), out %d days." % [operation_name, kill_text, place, days])
 				if hp / max_hp < float(inj.get("critical_fraction", 0.3)) \
-						and rng.randf() < float(inj.get("permanent_chance_when_critical", 0.4)):
+						and rng.randf() < float(inj.get("permanent_chance_when_critical", 0.4)) * float(tech.get("permanent_injury", 1.0)):
 					var options: Array = (inj["permanent"] as Dictionary).keys().filter(func(k): return not r.injuries.has(k))
 					if not options.is_empty():
 						var p: String = options[rng.randi() % options.size()]
@@ -161,7 +196,8 @@ func apply_results(results: Array, success: bool) -> Dictionary:
 				r.add_log(date, "Steadied after a clean operation; no longer shaken.")
 		report["entries"].append({"id": r.id, "name": r.full_name(), "outcome": outcome, "kills": kills, "notes": notes})
 
-	roster.advance_days(DAYS_PER_MISSION)
+	report["research_finished"] = roster.advance_days(DAYS_PER_MISSION)
+	report["funding_gained"] = roster.funding - funding_before
 	report["next_date"] = roster.date_string()
 	return report
 

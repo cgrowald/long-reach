@@ -16,6 +16,7 @@ const Door := preload("res://tactical/level/door.gd")
 const PixelFilter := preload("res://tactical/fx/pixel_filter.gd")
 const UnitLabels := preload("res://tactical/ui/unit_labels.gd")
 const RadialMenu := preload("res://tactical/ui/radial_menu.gd")
+const HeartbeatOverlay := preload("res://tactical/ui/heartbeat_overlay.gd")
 
 const NAV_BOUNDS := AABB(Vector3(-35.0, -2.0, -35.0), Vector3(70.0, 6.0, 70.0))
 const TRACER_BLUE := Color(1.0, 0.92, 0.55)
@@ -36,6 +37,7 @@ var _banner: Label
 var _fog_tick: int = 0
 var _campaign = null
 var _end_btn: Button
+var _sensor_assigned: bool = false
 var _speed_idx: int = 2
 
 
@@ -81,6 +83,10 @@ func _ready() -> void:
 	var vision := VisionOverlay.new()
 	vision.setup(friendlies, _selection)
 	add_child(vision)
+
+	var heartbeat := HeartbeatOverlay.new()
+	heartbeat.setup(friendlies, hostiles)
+	add_child(heartbeat)
 
 	var overlay := PathOverlay.new()
 	overlay.setup(friendlies, _selection)
@@ -135,6 +141,13 @@ func _spawn_units() -> void:
 			u.record_id = r.id
 			u.apply_modifiers(r.modifiers())
 		u.position = spawn
+		if _in_campaign():
+			var fx: Dictionary = _campaign.tech_effects()
+			# Sensor: lead Assaulter carries the prototype; Mk II puts one on every Assaulter.
+			var carries: bool = u.class_id == "assaulter" and (float(fx.get("heartbeat_all", 0.0)) > 0.0 or not _sensor_assigned)
+			u.apply_tech(fx, carries)
+			if carries and u.heartbeat_range > 0.0:
+				_sensor_assigned = true
 		map.add_child(u)
 		u.fired.connect(_on_unit_fired.bind(u))
 		friendlies.append(u)

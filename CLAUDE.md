@@ -48,7 +48,7 @@ tactical/control/     selection_controller.gd (select, box select, move orders)
 tactical/camera/      camera_rig.gd
 tactical/ui/          squad_panel, path_overlay, selection_box
 tactical/fx/          tracers, move markers
-people/               operator_record, recruiter, roster (calendar + save), portrait (procedural pixel faces), campaign (autoload: deploy, results, AAR data)
+people/               research (projects, status, effects), operator_record, recruiter, roster (calendar + save), portrait (procedural pixel faces), campaign (autoload: deploy, results, AAR data)
 hq/                   hq.gd (roster, detail, memorial, recruit, squad + deploy), aar.gd (after-action report)
 world/                (later milestones)
 ```
@@ -72,5 +72,6 @@ world/                (later milestones)
 - UI gotcha: a Control whose parent is a CanvasLayer is NOT sized by full-rect anchors; set position/size from get_viewport_rect() or it gets zero size and no mouse input.
 - Simulated mouse input (root.push_input) only maps correctly in a windowed run, not --headless.
 - In test scripts count time with _physics_process (60/s game time); _process frame counts depend on FPS.
-- M4 characters (first slice) built and tested: persistent roster, HQ, memorial, deploy, stats affect missions, AAR with wounds/permanent injuries/growth/traits/service record. Awaiting user playtest. Next: M5 research.
+- M4 characters (first slice) built and tested: persistent roster, HQ, memorial, deploy, stats affect missions, AAR with wounds/permanent injuries/growth/traits/service record. Awaiting user playtest.
+- M5 research (first slice) built and tested: funding (weekly budget, success bonus, recruit cost), research tab, one lab project at a time, Stand down 1 week, tech effects in missions (optics, plates, suppressors = shot noise, frame charges, trauma kits, heartbeat sensor with through-wall blips + HEARTBEAT tags). Data: data/research.json. Logic: people/research.gd. Next: M6 campaign map (ask the user about the sector map design first).
 - Long silent runs (battle regressions, screenshots): tell the user first, or run in background.

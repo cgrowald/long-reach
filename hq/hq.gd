@@ -4,6 +4,8 @@ extends Control
 
 const Portrait := preload("res://people/portrait.gd")
 const GameData := preload("res://sim/game_data.gd")
+const Research := preload("res://people/research.gd")
+const BRANCH_ORDER: Array[String] = ["Sensing", "Weapons & protection", "Entry & mobility", "Medical"]
 
 const GOLD := Color(1.0, 0.82, 0.3)
 const DIM := Color(0.62, 0.66, 0.7)
@@ -26,6 +28,10 @@ var _deploy_btn: Button
 var _new_btn: Button
 var _roster_tab: Button
 var _memorial_tab: Button
+var _research_tab: Button
+var _recruit_btn: Button
+var _focused_project: String = ""
+var _notice: String = ""
 
 
 func _ready() -> void:
@@ -62,7 +68,9 @@ func _build() -> void:
 	root.add_child(tabs)
 	_roster_tab = _button("ROSTER", func(): _set_tab("roster"))
 	_memorial_tab = _button("MEMORIAL", func(): _set_tab("memorial"))
+	_research_tab = _button("RESEARCH", func(): _set_tab("research"))
 	tabs.add_child(_roster_tab)
+	tabs.add_child(_research_tab)
 	tabs.add_child(_memorial_tab)
 
 	var body := HBoxContainer.new()
@@ -100,7 +108,9 @@ func _build() -> void:
 	var fs := Control.new()
 	fs.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	footer.add_child(fs)
-	footer.add_child(_button("Recruit", _on_recruit))
+	_recruit_btn = _button("Recruit", _on_recruit)
+	footer.add_child(_recruit_btn)
+	footer.add_child(_button("Stand down 1 week", _on_stand_down))
 	_new_btn = _button("New campaign", _on_new_campaign)
 	footer.add_child(_new_btn)
 	_deploy_btn = _button("DEPLOY", _on_deploy)
@@ -113,22 +123,36 @@ func _build() -> void:
 
 func _refresh() -> void:
 	var ro = _campaign.roster
-	_date_label.text = "%s     ·     Operations run: %d     ·     Fallen: %d" % [ro.date_string(), ro.missions_run, ro.fallen().size()]
+	_date_label.text = "%s     ·     Funding %s     ·     Operations %d     ·     Fallen %d" % [ro.date_string(), _money(ro.funding), ro.missions_run, ro.fallen().size()]
+	_recruit_btn.text = "Recruit (%s)" % _money(_campaign.recruit_cost())
+	_recruit_btn.disabled = ro.funding < _campaign.recruit_cost() or ro.living().size() >= ro.MAX_ROSTER
+	_research_tab.disabled = _tab == "research"
 	_memorial_tab.text = "MEMORIAL (%d)" % ro.fallen().size()
 	_roster_tab.disabled = _tab == "roster"
 	_memorial_tab.disabled = _tab == "memorial"
 	for c in _grid.get_children():
 		c.queue_free()
+	if _tab == "research":
+		_build_research()
+		_update_squad_footer()
+		return
 	var people: Array = ro.living() if _tab == "roster" else ro.fallen()
 	for r in people:
 		_grid.add_child(_card(r))
 	if people.is_empty():
 		_grid.add_child(_label("No names on the wall. Keep it that way." if _tab == "memorial" else "No one left.", 16, DIM))
+	_update_squad_footer()
+	_show_detail(_focused)
+
+
+func _update_squad_footer() -> void:
+	var ro = _campaign.roster
 	_squad = _squad.filter(func(id): return ro.get_by_id(id) != null and ro.get_by_id(id).is_available())
 	var names: Array = _squad.map(func(id): return ro.get_by_id(id).callsign)
 	_squad_label.text = "Squad (%d/%d):  %s" % [_squad.size(), _campaign.SQUAD_SIZE, ", ".join(names) if not names.is_empty() else "click an operator, then Add to squad"]
 	_deploy_btn.disabled = _squad.is_empty()
-	_show_detail(_focused)
+	if _notice != "":
+		_squad_label.text = _notice + "     " + _squad_label.text
 
 
 func _card(r) -> Control:
@@ -236,6 +260,114 @@ func _show_detail(id: int) -> void:
 		_detail.add_child(l)
 
 
+# ---------------------------------------------------------------- research
+
+func _build_research() -> void:
+	var ro = _campaign.roster
+	var all: Dictionary = Research.projects()
+	for branch in BRANCH_ORDER:
+		for id in all:
+			if str(all[id].get("branch", "")) == branch:
+				_grid.add_child(_project_card(ro, id, all[id]))
+	_show_project_detail()
+
+
+func _project_card(ro, id: String, p: Dictionary) -> Control:
+	var st: String = Research.status(ro, id)
+	var card := PanelContainer.new()
+	card.custom_minimum_size = Vector2(390, 0)
+	card.mouse_filter = Control.MOUSE_FILTER_STOP
+	var border: Color = Color(0.5, 0.7, 0.9) if id == _focused_project else (GOLD if st == "active" else Color(0.22, 0.26, 0.3))
+	card.add_theme_stylebox_override("panel", _box(Color(0.11, 0.14, 0.17), border, 2 if (st == "active" or id == _focused_project) else 1))
+	card.gui_input.connect(func(e):
+		if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT:
+			_focused_project = id
+			_refresh())
+	var col := VBoxContainer.new()
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	card.add_child(col)
+	col.add_child(_label(str(p.get("name", id)), 17, Color.WHITE))
+	col.add_child(_label(str(p.get("branch", "")), 12, DIM))
+	col.add_child(_label(_project_status_text(ro, id, p), 13, _project_status_color(st)))
+	return card
+
+
+func _project_status_text(ro, id: String, p: Dictionary) -> String:
+	match Research.status(ro, id):
+		"done":
+			return "RESEARCHED"
+		"active":
+			return "IN PROGRESS · %d days left" % ro.research_days_left
+		"planned":
+			return "Needs: %s" % p.get("needs_milestone", "later work")
+		"locked":
+			var missing: Array = p.get("requires", []).filter(func(r): return not ro.research_done.has(r))
+			return "Requires: %s" % ", ".join(missing.map(func(r): return Research.projects().get(r, {}).get("name", r)))
+	return "%s  ·  %d days" % [_money(int(p.get("cost", 0))), int(p.get("days", 0))]
+
+
+func _project_status_color(st: String) -> Color:
+	match st:
+		"done":
+			return OK_GREEN
+		"active":
+			return GOLD
+		"available":
+			return Color.WHITE
+	return DIM
+
+
+func _show_project_detail() -> void:
+	for c in _detail.get_children():
+		c.queue_free()
+	var ro = _campaign.roster
+	var all: Dictionary = Research.projects()
+	if all.has(_focused_project):
+		var p: Dictionary = all[_focused_project]
+		_detail.add_child(_label(str(p.get("name", "")), 22, GOLD))
+		_detail.add_child(_label(str(p.get("branch", "")), 13, DIM))
+		var desc := _label(str(p.get("desc", "")), 15, Color.WHITE)
+		desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		desc.custom_minimum_size = Vector2(440, 0)
+		_detail.add_child(desc)
+		_detail.add_child(_label("Cost %s  ·  %d days" % [_money(int(p.get("cost", 0))), int(p.get("days", 0))], 15, Color.WHITE))
+		var st: String = Research.status(ro, _focused_project)
+		if st != "available":
+			_detail.add_child(_label(_project_status_text(ro, _focused_project, p), 15, _project_status_color(st)))
+		if st == "available":
+			var b := _button("Start research", func(): _start_research(_focused_project))
+			b.disabled = not Research.can_start(ro, _focused_project)
+			if ro.research_current != "":
+				_detail.add_child(_label("The lab is busy with another project.", 13, DIM))
+			elif ro.funding < int(p.get("cost", 0)):
+				_detail.add_child(_label("Not enough funding yet.", 13, DIM))
+			_detail.add_child(b)
+	else:
+		_detail.add_child(_label("Pick a project to read about it.", 16, DIM))
+		if ro.research_current != "":
+			_detail.add_child(_label("Lab: %s, %d days left." % [all[ro.research_current].get("name", ""), ro.research_days_left], 15, GOLD))
+		else:
+			_detail.add_child(_label("Lab: idle.", 15, DIM))
+	_detail.add_child(_section("ORGANIZATION LOG"))
+	for i in range(ro.events.size() - 1, maxi(-1, ro.events.size() - 30), -1):
+		var l := _label(ro.events[i], 13, Color.WHITE)
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		l.custom_minimum_size = Vector2(440, 0)
+		_detail.add_child(l)
+
+
+func _start_research(id: String) -> void:
+	if _campaign.start_research(id):
+		_notice = ""
+	_refresh()
+
+
+func _money(n: int) -> String:
+	if absi(n) >= 1000000:
+		return "$%.2fM" % (n / 1000000.0)
+	return "$%dk" % int(round(n / 1000.0))
+
+
 # ---------------------------------------------------------------- actions
 
 func _on_card_input(e: InputEvent, id: int) -> void:
@@ -259,6 +391,12 @@ func _toggle_squad(id: int) -> void:
 func _set_tab(t: String) -> void:
 	_tab = t
 	_focused = -1
+	_refresh()
+
+
+func _on_stand_down() -> void:
+	var finished: Array[String] = _campaign.stand_down()
+	_notice = "A quiet week." if finished.is_empty() else "Research complete: %s!" % ", ".join(finished)
 	_refresh()
 
 

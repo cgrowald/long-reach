@@ -72,6 +72,11 @@ var actions: Array[String] = []     # what this soldier's class can do
 var record_id: int = -1             # campaign operator this unit is (-1 = none)
 var kills: int = 0
 var accuracy_mult: float = 1.0       # from the operator's stats / traits / injuries
+# From researched tech (set by main):
+var shot_noise_range: float = HEARING_RANGE  # how far this soldier's gunfire is heard
+var breach_radius_mult: float = 1.0
+var heartbeat_range: float = 0.0            # > 0: carries a heartbeat sensor
+var sensed: bool = false                    # hostile picked up by a friendly heartbeat sensor
 
 var pace: int = Pace.WALK
 var hold_fire: bool = false
@@ -411,6 +416,20 @@ func apply_modifiers(m: Dictionary) -> void:
 	run_speed *= float(m.get("speed", 1.0))
 	max_hp *= float(m.get("hp", 1.0))
 	hp = max_hp
+
+
+## Researched tech: {accuracy, hp, shot_noise, breach_charges, breach_radius, heartbeat_range}.
+## carries_sensor: this soldier gets the heartbeat sensor (if researched).
+func apply_tech(fx: Dictionary, carries_sensor: bool) -> void:
+	accuracy_mult *= float(fx.get("accuracy", 1.0))
+	max_hp *= float(fx.get("hp", 1.0))
+	hp = max_hp
+	shot_noise_range = float(fx.get("shot_noise", HEARING_RANGE))
+	breach_radius_mult = float(fx.get("breach_radius", 1.0))
+	if actions.has("breach"):
+		items["breach_charge"] = item_count("breach_charge") + int(fx.get("breach_charges", 0.0))
+	if carries_sensor:
+		heartbeat_range = float(fx.get("heartbeat_range", 0.0))
 
 
 ## Throw a grenade at a ground point now. Returns false if not possible.
@@ -900,7 +919,7 @@ func _detonate_charge(door, side: float) -> void:
 	var far: float = -side
 	var blast: Vector3 = door.center + n * far * 0.3 + Vector3(0.0, 1.0, 0.0)
 	door.blow()
-	var radius: float = float(data.get("radius", 4.5))
+	var radius: float = float(data.get("radius", 4.5)) * breach_radius_mult
 	var dmg_radius: float = float(data.get("damage_radius", 2.0))
 	var noise: float = float(data.get("noise_range", 35.0))
 	for u in get_tree().get_nodes_in_group("units"):
@@ -1019,7 +1038,7 @@ func _fire_at(t) -> void:
 	var exposure: float = t.exposure_from(eye)
 	if exposure <= 0.0:
 		return
-	_alert_nearby(HEARING_RANGE)
+	_alert_nearby(shot_noise_range)
 	var distance: float = global_position.distance_to(t.global_position)
 	var move_factor: float = 1.0
 	if is_moving():

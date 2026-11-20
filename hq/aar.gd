@@ -41,6 +41,10 @@ func _ready() -> void:
 		rows.add_child(_entry_row(campaign, e))
 
 	col.add_child(_label("Time passes. The calendar moves to %s; the wounded keep healing." % rep.get("next_date", ""), 14, DIM))
+	var gained: int = int(rep.get("funding_gained", 0))
+	col.add_child(_label("Funding this week: +$%dk%s" % [int(round(gained / 1000.0)), "  (includes success bonus)" if success else ""], 14, DIM))
+	for name in rep.get("research_finished", []):
+		col.add_child(_label("RESEARCH COMPLETE: %s" % name, 16, GOLD))
 	var back := Button.new()
 	back.text = "Return to HQ"
 	back.custom_minimum_size = Vector2(220, 44)
