@@ -1,0 +1,19 @@
+{
+	"_note": "Clickable things in the garage. 'nodes' are object names from art/garage.glb (prefix match). 'text' is what you see when you click it (the notebook, sticky note, charger and laptop have their own behaviour).",
+	"views": ["bench", "laptop", "window", "door"],
+	"things": {
+		"laptop": {"name": "The laptop", "nodes": ["Screen", "Laptop_"]},
+		"notebook": {"name": "Pavel's notebook", "nodes": ["Notebook"]},
+		"sticky": {"name": "Sticky note", "nodes": ["StickyNote"]},
+		"charger": {"name": "Charger", "nodes": ["Charger"]},
+		"box": {"name": "Pavel's box", "nodes": ["PavelsBox"], "text": "His jacket's on the hook now. In the box: his keys, a tin of screws, a photo of the two of you at the lake, both sunburnt. You put the lid back on."},
+		"phone": {"name": "Pavel's phone", "nodes": ["PavelsPhone"], "text": "The cracked phone. One day you'll have the right screen for it.", "text_if": {"flag": "phone_fixed", "text": "Pavel's phone. Working again. The scrap screen is a little too big for it."}},
+		"jacket": {"name": "Pavel's jacket", "nodes": ["PavelsJacket"], "text": "It still smells of engine oil and the cheap cigarettes he swore he quit."},
+		"door": {"name": "Door to the house", "nodes": ["Door"], "text": "The house is quiet. Mira's alarm is set for six."},
+		"window": {"name": "Window", "nodes": ["Window_Glass"], "text": "Rain on the glass. Across the street, Bruno's light is still on."},
+		"calendar": {"name": "Calendar", "nodes": ["Calendar"], "text": "October. The Marshal smiles at you from the top of the page. Someone (Lena) drew a moustache on him in pencil, very lightly."},
+		"bike": {"name": "Lena's bike", "nodes": ["Bike_"], "text": "Pavel fixed the chain last summer. It still doesn't squeak."},
+		"toolbox": {"name": "Toolbox", "nodes": ["Toolbox"], "text": "Your father's toolbox. The lid has a dent from the time Pavel dropped it off the roof."},
+		"lamp": {"name": "Bench lamp", "nodes": ["Lamp_"], "text": "It flickers when the plant's night shift starts up. Everyone's power does."}
+	}
+}

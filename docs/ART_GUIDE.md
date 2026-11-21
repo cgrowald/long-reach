@@ -22,7 +22,7 @@ The good news: the last two are cheap, and they matter most. A fixed palette plu
 
 ## 2. Your first session in Blender (about an hour)
 
-Claude will give you a `.blend` file next to each exported `.glb` in `art/`. Work on the `.blend`; Claude re-exports it, or you use File > Export > glTF 2.0.
+The garage is `art/src/garage.blend` (made by `art/src/make_garage.py`); the game loads `art/garage.glb`. Work on the `.blend`, then File > Export > glTF 2.0 over `art/garage.glb` (format: glTF Binary). Note: re-running the script overwrites the `.blend`, so once you start tweaking, tell Claude and the script stops being the source.
 
 **Controls you need:**
 - Middle mouse: orbit. Shift + middle mouse: pan. Scroll wheel: zoom.

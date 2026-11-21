@@ -43,6 +43,16 @@ Valdenmark, 2041. The Republic runs on screens: digital IDs, face-matching camer
 
 ---
 
+## How stories work in the game (decided 2026-11-20)
+
+- **Pavel's arc is an opening story,** not the whole game. Its job is to give you access (contacts, the forum, proof, your first people) so the insurgency can start. It doesn't have to go too hard.
+- **The ending of this arc** (one possible version): you win, and you find Pavel. A scene where you can say that everything you left behind led here. You hand him the leadership, and soon you both give it up for **a ring of trusted leaders** you met along the way.
+- **No single correct answer.** Every story has several outcomes depending on what you did: Pavel alive or dead, Viktor friend or enemy, Mira with you or gone.
+- **Many stories:**
+  - the user writes about **10 opening stories** (one per "what was taken from you" in character creation, or more);
+  - once there are enough, Claude writes many more in the user's style, so the world feels open and new every run;
+  - all of it is written during development and stored as data. **The game itself doesn't run an AI.**
+
 ## The first campaign's arc (the 10-hour proof of concept)
 
 1. **The box** (week 1, T1 covers Monday-Thursday): Pavel's things, lantern, the forum, Station 4. Ends with: *he may be alive.*

@@ -1,29 +1,38 @@
 extends Control
-## T1 root: the garage at night. Draws the room around the laptop, runs the night clock,
-## the boot/login sequence, the day cards between nights, and the end summary.
+## The garage at night: a pixel-art 3D room (terminal/room3d.gd) with the laptop OS rendered into a
+## viewport that shows on the 3D screen and, when you lean in, as a crisp overlay you can use.
+## Also runs the night clock, boot/login, the day cards between nights, and the end summary.
 
 const T := preload("res://terminal/os_theme.gd")
 const State := preload("res://sim/terminal_state.gd")
 const Desktop := preload("res://terminal/desktop.gd")
 const DayCard := preload("res://terminal/day_card.gd")
 const Sfx := preload("res://terminal/sfx.gd")
+const Room3D := preload("res://terminal/room3d.gd")
 
 const SCREEN := Rect2(144, 26, 1312, 738)
 const MIN_PER_SEC := 1.0     # laptop clock: one game minute per real second
+const PIXEL := 3             # the 3D room renders at 1/3 resolution for the pixel-art look
 
 var state
 var sfx
 var screen: Control
 var desktop: Control
+var room
+var _room_box: SubViewportContainer
+var _os_box: SubViewportContainer
+var _os_vp: SubViewport
 var _desk_row: HBoxContainer
-var _charger: Button
-var _sticky: Button
+var _hint: Label
+var _lean_btn: Button
+var _hover: Label
 var _overlay: Control
 var _debug: Label
 var _acc := 0.0
 var _night_running := false
 var _ticks_backtick: Array = []
 var _login_stage := false
+var _boot_tween: Tween
 
 
 func _ready() -> void:
@@ -31,14 +40,42 @@ func _ready() -> void:
 	sfx = Sfx.new()
 	add_child(sfx)
 	state = State.new()
-	queue_redraw()
+	var vs := get_viewport_rect().size
 
+	# The OS lives in its own viewport so it can be shown on the 3D laptop and as an overlay.
+	_os_box = SubViewportContainer.new()
+	_os_box.position = SCREEN.position
+	_os_box.size = SCREEN.size
+	_os_box.stretch = true
+	_os_vp = SubViewport.new()
+	_os_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	_os_vp.gui_embed_subwindows = false
+	_os_box.add_child(_os_vp)
 	screen = Control.new()
-	screen.position = SCREEN.position
 	screen.size = SCREEN.size
 	screen.clip_contents = true
-	add_child(screen)
-	_build_desk()
+	screen.theme = T.make()
+	_os_vp.add_child(screen)
+
+	# The garage, rendered small and scaled up with hard pixels.
+	_room_box = SubViewportContainer.new()
+	_room_box.size = vs
+	_room_box.stretch = true
+	_room_box.stretch_shrink = PIXEL
+	_room_box.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_room_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var rvp := SubViewport.new()
+	rvp.msaa_3d = Viewport.MSAA_DISABLED
+	_room_box.add_child(rvp)
+	add_child(_room_box)
+	room = Room3D.new()
+	rvp.add_child(room)
+	room.setup(_os_vp.get_texture())
+	room.arrived.connect(_on_camera_arrived)
+	add_child(_os_box)
+	_show_os(false)
+
+	_build_hud()
 	_debug = T.label("", 12, Color(0.6, 1.0, 0.6))
 	_debug.position = Vector2(8, 8)
 	_debug.visible = false
@@ -48,50 +85,38 @@ func _ready() -> void:
 
 # ------------------------------------------------------------- the room
 
-func _draw() -> void:
-	var s := get_viewport_rect().size
-	draw_rect(Rect2(Vector2.ZERO, s), Color(0.06, 0.06, 0.07))
-	# Faint garage wall boards.
-	for i in 14:
-		draw_rect(Rect2(i * 118, 0, 2, 790), Color(0.08, 0.08, 0.09))
-	# The bench.
-	draw_rect(Rect2(0, 790, s.x, s.y - 790), Color(0.24, 0.17, 0.11))
-	draw_rect(Rect2(0, 790, s.x, 6), Color(0.32, 0.23, 0.15))
-	# Laptop bezel and hinge.
-	var bez := SCREEN.grow(16)
-	draw_rect(bez, Color(0.13, 0.13, 0.14))
-	draw_rect(bez, Color(0.22, 0.22, 0.24), false, 2.0)
-	draw_rect(Rect2(bez.position.x - 30, bez.end.y, bez.size.x + 60, 12), Color(0.18, 0.18, 0.2))
-	draw_circle(Vector2(SCREEN.get_center().x, SCREEN.position.y - 8), 3, Color(0.05, 0.05, 0.05))
-	# The light from the screen on the bench.
-	draw_rect(Rect2(bez.position.x, 796, bez.size.x, 40), Color(0.5, 0.6, 0.7, 0.04))
-
-
-func _build_desk() -> void:
+func _build_hud() -> void:
 	_desk_row = HBoxContainer.new()
-	_desk_row.position = Vector2(40, 818)
-	_desk_row.size = Vector2(1520, 60)
-	_desk_row.add_theme_constant_override("separation", 18)
+	_desk_row.position = Vector2(30, 846)
+	_desk_row.size = Vector2(1540, 44)
+	_desk_row.add_theme_constant_override("separation", 14)
 	add_child(_desk_row)
-	var note := _desk_button("Pavel's notebook", Color(0.55, 0.45, 0.3))
-	note.pressed.connect(_show_notebook)
-	_sticky = _desk_button("sticky note", Color(0.85, 0.8, 0.35))
-	_sticky.pressed.connect(_show_sticky)
-	_charger = _desk_button("charger: unplugged", Color(0.3, 0.3, 0.32))
-	_charger.pressed.connect(_toggle_charger)
+	_hint = T.label("", 15, Color(0.8, 0.78, 0.7))
+	_hint.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.9))
+	_hint.add_theme_constant_override("shadow_offset_x", 1)
+	_hint.add_theme_constant_override("shadow_offset_y", 1)
+	_desk_row.add_child(_hint)
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_desk_row.add_child(spacer)
-	var lid := _desk_button("Close the lid  (end the night)", Color(0.35, 0.2, 0.18))
+	_lean_btn = _hud_button("Lean back  (Esc)", Color(0.22, 0.24, 0.26))
+	_lean_btn.pressed.connect(_lean_back)
+	var lid := _hud_button("Close the lid  (end the night)", Color(0.35, 0.2, 0.18))
 	lid.pressed.connect(_close_lid)
 	_desk_row.visible = false
+	_hover = T.label("", 15, Color(1.0, 0.92, 0.7))
+	_hover.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 1))
+	_hover.add_theme_constant_override("shadow_offset_x", 2)
+	_hover.add_theme_constant_override("shadow_offset_y", 2)
+	_hover.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_hover)
 
 
-func _desk_button(text: String, col: Color) -> Button:
+func _hud_button(text: String, col: Color) -> Button:
 	var b := Button.new()
 	b.text = text
 	b.focus_mode = Control.FOCUS_NONE
-	b.custom_minimum_size = Vector2(0, 44)
+	b.custom_minimum_size = Vector2(0, 38)
 	b.add_theme_font_size_override("font_size", 15)
 	b.add_theme_stylebox_override("normal", T.box(col, col.lightened(0.25), 1, 3))
 	b.add_theme_stylebox_override("hover", T.box(col.lightened(0.1), Color(1, 0.9, 0.6), 1, 3))
@@ -102,16 +127,80 @@ func _desk_button(text: String, col: Color) -> Button:
 	return b
 
 
+func _show_os(on: bool) -> void:
+	_os_box.modulate.a = 1.0 if on else 0.0
+	_os_box.mouse_filter = Control.MOUSE_FILTER_STOP if on else Control.MOUSE_FILTER_IGNORE
+	if not on:
+		_os_vp.gui_release_focus()
+	if _lean_btn:
+		_lean_btn.visible = on
+		_hint.text = "" if on else "A / D  look around      click things      click the laptop to use it"
+	if _hover:
+		_hover.text = ""
+
+
+func _use_laptop(instant: bool = false) -> void:
+	_close_overlay()
+	room.use_laptop(SCREEN, get_viewport_rect().size, instant)
+
+
+func _lean_back() -> void:
+	if not room.using_laptop:
+		return
+	_show_os(false)
+	room.look_view("laptop")
+
+
+func _on_camera_arrived(v: String) -> void:
+	if v == "use":
+		_show_os(true)
+
+
 func _refresh_desk() -> void:
-	_charger.text = "charger: plugged in" if state.plugged else "charger: unplugged"
-	_sticky.visible = state.sticky != ""
+	room.set_visible_node("Charger_Cable", state.plugged)
 
 
 func _toggle_charger() -> void:
 	state.plugged = not state.plugged
 	sfx.play("toggle")
 	_refresh_desk()
+	state.toast.emit("Charger plugged in." if state.plugged else "Charger unplugged.")
 	state.changed.emit()
+
+
+func _interact(id: String) -> void:
+	match id:
+		"laptop":
+			if _night_running or _login_stage:
+				sfx.play("click")
+				_use_laptop()
+		"notebook":
+			_show_notebook()
+		"sticky":
+			_show_sticky()
+		"charger":
+			_toggle_charger()
+		"":
+			pass
+		_:
+			var t: Dictionary = room.things.get(id, {})
+			var text: String = str(t.get("text", ""))
+			var alt: Dictionary = t.get("text_if", {})
+			if not alt.is_empty() and state.has_flag(str(alt.get("flag", ""))):
+				text = str(alt["text"])
+			sfx.play("paper")
+			_paper(str(t.get("name", id)), [text])
+
+
+func _gui_input(e: InputEvent) -> void:
+	if room == null or room.using_laptop or not _desk_row.visible:
+		return
+	if e is InputEventMouseMotion:
+		var id: String = room.pick(e.position / PIXEL)
+		_hover.text = str(room.things.get(id, {}).get("name", "")) if id != "" else ""
+		_hover.position = e.position + Vector2(18, 10)
+	elif e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT:
+		_interact(room.pick(e.position / PIXEL))
 
 
 func _paper(title: String, lines: Array) -> void:
@@ -133,7 +222,7 @@ func _paper(title: String, lines: Array) -> void:
 	col.add_child(close)
 	add_child(p)
 	p.reset_size()
-	p.position = Vector2(60, 790 - p.size.y - 10)
+	p.position = Vector2(60, 830 - p.size.y)
 	_overlay = p
 
 
@@ -150,12 +239,17 @@ func _show_notebook() -> void:
 
 func _show_sticky() -> void:
 	sfx.play("paper")
-	_paper("Sticky note on the bench", ["laptop: " + state.sticky])
+	if state.sticky == "":
+		_paper("Sticky note", ["Blank. You kept your password in your head."])
+	else:
+		_paper("Sticky note on the bench", ["laptop: " + state.sticky])
 
 
 # ------------------------------------------------------------- flow
 
 func _clear_screen() -> void:
+	if _boot_tween and _boot_tween.is_valid():
+		_boot_tween.kill()
 	for c in screen.get_children():
 		c.queue_free()
 	desktop = null
@@ -204,6 +298,7 @@ func _boot() -> void:
 	_clear_screen()
 	_desk_row.visible = true
 	_refresh_desk()
+	_use_laptop(true)
 	sfx.play("lid", -6.0)
 	sfx.fan(true)
 	var bios := RichTextLabel.new()
@@ -220,8 +315,11 @@ func _boot() -> void:
 		"Battery .... %d%%" % int(state.battery), "Network .... weak signal", "", "Loading HEARTH OS 7.2 ..."]
 	sfx.play("beep", -12.0)
 	var tw := create_tween()
+	_boot_tween = tw
 	for l in lines:
-		tw.tween_callback(func(): bios.add_text(l + "\n"))
+		tw.tween_callback(func():
+			if is_instance_valid(bios):
+				bios.add_text(l + "\n"))
 		tw.tween_interval(0.16)
 	tw.tween_interval(0.4)
 	tw.tween_callback(_logo)
@@ -370,6 +468,8 @@ func _end_night(note: String) -> void:
 	sfx.play("lid", -6.0)
 	sfx.fan(false)
 	_clear_screen()
+	_show_os(false)
+	room.look_view("laptop")
 	_desk_row.visible = false
 	var more: bool = state.end_night()
 	if note != "":
@@ -428,7 +528,17 @@ func _unhandled_input(e: InputEvent) -> void:
 		if e.keycode == KEY_F9:
 			_debug.visible = not _debug.visible
 		if e.keycode == KEY_ESCAPE:
-			_close_overlay()
+			if is_instance_valid(_overlay):
+				_close_overlay()
+			elif room.using_laptop and _desk_row.visible:
+				_lean_back()
+		if not room.using_laptop and _desk_row.visible:
+			if e.keycode in [KEY_A, KEY_LEFT]:
+				_close_overlay()
+				room.turn(-1)
+			elif e.keycode in [KEY_D, KEY_RIGHT]:
+				_close_overlay()
+				room.turn(1)
 
 
 func _input(e: InputEvent) -> void:
