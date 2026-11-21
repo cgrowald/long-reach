@@ -6,6 +6,92 @@
 
 ---
 
+## 0. THE CORE (decided 2026-11-20, late night). Read this first; it overrides older sections
+
+**Nothing is predetermined.** It's a systemic, run-based game in the spirit of Balatro's structure (random offers, combos, builds that snowball), not a text adventure. Growth is still the point.
+
+### 0.1 The op loop (one loop at every scale)
+> **Find a target → hit it → loot drops → combine the loot → the world opens up → bigger targets.**
+
+- **Targets** are places on the overworld map (generated each run): government offices (data, dirt), gun stores (weapons), a metal refinery (parts for upper receivers), police posts, roadblocks, officials, radio towers, depots.
+- **Loot** (rarity tiers, rolled traits; see PROOF_AND_INTEL.md) feeds:
+  - the benches (parts become receivers become rifles);
+  - people (dirt turns them);
+  - the movement (leaks grow it);
+  - new targets (Chain loot).
+- **Weekly random offers** (forum, market, contacts) give you a handful of opportunities to choose from. You can't take everything.
+- **Combos snowball:** refinery parts → receivers → armed cells → the armory opens → the barracks open.
+- **The regime's rule of the week** works like a boss modifier you must play around.
+
+### 0.2 Three ways to run any op
+1. **Do it yourself:**
+   - hack it on the PC (your "sword": the laptop is where a small person beats a whole system, the Dungeon Crawler Carl feeling);
+   - or go there in first person (small locations only).
+2. **Command it:** watch through cameras or drones and make a few big calls while your people fight as themselves.
+3. **Auto-resolve:** read the result.
+
+**Scale:** the same op system goes from you alone → a cell → squads → platoons across the town in the final war. Your control moves from your hands to the cameras to the drones; micro shrinks as scale grows. You can always jump in yourself.
+
+### 0.3 Watch-and-decide combat (the biggest unknown; prototype first)
+- **The feeling:** the Door Kickers 2 joy of a team pieing a corner perfectly, **without micro**.
+- **Skill shows in movement:**
+  - **rookies** bunch up, check corners late, flinch, miss;
+  - **trained squads** stack, pie in one smooth motion and cross-cover.
+  
+  Getting good is something you *watch*.
+- **Dice roll themselves:** XCOM-style hit and reaction chances, played out in real time. No "35%" button. Better training and gear than the enemy means faster reactions and better aim.
+- **The player's calls** (a few per fight, like a manager game's touchline shouts):
+  - **routes:** take the hallway, take the stairwell;
+  - **assignments:** you watch this, you watch that, you hack or exploit that target, whether it's a device or a person;
+  - **tempo:** quiet, loud, hold, pull out.
+- **Squad AI:** the squad decides the plan, and each soldier carries it out his own way (hierarchical AI). Soldiers act on their own: take cover, pull wounded, react to grenades.
+- **Readability rule:** sloppiness must look like rookies, not bugs. (SWAT 4's main complaint was teammates who sometimes clear brilliantly and sometimes run past an enemy.)
+- **Auto slow motion on contact** gives you a beat to make the call.
+- Not as complex as Door Kickers 2 or Gates of Hell. Not a shooter.
+
+### 0.4 Readable combos: the op report
+After every op, a report tallies up like Balatro's score:
+
+> loot ★★★ · CLEAN (no casualties) · GHOST (never seen) · NO CIVILIANS HURT → ★★★★, sympathy up
+
+- **Clean execution raises or keeps loot rarity, and grows your skills.** Sloppy work downgrades loot and adds heat.
+- This holds for every kind of op: hacks, robberies, hits on officials, roadblocks.
+- **Payday-style getting caught:** quiet → suspicion → alert → response, within an op; heat across the run (revisit later).
+
+### 0.5 Two economies
+- **The broker:** a third party you pay in loot or money for special upgrades (skills, perks, tools, specialists). **Never war materials.**
+- **War materials** (guns, ammo, parts, plates) come only from your own loop: raids, benches, supply chains.
+
+### 0.6 People: named legends and the numbers
+- **A few named operatives** you care about (XCOM-style). They're the legends for high-profile ops, upgraded with rare loot (rare metals, special ammo). Rare loot recurs through the main loop; it's not finite.
+- **Everyone else** grows into squads and platoons as numbers.
+
+### 0.7 More than one way to win
+- **Military:** storm the capital.
+- **Political:** a perfect, damning evidence drop from a great op gets the president impeached. No army needed on a great run.
+- Others to design (a popular uprising, a general strike?). Your lean tends to pick your path.
+
+### 0.8 Views
+- **Overworld map** for the town or country.
+- **The PC** is the main tool.
+- **First person** only for small locations (the garage, a records room, a stairwell).
+- **Cameras and drones** for commanding fights.
+
+### 0.9 What carries over from what's built
+- **Kept:** the laptop OS, Probe and the lab engine (becomes generated), loot, patterns, the garage, sound.
+- **Reused:** the old CQB engine (soldiers who see and shoot on their own, the pie maneuver, raised and low-ready poses). It gets autonomous, skill-based behavior.
+- **Becomes optional:** the hand-scripted days 1-4, kept as a tutorial or one opening story.
+- **Story:** the user's opening stories set your starting pieces and a long-term goal. Their scenes fire when the systems get you there, not on fixed days.
+
+### 0.10 Build order
+1. **Combat prototype:** watch-and-decide on one building (see docs/COMBAT_PROTOTYPE.md).
+2. **Town overworld** with generated targets and weekly offers.
+3. **The op system:** plan → execute (yourself, command or auto) → op report → loot.
+4. **The gun bench** eating loot.
+5. Generated labs, the broker, named operatives.
+
+---
+
 ## 1. Pitch
 
 You are nobody: a reluctant family man or woman with a cover job, a garage and a laptop, in a country ruled by a regime. Every campaign generates a new country. Something was taken from you. You build a resistance from zero:
@@ -399,6 +485,7 @@ Each milestone ends playable.
 
 | Date | Decision |
 |---|---|
+| 2026-11-20 | NEW CORE (section 0): systemic Balatro-like structure, nothing predetermined; the op loop (target, hit, loot, combine, open up); three ways to run any op (yourself, command via cameras/drones, auto); watch-and-decide combat with skill visible in movement and auto dice; op report tally; broker (upgrades, never war materials); named legends + numbers; military and political wins; overworld + PC + first person for small places. Build order: combat prototype first. User offered phone videos of drills (ex-Army) to model AI movement. |
 | 2026-11-20 | T3 built: Probe app with the Annex lab (map, typed commands, Tab completion, typo hints, idle hints, assist chips, patterns that can break, trace meter), loot drops with tier cards and the Archivist, loot posts give big follower bonuses. |
 | 2026-11-20 | Annex answers: Pavel moved to the capital (yes). Mrs. Duda dilemma (great, keep). Keep typing, plus an assist option with autofill chips for known commands; beaten defenses become saved "patterns" you replay (memorized feel), which daily rules can break. Short labs give small loot (1-3 stars); big jobs give procedurally generated high-tier loot (up to 5-star blackmail/leaks) with a Dungeon Crawler Carl style looting thrill but our own rarity; big loot also unlocks path support for your troops. Terminal UI vibe needs a look pass (WIP). See docs/PROOF_AND_INTEL.md 5-8. |
 | 2026-11-20 | Answers: lean-in is GROWN BY DOING (no classes). Hacking labs = a clickable map of the target network plus a few short typed commands with hints. First need to get all its paths: PROOF AND INTEL (hack an office, break in, janitor job, exploit a clerk). Every run varies: country and regime, opening story, your circle of people, and which paths exist. |

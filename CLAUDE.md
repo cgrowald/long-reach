@@ -1,6 +1,6 @@
 # Uprising (working title; repo "long-reach") - notes for Claude
 
-Underground resistance game: a reluctant parent in a generated country builds a movement from nothing (laptop, workbench, cells) into an army that storms the capital. **Read `docs/GAME_DESIGN.md` first** (source of truth; update its Decisions Log on every user decision). Also: `docs/PROOF_AND_INTEL.md` (the 4-path need template + the Annex hacking lab), `docs/STORY_PREMISE.md` (cast, arc, scenes the user writes), `docs/FIRST_WEEK.md` (paper playtest of the opening), `docs/TERMINAL.md` (the laptop OS). The old counter-terror game (M0-M7) is archived in `docs/archive/`; its code stays and gets reused.
+Underground resistance game: a reluctant parent in a generated country builds a movement from nothing (laptop, workbench, cells) into an army that storms the capital. **Read `docs/GAME_DESIGN.md` first** (source of truth; update its Decisions Log on every user decision). Also: `docs/COMBAT_PROTOTYPE.md` (watch-and-decide plan, next build), `docs/PROOF_AND_INTEL.md` (the 4-path need template + the Annex hacking lab), `docs/STORY_PREMISE.md` (cast, arc, scenes the user writes), `docs/FIRST_WEEK.md` (paper playtest of the opening), `docs/TERMINAL.md` (the laptop OS). The old counter-terror game (M0-M7) is archived in `docs/archive/`; its code stays and gets reused.
 
 ## Working with the user
 - The user does not write code. They direct, playtest, and make design calls. Claude writes all code.
@@ -55,3 +55,4 @@ people/ hq/ world/ tactical/   old counter-terror code (portraits, roster, map d
 - 2026-11-20: game switched to the uprising design; planning done for the opening. Building **T1: the terminal on its own** (docs/TERMINAL.md section 6). Old counter-terror screens are no longer the main scene.
 - T2a built: 3D garage around the laptop (placeholder Blender models, four views, clickable objects, lean in/out). Godot has Blender import disabled; .blend files live in art/src/ which Godot ignores.
 - T3 built: the Annex hacking lab in the Probe app (data/labs/annex.json, data/loot.json). Unlocked on night 4 via kettle's forum thread. The night clock pauses during labs; each command costs minutes.
+- 2026-11-20 late: design core rewritten (GAME_DESIGN section 0: op loop, three ways to run an op, watch-and-decide combat, op report, two economies, named legends + numbers, multiple win paths). Next build: the combat prototype (docs/COMBAT_PROTOTYPE.md), after the user answers its gap questions. The old tactical engine is NOT dead: it gets reused for this.
