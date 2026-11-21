@@ -139,3 +139,67 @@ Build **B and A as two tiny toys** (one target, a few packets or cards, two tool
 - Breach Protocol: [PC Gamer](https://pcgamer.com/how-to-cyberpunk-2077-hacking-breach-protocol), [Sportskeeda](https://www.sportskeeda.com/esports/cyberpunk-2077-how-breach-protocol-efficiently), [Gamepressure](https://www.gamepressure.com/cyberpunk-2077/hacking/z7c78e)
 - Hacking deckbuilders: [DeckRunners](https://sirdrmchurtz.itch.io/deckrunners), [Terminal Warfare](https://store.steampowered.com/app/4812060/Terminal_Warfare)
 - White Knuckle: [80.lv breakdown](https://80.lv/articles/breakdown-how-dark-machine-created-a-roguelite-speed-climbing-game)
+
+---
+
+## 6. The hack, v3 design (2026-11-21, after the user played both toys)
+
+**What the user said:**
+- It has to be a mix of the two toys.
+- Build a deck of hacking cards, like other hacking card games. The cards only come from learning how to hack or from making gadgets. Specific cards do specific jobs: one breaks a firewall, one gets you an SSH shell.
+- Each card is used once.
+- Each target has a network, like Deus Ex and Cyberpunk, but with a fun spin.
+- It should be the incremental, giant-numbers feeling of Balatro: planets upgrade hands and jokers add mult and points. Here, your toolset has star ratings that do that, so you hack buildings faster and faster.
+- Hacking is one small part of the game. Maybe each hack has its own minigame.
+- What you get feeds gear for your soldiers. Star-rated gear makes a soldier a legend and more likely to survive.
+- The world of Iron Nest is where you work from.
+- The goal is the "OHHH, THAT'S the actual way to do it" moment. Not spamming the hack button, but combining the right exploits. Like Balatro or Ultra Pool: you can play normally and try to win, but the combos get you there.
+
+### The idea in one line
+**The combo IS the real attack logic, gamified.** Scout, get in, escalate, then grab. Play cards in the right order, against the weak spot you found, and the numbers explode. Play them randomly and you scrape by. That's the "OHHH" moment, and it teaches the *shape* of hacking (no real procedures).
+
+### Pieces (Balatro mapping)
+| Balatro | Ours | Where it comes from |
+|---|---|---|
+| A blind | **A node** in the target's network (firewall, shell, camera, database, vault). Each has a defence number to beat. | The target (generated) |
+| A hand of cards | **Your hack deck**, brought on the job. Each card is used once per hack. | **Techniques** you learned (they come back every hack) + **gadget cards** you made at a bench (gone once played) |
+| Poker hands | **Chains**, read in the order played (see below) | Fixed list, upgraded by practice |
+| Planets | **Technique levels**: practise a chain and it levels up (+chips, +mult) | Doing it, plus manuals found as loot |
+| Jokers | **Rig modules with star ratings** (1-5 ★): permanent passives | Bench-built, loot, the broker |
+| Boss blind | **The rule of the day** + the node's security software | The world |
+
+### Card roles (the four suits, but they mean something)
+- **SCAN** (recon): low chips, but **tags the node's weak spot** ("old SSH", "default password", "careless clerk").
+- **ACCESS** (get in): chips. SSH key, phish, cloned badge, default password.
+- **EXPLOIT** (escalate): mult. Overflow, injection, privilege jump.
+- **PAYLOAD** (grab or stay): turns the score into loot. Dump, keylogger, backdoor.
+
+### Chains (the "poker hands")
+Read in the order you play the cards:
+- **Kill chain:** SCAN → ACCESS → EXPLOIT → PAYLOAD. The big one.
+- **Tunnel:** 3+ cards of the same protocol (all SSH).
+- **Matched:** any card that hits the tagged weak spot ×2 (a stack of matches multiplies).
+- **Brute:** 3+ ACCESS cards. Works but is weak and loud (+trace).
+- **Ping:** anything else.
+
+### The giant numbers
+- **Overkill carries over.** Damage beyond a node's defence flows into the next node. One great chain can blow through three nodes, with the numbers cascading down the network map. This is the Balatro "the score keeps going" feeling.
+- **Rig modules multiply,** and a 5★ module is silly ("each Matched card ×3").
+- **Week 1:** the Ministry mail server takes 10 careful minutes. **Week 6:** your rig blows through it in 20 seconds and you go for the vault instead. Hacking gets *faster* as you grow, the way the user wants.
+- **Late game:** nodes far below your power **auto-crack** (the incremental / automation moment), so you only play the hard nodes by hand.
+
+### Minigames per node type (the mix)
+- Most nodes: **cards** (Breach Hand).
+- **Firewall boss nodes** (heavy defence): a **flood** minigame. Your chain's score becomes packets, played out Packet Pit style for bonus overkill.
+- Later: a **camera node** (loop the footage: timing), a **badge reader** (a rhythm swipe). Each is short, and each is an optional skill bonus on top of the cards.
+
+### Where it goes
+- What the hack gets you is **intel tiers** (see section 1) **and parts and plans**: blueprints, codes and schedules.
+- Those become **gear at the benches**, and **star-rated gear makes soldiers legends**: better survival, better numbers.
+- It all happens from **the Iron Nest room**: the garage, the rig, the benches.
+
+### Open questions for the user
+1. Do learned techniques come back every hack (only gadget cards are gone for good), or is every card gone for good?
+2. Overkill flowing through the network: yes?
+3. Should a node's own minigame (flood, camera loop) be optional bonus or required?
+4. How many cards does a hack take? (Claude's guess: a deck of ~15, 5-8 plays per hack, 3-6 nodes.)
