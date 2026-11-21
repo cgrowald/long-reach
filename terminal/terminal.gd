@@ -263,9 +263,13 @@ func _title() -> void:
 	var opts: Array = [{"text": "New game"}]
 	if State.has_save():
 		opts.insert(0, {"text": "Continue (day %d)" % _saved_day()})
+	opts.append({"text": "Combat prototype: watch and decide"})
 	card.show_title("UPRISING", "T1 prototype: the laptop\n\nA terminal-only slice of the first week. Headphones recommended.", opts)
 	card.chosen.connect(func(i):
 		card.queue_free()
+		if i == opts.size() - 1:
+			get_tree().change_scene_to_file("res://tactical/watch/watch_main.tscn")
+			return
 		if State.has_save() and i == 0:
 			state.load_save()
 		else:

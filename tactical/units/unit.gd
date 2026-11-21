@@ -74,6 +74,8 @@ var actions: Array[String] = []     # what this soldier's class can do
 var record_id: int = -1             # campaign operator this unit is (-1 = none)
 var kills: int = 0
 var accuracy_mult: float = 1.0       # from the operator's stats / traits / injuries
+var moving_accuracy: float = 0.0     # trained shooters stay accurate on the move (0 = untrained default)
+var damage_taken_mult: float = 1.0   # plates and gear
 # From researched tech (set by main):
 var shot_noise_range: float = HEARING_RANGE  # how far this soldier's gunfire is heard
 var breach_radius_mult: float = 1.0
@@ -692,7 +694,7 @@ func hear_noise(source_pos: Vector3) -> void:
 func take_damage(amount: float, source) -> void:
 	if is_dead:
 		return
-	hp -= amount
+	hp -= amount * damage_taken_mult
 	alerted = true
 	_scan_timer = 0.0
 	if source != null and source != self and target == null and not source.is_dead:
@@ -1112,6 +1114,7 @@ func _fire_at(t) -> void:
 		move_factor = CombatRules.RUN_ACCURACY if pace == Pace.RUN else CombatRules.WALK_ACCURACY
 		if _pieing():
 			move_factor = PIE_ACCURACY
+		move_factor = maxf(move_factor, moving_accuracy)
 	var chance: float = CombatRules.hit_chance(weapon, distance, move_factor, t.is_moving()) * exposure * accuracy_mult
 	var hit: bool = randf() < chance
 

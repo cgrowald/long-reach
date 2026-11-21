@@ -83,7 +83,69 @@ How soldiers *decide*: spacing in a stack, when the second man moves, the angle 
 
 ---
 
-## 4. Gap questions before building (answer what you can)
+## 4. Answers (user, 2026-11-20)
+
+1. **Camera:** both views, drone and CCTV, switchable.
+2. **Calls:**
+   - **Hotkeys.** Tell them which direction to move, then give a move order, without clicking the exact spot. They use cover intelligently on their own, so you're not running 100 simulations in your head.
+   - Plus **stop commands**, and the option to **control each soldier individually to set up defenses.**
+   - **Both sides matter:** attacking *and* defending.
+3. **Pause:**
+   - **If you're not there in person,** you can pause at any time, give new commands, then let it play out.
+   - **Slow motion** too, at first, to see whether it's good and to help with soldiers who miss a corner or check it too slowly.
+4. **No numbers on screen.** Judge by watching; knowing the numbers takes the fun out of it.
+5. **Same gray-box building** for speed, but the system should support longer halls and realistic-sized buildings.
+6. **Reference:** the user found a video of a clearing style instead of filming drills ("we don't need a whole lot right now"). Video studied in section 5. Not stored in the repo.
+
+## 5. What the reference video shows (2026-11-20)
+
+A two-minute shoot-house training montage: helmet cams, fast cuts. It's good for **style**, not exact timings. What it shows:
+
+- **Door prep:** the breacher sets up the door (charge and initiator) while the team waits **stacked tight along the wall beside the door**, out of the doorway.
+- **Hallways:** a **tight single-file train**, about an arm's length apart. The lead covers the far end of the hall; the man behind covers over the lead's shoulder.
+- **Entry:** the team **flows through the doorway without stopping in it** (the doorway is the "fatal funnel"). Each man peels to a different side: the first goes deep along one wall, the second takes the opposite side, and the next ones follow. Weapons are on target the moment each man is inside. Several men are in the room within about 1-2 seconds.
+- **The feeling to copy:** momentum and flow. Nobody stands still in a doorway; everybody knows where he's going.
+
+### Clearing rules for the AI (from the video + standard practice)
+| Behaviour | Veteran | Rookie |
+|---|---|---|
+| Stack | Tight, along the wall, out of the doorway | Loose, someone standing in front of the door |
+| Gap between men entering | ~0.5 s | 1.5-2.5 s, with a pause in the doorway |
+| Direction after entry | Alternating sides, no crossing | Sometimes both go the same way, or one stops at the threshold |
+| Pie a corner | Smooth, weapon up, steady speed | Jerky, starts too close to the corner, weapon low |
+| Reaction to a target | Fast (reaction time from skill) | Slow, sometimes freezes |
+| Hallway train | Tight, the lead covers the far end, the second over his shoulder | Strung out, everyone looking the same way |
+
+## 6. As built (2026-11-20): `tactical/watch/`, from the title screen "Combat prototype"
+
+- **`room_graph.gd`:** the test building's 4 rooms and which doors connect them; "best exit in this direction".
+- **`squad_brain.gd`:**
+  - direction → stack along the wall beside the door (out of the doorway);
+  - open it (quiet) or kick + flashbang (loud);
+  - **veterans and trained slice the pie on the open doorway from outside first**;
+  - flow in one by one, alternating sides, eyes on their corner;
+  - call the room clear;
+  - also hold, pull out, one soldier covers a direction, one soldier hacks the camera hub (reveals everyone for 25 s).
+- **`watch_cams.gd`:** a drone that follows the squad (mouse wheel zooms) and 3 CCTV cameras with a grain filter; a CCTV camera shows everyone in its room.
+- **`watch_main.gd`:**
+  - skill picker, hotkeys, fog of war, call-outs over heads ("Going in!", "Contact!", "CLEAR!");
+  - auto slow motion on first contact; pause; manual slow motion;
+  - green tint on cleared rooms; the op report with stars and tags.
+- **Skill** (`data/watch/skills.json`):
+  - reaction, accuracy, **accuracy while moving**, plates (damage taken);
+  - stack spacing, gaps between entries, hesitation in the doorway, wrong-side entries, standing in the fatal funnel, whether they pie first.
+- **Headless results** (the squad clears room after room on its own, quiet tempo):
+  - **Veterans:** all 6 enemies down, lose 1-2 people;
+  - **Trained:** most enemies down, the squad doesn't survive;
+  - **Rookies:** 2-4 enemies down, up to 7 doorway stops.
+  
+  There is real variance; one windowed veteran run was wiped on the last room.
+- **Known rough edges:**
+  - placeholder capsules;
+  - enemies don't move (they wait aimed at doors once they hear shooting);
+  - no wounded-dragging or grenade-dodging yet.
+
+## 7. Gap questions before building (answered above)
 
 1. **Camera:** in the prototype, which do you want to try first?
    - a drone view (above, angled);
