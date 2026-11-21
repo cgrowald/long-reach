@@ -14,7 +14,7 @@ Underground resistance game: a reluctant parent in a generated country builds a 
 - Downloads need explicit user permission. Never kill the user's Godot editor. Warn before long silent runs.
 
 ## Tech
-- Godot 4.7, GDScript, Forward+. Project root = repo root. Main scene: `res://terminal/terminal.tscn` (T1 prototype).
+- Godot 4.7, GDScript, Forward+. Project root = repo root. Main scene: `res://v2/menu.tscn` (v2 restart, see docs/RESTART.md). The old build (terminal/, tactical/watch/, etc.) is tagged `v1-final`; copy pieces into v2/ only when they fit.
 - Godot exe: `C:\Users\Chandler\Tools\Godot\Godot_v4.7.2-stable_win64.exe` (`_console` variant for headless runs).
 - Blender 5.3 for generated low-poly models: `C:\Program Files\Blender Foundation\Blender 5.3\blender.exe --background --factory-startup --python <script.py>`.
 - How to test (smoke runs, behaviour scripts, screenshots): see the `godot-verify` skill in `.claude/skills/`.
@@ -60,3 +60,4 @@ people/ hq/ world/ tactical/   old counter-terror code (portraits, roster, map d
 - Combat prototype built (tactical/watch/, title screen button). Controls v2: select + right-click door = stack, breach plan panel, right-click ground = move. Garage and drone have depth of field.
 - Step 1 of the PC rebuild DONE (docs/OPEN_PC_AND_ECONOMY.md section 9): sandbox mode (New game), generated town (sim/world_gen.gd), systemic messages, Market, Workshop, Nod, Map, generated web pages, drab HEARTH GNU/State look. Data in data/os/. The scripted T1 week (story mode) stays only for the old tests.
 - NEXT steps: 2 = hours-per-day time + going out (town map POIs, short hands-on scenes); 3 = bench minigames (hacking table first: assemble, solder, flash); 4 = Nod followers payoffs + Bureau levels, warnings, raid scramble.
+- 2026-11-21: RESTART (v2). docs/MARKET_RESEARCH.md + docs/RESTART.md. Two hacking minigame toys in v2/ (Packet Pit = Ball x Pit style, Breach Hand = Balatro style), sim in v2/sim/, shared pixel CRT + hack rig UI in v2/ui/. The user plays both and picks one; then polish that one until it's fun before building anything else.
