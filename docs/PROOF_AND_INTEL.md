@@ -166,9 +166,86 @@ A dark network map in a new laptop app, **Probe**. Nodes appear as you find them
 
 ---
 
-## 5. Questions for the user
+## 5. Answers (user, 2026-11-20)
 
-1. **The twist:** Pavel moved to the capital. Does that work for you, or should the first arc keep him in Kessel?
-2. **Mrs. Duda** (Lena's teacher) as the clerk: a good small-world dilemma, or too cruel this early?
-3. **Typed commands:** is the table above about the right amount of typing, or should commands be clickable buttons with typing optional?
-4. **Lab length:** this one is about 10-15 minutes. Should most labs be shorter (5 minutes, several per week) or rarer and bigger?
+1. **Pavel moved to the capital:** yes, great twist.
+2. **Mrs. Duda as the clerk:** "GREAT dilemma this early, exactly the kind of thing I mean." Keep it.
+3. **Typing:** keep typing, it makes you feel like a hacker. But some players won't want to think that hard, so add an **assist option with buttons that autofill**. You still have to know what to do. It should feel like you've **memorized the pattern** (like the steps to get around a two-factor login). See section 6.
+4. **Lab length:**
+   - **short labs** for smaller loot (espionage on a political target, a schedule, a credential);
+   - **big missions** for high-tier loot, with procedurally generated rarity (5-star blackmail, leaks), with the looting thrill of the *Dungeon Crawler Carl* books but our own rarity system;
+   - big loot is a huge upgrade, and it pushes you to unlock that path's support for your troops. See section 7.
+5. **The terminal UI's vibe needs work** (known, WIP). Do a look pass later, with the user's references.
+
+---
+
+## 6. Typing and the assist option: you remember patterns
+
+- **Typing is the default.** Commands are short and forgiving: autocomplete with Tab, typos suggested ("did you mean `scan printer`?").
+- **Assist option** (a setting, can be toggled any time): command **chips** appear under the prompt for commands you **already know**. Click to autofill, Enter to run.
+  - Chips only show commands you've learned. New commands still come from hints, the forum, kettle, and experimenting.
+  - Chips never show *which* target or *what order*. You still have to know the plan; the assist only saves typing.
+- **Patterns (the "memorized" feeling):**
+  - After you beat a kind of defense by hand once, the sequence is saved as a **pattern** in your notes, e.g.:
+
+    ```
+    PATTERN: two-factor bounce
+    1. login <target> <user>      (the code goes to their phone)
+    2. spoof sms <user>           (needs their phone number)
+    3. replay code
+    ```
+
+  - Next time you meet that defense, the pattern is a one-click chain: the steps type themselves fast, with a satisfying rattle.
+  - **Patterns can break:** a daily rule ("two-factor codes now expire in 30 seconds") makes an old pattern fail halfway. You learn the new version and the pattern updates. This is the Papers, Please "new angles each day" feeling, applied to hacking.
+- **Leaning in:** more patterns, longer chains, faster replays. Your pattern book is your hacker identity for the run.
+
+---
+
+## 7. Loot and rarity (short labs vs big jobs)
+
+**The feeling:** opening a drop and seeing it's rare. Big, readable, a little ridiculous. Your own side's voice (darkly funny) announces it.
+
+### Rarity tiers (ours)
+
+| Stars | Tier | Example drop |
+|---|---|---|
+| 1 | **Scrap** | A canteen menu, a misfiled form. Flavor, small sympathy |
+| 2 | **Lead** | A guard rotation, a clerk's login, one name |
+| 3 | **Story** | A payroll showing ghost workers, a photo of the grey vans with readable plates |
+| 4 | **Scandal** | A minister's bribe ledger, the full Station 4 list |
+| 5 | **Bombshell** | Proof that topples someone: the Marshal's health records, a massacre order with a signature |
+
+### Where loot comes from
+- **Short labs** (about 5 minutes, several a week): espionage on a political target, a district office, a police inbox. Drops 1-3 stars. Leads, credentials, small dirt. They unlock things: a person to exploit, a door code, the next lab.
+- **Big jobs** (a long lab, a break-in, a multi-step operation): drops 3-5 stars, generated from the target. A 5-star drop is rare and changes your run.
+
+### Each drop is generated
+- **Target:** who or what it's about (a person, an institution).
+- **Type:** blackmail, leak, credential, schedule, money trail.
+- **Stars:** the tier, rolled from the job's difficulty and how well you played (quiet, complete, fast).
+- **Traits**, rolled per drop. Examples:
+  - **Verified:** credibility up when posted;
+  - **Hot:** decays fast, use it this week;
+  - **Chain:** points to another target, a new lab unlocks;
+  - **Personal:** using it creates a grudge;
+  - **Traceable:** your trail is on it, scrub it first;
+  - **Leverage:** can turn the target instead of exposing them.
+- **The announcement:** a card flips open with the tier color, the name and the traits. The forum's grumpy archive bot (lantern's "the Archivist", our own voice) grades it with a dark one-liner.
+
+### What loot is for
+- **Post** it: followers and sympathy. Higher stars mean bigger swings; Bombshells can flip a whole district.
+- **Use** it: blackmail or turn a person, plan a mission, find Pavel.
+- **Sell or trade** it: to foreign press or a sponsor for money and favors.
+- **Unlock path support for your troops** (the long-term upgrade):
+  - spending big loot on a path makes that path available to your people, not just you;
+  - examples:
+    - a 4-star police payroll leak → your cells get "known guards" (safer break-ins in that district);
+    - a Bombshell on the telecom ministry → every cell gets safer channels for a month;
+  - this is how leaning in becomes the movement's strength.
+
+---
+
+## 8. Still open
+- Rarity names: Scrap / Lead / Story / Scandal / Bombshell, or something else?
+- The Archivist's voice: who writes its one-liners (user, or Claude in the user's style)?
+- How often should a 5-star drop happen in a 10-hour run? (Proposal: 1 to 3.)
