@@ -1,0 +1,42 @@
+{
+	"_note": "Loot drops. Tiers by stars. Traits roll per drop. Archivist lines are placeholders for the user to rewrite.",
+	"tiers": {
+		"1": {"name": "Scrap", "color": "#8a8f94"},
+		"2": {"name": "Lead", "color": "#4f9d69"},
+		"3": {"name": "Story", "color": "#3f7fc9"},
+		"4": {"name": "Scandal", "color": "#9b4fc9"},
+		"5": {"name": "Bombshell", "color": "#e0a020"}
+	},
+	"traits": {
+		"verified": {"name": "Verified", "desc": "Hard to call fake. Posts hit harder."},
+		"hot": {"name": "Hot", "desc": "Goes stale fast. Use it this week."},
+		"chain": {"name": "Chain", "desc": "Points to another target. A new lead opens."},
+		"personal": {"name": "Personal", "desc": "Using it hurts someone you know. Grudges will follow."},
+		"traceable": {"name": "Traceable", "desc": "Your trail is on it (metadata). Scrub it before posting."},
+		"leverage": {"name": "Leverage", "desc": "Could turn someone instead of exposing them."}
+	},
+	"drops": {
+		"fragments": {
+			"name": "Ledger fragments (3 pages)", "type": "Leak", "stars": 2,
+			"traits": {"chain": 1.0, "hot": 0.4, "traceable": 1.0},
+			"file": "/Documents/loot/annex_fragments.txt",
+			"meta": {"Source": "HearthPrint Office 600 (Annex)", "Scanned by": "m.duda"},
+			"text": "FACILITY 4 INTAKE LEDGER - pages 3, 7, 9 (scanned)\n\n0371  Sorin, M.     B   released (signed)\n0379  Petrov, A.    C   held\n0380  Lind, K.      C   held\n...\n0406  Mares, T.     B   held\n\n(page 9 is half a coffee ring)"
+		},
+		"ledger": {
+			"name": "Station 4 intake ledger (current)", "type": "Leak", "stars": 4,
+			"upgrade": {"chance": 0.35, "if_quiet": 40, "if_wiped": true, "name": "Station 4 ledger + the 'no record' order, signed", "trait": "verified"},
+			"traits": {"verified": 0.5, "personal": 1.0, "traceable": 1.0, "leverage": 0.4, "chain": 0.6},
+			"file": "/Documents/loot/station4_ledger_current.txt",
+			"meta": {"Source": "ARCHIVE-SRV (Interior Ministry, Kessel Annex)", "Copied by": "m.duda (CLERK-PC-3)", "Copied at": "{TIME}"},
+			"text": "INTERIOR MINISTRY - FACILITY 4 (GRENZ ROAD) - INTAKE LEDGER - CURRENT\n214 entries. Authorized: Maj. R. Stanek (211), 0001 (3)\n\n0371  Sorin, M.      released (signed)\n0377  Brandt, E.     -> CAPITAL, Facility 1 (14 Mar)\n0388  Kolar, J.      deceased ('pre-existing condition')\n0402  Halden, P.     -> CAPITAL, Facility 1 (03 Oct)\n0405  Mares, A.      held\n0406  Mares, T.      held\n0419  Varga, D.      -> CAPITAL\n... 207 more\n\nStanding order 14/B: entries marked 'no record' are not to be entered in the civil registry."
+		}
+	},
+	"archivist": {
+		"1": ["Filed under: why did you bother.", "I've seen better leaks from a teapot."],
+		"2": ["A lead. Small, but it has legs.", "Somebody somewhere just got slightly less safe."],
+		"3": ["Now that's a story. Somebody's having a bad week.", "Print it, post it, frame it."],
+		"4": ["Oh, this is a scandal. Hide it somewhere your kids won't find it.", "Two hundred names they swore didn't exist. Careful with this one."],
+		"5": ["BOMBSHELL. I need to sit down. I don't have a body, but I need to sit down.", "This doesn't topple a man. It topples a building."]
+	}
+}

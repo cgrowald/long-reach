@@ -41,7 +41,7 @@ Underground resistance game: a reluctant parent in a generated country builds a 
 docs/        GAME_DESIGN.md, FIRST_WEEK.md, TERMINAL.md, archive/ (counter-terror docs + old notes)
 terminal/    the garage + laptop: terminal.gd (flow, HUD, OS viewport), room3d.gd (3D garage, views, picking), desktop, window frame, apps/*
 art/         garage.glb (loaded) + audio/; art/src/ (.gdignore) holds make_garage.py and garage.blend
-sim/         terminal_state.gd (laptop/game state for T1), plus old counter-terror rules (network.gd to invert later)
+sim/         terminal_state.gd (laptop/game state), lab_state.gd (hacking lab engine), loot.gd (rarity drops), plus old counter-terror rules (network.gd to invert later)
 data/terminal/  T1 content: days, contacts/conversations, sites, files, shell
 people/ hq/ world/ tactical/   old counter-terror code (portraits, roster, map drawing, tactical engine) to reuse
 ```
@@ -54,3 +54,4 @@ people/ hq/ world/ tactical/   old counter-terror code (portraits, roster, map d
 ## Status
 - 2026-11-20: game switched to the uprising design; planning done for the opening. Building **T1: the terminal on its own** (docs/TERMINAL.md section 6). Old counter-terror screens are no longer the main scene.
 - T2a built: 3D garage around the laptop (placeholder Blender models, four views, clickable objects, lean in/out). Godot has Blender import disabled; .blend files live in art/src/ which Godot ignores.
+- T3 built: the Annex hacking lab in the Probe app (data/labs/annex.json, data/loot.json). Unlocked on night 4 via kettle's forum thread. The night clock pauses during labs; each command costs minutes.

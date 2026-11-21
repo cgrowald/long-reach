@@ -1,0 +1,82 @@
+{
+	"id": "annex",
+	"name": "Kessel Annex",
+	"blurb": "Interior Ministry records office, Kessel. Public kiosk in the lobby.",
+	"entry": "kiosk",
+	"_note": "Commands per node. 'trace' = trace meter %, 'time' = laptop minutes, 'set' = lab flags, 'learn' = verbs that become assist chips, 'reveal' = nodes that appear on the map. Story effects use 'do' (same actions as days.json).",
+	"start_known": ["scan", "help", "logout"],
+	"nodes": {
+		"kiosk": {
+			"label": "KIOSK", "pos": [0.06, 0.3], "kind": "kiosk",
+			"commands": {
+				"scan": {"trace": 3, "time": 3, "set": ["kiosk_scanned"], "learn": ["login"], "text": "Citizen Records Kiosk v1.2 (State Electronics Combine)\n  Maintenance login: ENABLED\n  Last updated: 2033\n  Network: ANNEX-OFFICE"},
+				"login": {"user": "maintenance", "password": ["maintenance"], "trace": 4, "time": 2, "grant": true, "set": ["kiosk_access"], "reveal": ["network", "logs"], "learn": ["scan network", "wipe logs"], "pattern": "factory login", "text": "Logged in as maintenance. The kiosk's menu is ugly and wide open.\nFrom here you can see the office network.", "fail_text": "Access denied.", "fail_trace": 6}
+			}
+		},
+		"network": {
+			"label": "ANNEX NET", "pos": [0.38, 0.3], "hidden": true, "kind": "net",
+			"commands": {
+				"scan": {"requires": ["kiosk_access"], "trace": 6, "time": 5, "set": ["net_scanned"], "reveal": ["network", "printer", "clerk-pc-3", "camera-hub"], "text": "ANNEX-OFFICE: 3 devices answer.\n  printer       HearthPrint Office 600\n  clerk-pc-3    Records desk 3\n  camera-hub    Lobby + corridor cameras"}
+			}
+		},
+		"printer": {
+			"label": "PRINTER", "pos": [0.02, 0.62], "hidden": true, "kind": "printer",
+			"commands": {
+				"scan": {"trace": 3, "time": 3, "set": ["printer_scanned"], "learn": ["pull"], "text": "HearthPrint Office 600, firmware 2.1 (2029)\n  Stores the last 200 scanned pages in memory.\n  Memory is readable without a login. (Of course it is.)"},
+				"pull": {"requires": ["printer_scanned"], "once": "printer_pulled", "trace": 10, "time": 6, "set": ["printer_pulled"], "loot": "fragments", "text": "Pulling scanned pages... most are canteen menus and leave forms.\nThree pages are from an intake ledger."}
+			}
+		},
+		"clerk-pc-3": {
+			"label": "CLERK-PC-3", "pos": [0.34, 0.62], "hidden": true, "kind": "pc",
+			"commands": {
+				"scan": {"trace": 3, "time": 3, "set": ["clerk_scanned"], "text": "Records desk 3, HEARTH OS 7.1\n  User: m.duda (Records, part-time)\n  Password hint (set by user): \"my class\"\n  Mapped drive: ARCHIVE-SRV\n  Lockout after 3 wrong passwords."},
+				"login": {"user": "m.duda", "password": ["3b", "class3b", "3-b", "class 3b", "3 b"], "max_fails": 3, "trace": 5, "time": 2, "grant": true, "set": ["clerk_access"], "reveal": ["archive-srv"], "learn": ["open"], "text": "Logged in as m.duda.\nDesktop wallpaper: a class photo. Thirty nine-year-olds and a smiling teacher.\nYou know one of the children. She's in the second row.", "fail_text": "Wrong password. The account counts.", "fail_trace": 12, "lock_text": "ACCOUNT LOCKED. IT will call m.duda in the morning to ask why someone tried her password three times.", "lock_set": ["duda_locked"]}
+			}
+		},
+		"camera-hub": {
+			"label": "CAMERA-HUB", "pos": [0.66, 0.62], "hidden": true, "kind": "camera",
+			"commands": {
+				"scan": {"trace": 3, "time": 3, "set": ["cams_scanned"], "learn": ["loop"], "text": "Camera hub: 6 cameras (lobby, corridor, archive door)\n  admin password changed in 2035 (someone did their job once)\n  Playback 'loop' function: no login required."},
+				"login": {"user": "admin", "password": ["admin_never_works_here"], "trace": 4, "time": 2, "fail_text": "Access denied. Someone changed this one.", "fail_trace": 8},
+				"loop": {"requires": ["cams_scanned"], "once": "cams_looped", "trace": 6, "time": 2, "set": ["cams_looped"], "do": [{"set": {"annex_cams_looped": true}}], "text": "Cameras now replay yesterday's footage for the next 10 minutes.\nIf anyone were standing in that corridor tonight, nobody would see them."}
+			}
+		},
+		"archive-srv": {
+			"label": "ARCHIVE-SRV", "pos": [0.34, 0.88], "hidden": true, "kind": "server",
+			"commands": {
+				"scan": {"trace": 3, "time": 2, "text": "Interior Ministry archive, Kessel Annex\n  Facility 4 intake ledger (current)\n  Reachable from clerk-pc-3"},
+				"open": {"requires": ["clerk_access"], "trace": 4, "time": 2, "set": ["archive_open"], "learn": ["search", "pull"], "text": "ARCHIVE-SRV open through m.duda's drive.\nFacility 4 intake ledger, 214 entries. You can 'search <name>' or 'pull' the whole file (loud)."},
+				"search": {"requires": ["archive_open"], "trace": 2, "time": 2, "results": {
+					"halden": {"text": "0402  Halden, P.   Oster checkpoint   Block C\n      STATUS: TRANSFERRED  ->  CAPITAL, Facility 1   (03 Oct)\n      Authorized: Maj. R. Stanek", "set": ["found_capital"], "do": [{"set": {"pavel_capital": true}}, {"notebook": "Pavel -> transferred to the CAPITAL, Facility 1, 3 Oct. Signed: Maj. Stanek."}]},
+					"brandt": {"text": "0377  Brandt, E.   (home)            Block A\n      STATUS: TRANSFERRED  ->  CAPITAL, Facility 1   (14 Mar)", "do": [{"set": {"elena_capital": true}}, {"notebook": "Elena Brandt -> CAPITAL, Facility 1 (March). D. should know."}]},
+					"stanek": {"text": "Maj. R. Stanek signed 211 of 214 entries.\nThe other three were signed by someone with no name, only a number: 0001."},
+					"mares": {"text": "0405  Mares, A.   Block B   held\n0406  Mares, T.   Block B   held"},
+					"sorin": {"text": "0371  Sorin, M.   released (signed statement)"},
+					"kolar": {"text": "0388  Kolar, J.   deceased   (cause: 'pre-existing condition')"},
+					"varga": {"text": "0419  Varga, D.   transferred -> CAPITAL"},
+					"*": {"text": "No matching entries. (Try a surname.)"}
+				}},
+				"pull": {"requires": ["archive_open"], "once": "ledger_pulled", "trace": 30, "time": 8, "set": ["ledger_pulled"], "loot": "ledger", "text": "Copying 214 entries... the archive server is slow and loud about it."}
+			}
+		},
+		"logs": {
+			"label": "LOGS", "pos": [0.68, 0.12], "hidden": true, "kind": "logs",
+			"commands": {
+				"wipe": {"requires_any": ["kiosk_access"], "once": "logs_wiped", "trace": 5, "time": 3, "set": ["logs_wiped"], "text": "Kiosk access log trimmed. Tonight never happened. (On this machine.)"}
+			}
+		}
+	},
+	"links": [["you", "kiosk"], ["kiosk", "network"], ["network", "printer"], ["network", "clerk-pc-3"], ["network", "camera-hub"], ["clerk-pc-3", "archive-srv"], ["kiosk", "logs"]],
+	"hints": [
+		{"until": "kiosk_scanned", "text": "Start with what you can reach: scan kiosk"},
+		{"until": "kiosk_access", "text": "Eight years without updates. Anything still on factory settings? The kiosk manual is on NetState. Try: login kiosk maintenance"},
+		{"until": "net_scanned", "text": "You're on the kiosk. What else is on its network? Try: scan network"},
+		{"until": "clerk_scanned", "text": "Three devices. The archive drive hangs off a clerk's PC. Try: scan clerk-pc-3"},
+		{"until": "clerk_access", "text": "The password hint is 'my class'. A teacher working part-time at the Annex... where have you seen the name Duda? (Lena's homework, in Files.) Login: login clerk-pc-3 m.duda"},
+		{"until": "archive_open", "text": "You're in her account. Open the mapped drive: open archive-srv"},
+		{"until": "found_capital", "text": "Find Pavel: search halden"},
+		{"until": "done", "text": "Pull the whole ledger (loud, +30% trace) or leave quietly. Wipe your tracks on the way out (wipe logs), then logout."}
+	],
+	"burn": {"exposure": 2, "why": "your connection to the Annex kiosk was traced (they patched it the next morning)"},
+	"lead": {"exposure": 1, "why": "the Annex kiosk logged a maintenance login at night (you didn't wipe the logs)"}
+}

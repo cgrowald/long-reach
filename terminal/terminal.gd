@@ -434,6 +434,8 @@ func _process(d: float) -> void:
 	if not _night_running:
 		return
 	_acc += d * MIN_PER_SEC
+	if state.has_flag("lab_active"):
+		_acc = 0.0   # during a hacking lab, time moves per command instead
 	if _acc >= 1.0:
 		var n := int(_acc)
 		_acc -= n
@@ -496,7 +498,9 @@ func _summary() -> void:
 	lines.append("")
 	lines.append("HOW VISIBLE YOU ARE: " + ["barely noticed", "watched", "noticed - a file has your name on it", "hunted"][state.exposure_level()])
 	lines.append("Followers on lantern: %d" % state.followers)
-	if state.has_flag("found_pavel"):
+	if state.has_flag("pavel_capital"):
+		lines.append("Pavel: moved from Station 4 to the CAPITAL, Facility 1, on 3 October.")
+	elif state.has_flag("found_pavel"):
 		lines.append("Pavel: transferred to STATION 4, Grenz Road." + ("  You have proof." if state.has_flag("station4_proof") else ""))
 	else:
 		lines.append("Pavel: still no record.")
@@ -509,6 +513,13 @@ func _summary() -> void:
 		lines.append("   " + str(l).substr(str(l).find(":") + 2))
 	if state.convos.get("hana", {}).get("log", []).size() > 0 and not state.has_flag("deleted_hana"):
 		lines.append("   Hana's messages are still on your laptop. She asked you to delete them.")
+	lines.append("")
+	if state.has_flag("annex_done") or state.has_flag("annex_burned"):
+		lines.append("THE ANNEX: " + ("they traced you and patched the kiosk." if state.has_flag("annex_burned") else "you got in and out."))
+	if state.has_flag("duda_locked"):
+		lines.append("   Mrs. Duda (Lena's teacher) will be questioned about her password tomorrow.")
+	for l in state.loot:
+		lines.append("   LOOT: %s  %s" % ["*".repeat(int(l["stars"])), l["name"]])
 	lines.append("")
 	lines.append("SECRETS FOUND: %d of 7" % state.secrets.size())
 	for s in state.secrets.values():

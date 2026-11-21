@@ -12,6 +12,7 @@ const APPS := {
 	"files": {"title": "Files", "script": "res://terminal/apps/files_app.gd", "size": Vector2(700, 440), "tile": "FILES", "color": Color(0.75, 0.6, 0.2)},
 	"console": {"title": "dev console", "script": "res://terminal/apps/console_app.gd", "size": Vector2(640, 400), "tile": ">_", "color": Color(0.12, 0.12, 0.12)},
 	"mines": {"title": "Field Clearance", "script": "res://terminal/apps/mines_app.gd", "size": Vector2(330, 400), "tile": "FIELD", "color": Color(0.45, 0.5, 0.3)},
+	"probe": {"title": "Probe", "script": "res://terminal/apps/probe_app.gd", "size": Vector2(1040, 640), "tile": "PROBE", "color": Color(0.1, 0.35, 0.2)},
 }
 const TASKBAR_H := 32
 
@@ -81,6 +82,8 @@ func _rebuild_icons() -> void:
 	var ids: Array = ["messages", "browser", "files", "mines"]
 	if state.has_flag("console_unlocked"):
 		ids.append("console")
+	if state.has_flag("probe_installed"):
+		ids.append("probe")
 	for id in ids:
 		_icons.add_child(_make_icon(id))
 
@@ -320,7 +323,8 @@ func _refresh() -> void:
 		var u: int = state.unread_total()
 		_badge.text = str(u)
 		_badge.visible = u > 0
-	if state.has_flag("console_unlocked") and _icons.get_child_count() < 5:
+	var want := 4 + (1 if state.has_flag("console_unlocked") else 0) + (1 if state.has_flag("probe_installed") else 0)
+	if _icons.get_child_count() != want:
 		_rebuild_icons()
 
 
@@ -389,3 +393,28 @@ class WifiIcon extends Control:
 			var h := 4.0 + i * 4.0
 			var col := Color(0.15, 0.17, 0.18) if i < bars else Color(0.6, 0.62, 0.62)
 			draw_rect(Rect2(2 + i * 5, size.y - 4 - h, 3, h), col)
+
+
+# ------------------------------------------------------------- loot
+
+const LootCard := preload("res://terminal/loot_card.gd")
+var _loot_queue: Array = []
+var _loot_open := false
+
+
+func show_loot(drop: Dictionary) -> void:
+	_loot_queue.append(drop)
+	if not _loot_open:
+		_next_loot()
+
+
+func _next_loot() -> void:
+	if _loot_queue.is_empty():
+		_loot_open = false
+		return
+	_loot_open = true
+	var card := LootCard.new()
+	card.size = size
+	add_child(card)
+	card.show_drop(_loot_queue.pop_front(), sfx)
+	card.closed.connect(func(): call_deferred("_next_loot"))

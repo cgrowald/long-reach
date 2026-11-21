@@ -40,6 +40,9 @@ var searches: Array = []
 var posts: Array = []
 var secrets: Dictionary = {}
 var log_lines: Array = []             # what happened (for the end summary)
+var learned: Array = []              # commands you know (assist chips)
+var patterns: Dictionary = {}         # name -> steps you can replay
+var loot: Array = []                  # drops you have found
 
 
 func _init() -> void:
@@ -77,6 +80,9 @@ func new_game() -> void:
 	posts = []
 	secrets = {}
 	log_lines = []
+	learned = []
+	patterns = {}
+	loot = []
 	exposure = 0
 	followers = 0
 	for f in file_lib.get("start", []):
@@ -94,6 +100,7 @@ func day_def() -> Dictionary:
 ## Called when the laptop opens for the night (after the day card).
 func begin_night() -> void:
 	minute = NIGHT_START
+	flags.erase("lab_active")
 	var d := day_def()
 	_do(d.get("on_night", []))
 	check_triggers()
@@ -579,6 +586,13 @@ func make_post(text: String, attach: String) -> Dictionary:
 			post["meta"] = true
 		else:
 			flags["posted_clean"] = true
+	if attach != "" and files.has(attach) and files[attach].has("stars"):
+		var st: int = int(files[attach]["stars"])
+		var bonus: int = st * st * 10
+		if files[attach].get("traits", []).has("verified"):
+			bonus = int(bonus * 1.5)
+		gained += bonus
+		flags["posted_loot_" + str(files[attach].get("loot", ""))] = true
 	followers += gained
 	post["gained"] = gained
 	posts.append(post)
@@ -595,7 +609,8 @@ func to_dict() -> Dictionary:
 	return {"day": day, "battery": battery, "plugged": plugged, "password": password, "sticky": sticky,
 		"exposure": exposure, "followers": followers, "flags": flags, "fired": fired, "convos": convos,
 		"queue": queue, "files": files, "trash": trash, "notebook": notebook, "searches": searches,
-		"posts": posts, "secrets": secrets, "log": log_lines}
+		"posts": posts, "secrets": secrets, "log": log_lines,
+		"learned": learned, "patterns": patterns, "loot": loot}
 
 
 func save() -> void:
@@ -633,6 +648,9 @@ func load_save() -> bool:
 	posts = d.get("posts", [])
 	secrets = d.get("secrets", {})
 	log_lines = d.get("log", [])
+	learned = d.get("learned", [])
+	patterns = d.get("patterns", {})
+	loot = d.get("loot", [])
 	for c in convo_data.get("contacts", {}):
 		if not convos.has(c):
 			convos[c] = {"log": [], "replies": "", "unread": 0, "started": false}

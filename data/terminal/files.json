@@ -8,7 +8,8 @@
 		]},
 		{"path": "/Pictures"},
 		{"path": "/Pictures/pavel"},
-		{"path": "/Downloads"}
+		{"path": "/Downloads"},
+		{"path": "/Documents/loot"}
 	],
 	"start": [
 		{"path": "/Pictures/biscuit.png", "type": "image", "pic": "dog", "meta": {"Camera": "Lumo S4", "Taken": "2 May 2039, 09:14", "Comment": "Biscuit turns 5!!"}},
@@ -29,11 +30,13 @@
 		"pavel_plates": {"path": "/Pictures/pavel/plates.txt", "type": "text", "meta": {"Device": "Mobi X2 (owner: P. HALDEN)"}, "text": "plates - grey vans at the bridge - early mornings\n\nKS 4471 M   (every tuesday)\nKS 0912 M\nKS 4471 M   again\nKS 3380 P   <- police?\nKS 0912 M   goes towards grenz road\n\nwhere do they take them"},
 		"scrub": {"path": "/Downloads/scrub.exe", "type": "exe", "installs": "scrub"},
 		"safetunnel": {"path": "/Downloads/safetunnel_setup.exe", "type": "exe", "installs": "safetunnel"},
-		"molenet": {"path": "/Downloads/molenet_setup.exe", "type": "exe", "installs": "molenet"}
+		"molenet": {"path": "/Downloads/molenet_setup.exe", "type": "exe", "installs": "molenet"},
+		"probe": {"path": "/Downloads/probe.exe", "type": "exe", "installs": "probe"}
 	},
 	"programs": {
 		"scrub": {"name": "Scrub", "installed_text": "Scrub installed. Open a file's Properties to strip its metadata.", "on_install": [{"set": {"scrub": true}}]},
 		"safetunnel": {"name": "SafeTunnel", "illegal": true, "installed_text": "SafeTunnel installed! You are now 100% ANONYMOUS. Click the shield in the tray to connect.", "on_install": [{"set": {"vpn_on": true}}, {"exposure": 3, "why": "installed SafeTunnel - a Ministry honeypot - and sent it your traffic"}]},
-		"molenet": {"name": "molenet", "illegal": true, "installed_text": "molenet: tunnel ready. Click the mole in the tray to connect. It will be slow.", "on_install": [{"set": {"vpn_on": true}}]}
+		"molenet": {"name": "molenet", "illegal": true, "installed_text": "molenet: tunnel ready. Click the mole in the tray to connect. It will be slow.", "on_install": [{"set": {"vpn_on": true}}]},
+		"probe": {"name": "Probe", "illegal": true, "installed_text": "Probe installed. A new icon on your desktop. kettle says: be quiet, be quick, wipe your logs.", "on_install": [{"set": {"probe_installed": true}}]}
 	}
 }
