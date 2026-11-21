@@ -120,7 +120,7 @@ From the user's screenshots:
 This also matches the project rule "one tactical engine for every mission type".
 
 ### Claude's recommendation
-Build **B and A as two tiny toys** (one target, a few packets or cards, two tools, a score → intel-tier readout), each playable in 30 seconds, in the new look's grey box. The user plays both and picks, then we build that one until it's fun before anything else.
+*(Done 2026-11-21: both toys were built AND played; the user rejected each as is and asked for a mix, see section 6 and docs/CORE_LOOP.md.)* Build **B and A as two tiny toys** (one target, a few packets or cards, two tools, a score → intel-tier readout), each playable in 30 seconds, in the new look's grey box. The user plays both and picks, then we build that one until it's fun before anything else.
 
 ---
 
