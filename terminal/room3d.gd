@@ -21,6 +21,8 @@ var things: Dictionary = {}           # thing id -> def
 var _body_thing: Dictionary = {}      # StaticBody3D -> thing id
 var _nodes: Dictionary = {}           # name -> Node3D
 var _tween: Tween
+var _dof: CameraAttributesPractical
+var _focus_dist := 1.0
 
 
 func setup(screen_texture: Texture2D) -> void:
@@ -50,6 +52,12 @@ func setup(screen_texture: Texture2D) -> void:
 	camera.fov = 60.0
 	camera.near = 0.02
 	add_child(camera)
+	# Depth of field with autofocus on whatever is in the middle of your view.
+	_dof = CameraAttributesPractical.new()
+	_dof.dof_blur_far_enabled = true
+	_dof.dof_blur_near_enabled = true
+	_dof.dof_blur_amount = 0.09
+	camera.attributes = _dof
 	camera.position = SEAT
 	camera.look_at(LOOK["laptop"])
 
@@ -219,3 +227,20 @@ func _move_to(t: Transform3D, secs: float, arrive: String) -> void:
 	_tween.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	_tween.tween_method(func(w: float): camera.global_transform = start.interpolate_with(t, w), 0.0, 1.0, secs)
 	_tween.tween_callback(func(): arrived.emit(arrive))
+
+
+func _process(delta: float) -> void:
+	if camera == null or _dof == null:
+		return
+	# Autofocus: find what the middle of the view is looking at, ease the focus there.
+	var from := camera.global_position
+	var to := from - camera.global_transform.basis.z * 8.0
+	var hit := get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(from, to))
+	var want: float = from.distance_to(hit["position"]) if not hit.is_empty() else 3.0
+	if using_laptop:
+		want = 0.45
+	_focus_dist = lerpf(_focus_dist, want, clampf(delta * 4.0, 0.0, 1.0))
+	_dof.dof_blur_far_distance = _focus_dist + 0.6
+	_dof.dof_blur_far_transition = maxf(0.8, _focus_dist * 0.9)
+	_dof.dof_blur_near_distance = maxf(0.05, _focus_dist * 0.55)
+	_dof.dof_blur_near_transition = maxf(0.05, _focus_dist * 0.3)

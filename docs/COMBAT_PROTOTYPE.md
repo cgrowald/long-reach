@@ -145,7 +145,22 @@ A two-minute shoot-house training montage: helmet cams, fast cuts. It's good for
   - enemies don't move (they wait aimed at doors once they hear shooting);
   - no wounded-dragging or grenade-dodging yet.
 
-## 7. Gap questions before building (answered above)
+## 7. Controls v2 (2026-11-20, the user's redesign)
+
+- **Select:** left-click a soldier (Shift adds), 1-4, or click empty ground / Q for the whole squad.
+- **Right-click a door:** the selected soldiers auto-stack on it by doctrine and wait.
+- **The breach plan panel** (`breach_panel.gd`): click the combo, then EXECUTE (Enter).
+  - **door:** open / kick / breach charge (only if someone on the stack carries one);
+  - **grenade:** none / flashbang / frag;
+  - **entry order:** click callsigns or press 1-4, e.g. 3-1-4-2;
+  - **slice the pie first** (skipped after a grenade).
+  
+  You can plan while they're still walking up; they go when stacked.
+- **Right-click ground:** move there. WASD pans the drone, F follows the squad.
+- **Look** (from the second reference video): tilt-shift depth of field, a muted colour grade, rain over the squad.
+- **Next idea logged:** comms tiers. Shouting is slow and only reaches whoever can hear; radios and headsets cut the delay.
+
+## 8. Gap questions before building (answered above)
 
 1. **Camera:** in the prototype, which do you want to try first?
    - a drone view (above, angled);

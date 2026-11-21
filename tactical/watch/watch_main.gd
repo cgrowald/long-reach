@@ -1,6 +1,8 @@
 extends Node3D
-## WATCH AND DECIDE prototype: you give a direction, the squad clears the room their way.
-## Skill decides how clean it looks. Drone view or CCTV. No numbers on screen.
+## WATCH AND DECIDE prototype. You micro the movements, not the individuals:
+## select the squad (or one man), right-click a door = they stack on it by doctrine,
+## then click a breach plan (door method, grenade, entry order, pie first) and execute.
+## Right-click ground = move there. Skill decides how clean it looks. No numbers on screen.
 
 const TestMap := preload("res://tactical/level/test_map.gd")
 const NavBuilder := preload("res://tactical/level/nav_builder.gd")
@@ -11,19 +13,20 @@ const PixelFilter := preload("res://tactical/fx/pixel_filter.gd")
 const RoomGraph := preload("res://tactical/watch/room_graph.gd")
 const SquadBrain := preload("res://tactical/watch/squad_brain.gd")
 const WatchCams := preload("res://tactical/watch/watch_cams.gd")
+const BreachPanel := preload("res://tactical/watch/breach_panel.gd")
 
 const NAV_BOUNDS := AABB(Vector3(-35.0, -2.0, -35.0), Vector3(70.0, 6.0, 70.0))
 const CLASSES := ["assaulter", "assaulter", "breacher", "marksman"]
 const CALLSIGNS := ["ROOK", "MOTH", "KETTLE", "FERRY"]
 const TANGO_SPAWNS := [0, 1, 2, 3, 4, 6]          # indices into test_map.tango_spawns (inside the building)
 const CAM_HUB := Vector3(-10.9, 0.0, 4.5)        # utility box on the outside of the west wall
-const DIRS := {KEY_W: Vector3(0, 0, -1), KEY_S: Vector3(0, 0, 1), KEY_A: Vector3(-1, 0, 0), KEY_D: Vector3(1, 0, 0)}
-const DIR_NAMES := {KEY_W: "north", KEY_S: "south", KEY_A: "west", KEY_D: "east"}
+const PICK_PX := 42.0
 
 static var preset_choice: String = ""             # survives a restart
 
 var friendlies: Array = []
 var hostiles: Array = []
+var doors: Array = []
 var brain
 var graph
 var cams
@@ -33,16 +36,12 @@ var over := false
 
 var _map: Node3D
 var _hud: CanvasLayer
-var _help: Label
 var _status: Label
 var _sel_label: Label
 var _mode_label: Label
-var _preview_label: Label
-var _marker: MeshInstance3D
+var _hover_label: Label
+var _panel
 var _selected: Array = []           # empty = whole squad
-var _pending_dir: Vector3 = Vector3.ZERO
-var _pending_name := ""
-var _pending_exit: Dictionary = {}
 var _time := 0.0
 var _contact_seen := false
 var _slow_left := 0.0
@@ -61,7 +60,6 @@ func _ready() -> void:
 	_map.process_mode = Node.PROCESS_MODE_PAUSABLE
 	add_child(_map)
 	NavBuilder.bake(_map, NAV_BOUNDS)
-	var doors: Array = []
 	for d in _map.doors:
 		var door: Node3D = Door.new()
 		door.setup(d["pos"], d["along_x"])
@@ -82,7 +80,6 @@ func _ready() -> void:
 	cams.setup(self, graph)
 	add_child(PixelFilter.new())
 	_build_hud()
-	_build_marker()
 	if preset_choice != "":
 		_start(preset_choice)
 	else:
@@ -105,8 +102,9 @@ func _build_hub() -> void:
 	_map.add_child(body)
 	var l := Label3D.new()
 	l.text = "CAMERA HUB"
-	l.font_size = 40
+	l.font_size = 48
 	l.pixel_size = 0.004
+	l.outline_size = 10
 	l.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	l.position = body.position + Vector3(0, 0.9, 0)
 	_map.add_child(l)
@@ -122,7 +120,7 @@ func _spawn() -> void:
 		u.fired.connect(_on_fired.bind(u))
 		friendlies.append(u)
 		var name_l := Label3D.new()
-		name_l.text = CALLSIGNS[i]
+		name_l.text = "%d %s" % [i + 1, CALLSIGNS[i]]
 		name_l.font_size = 56
 		name_l.pixel_size = 0.004
 		name_l.outline_size = 12
@@ -146,12 +144,7 @@ func _show_picker() -> void:
 	get_tree().paused = true
 	var panel := PanelContainer.new()
 	panel.name = "Picker"
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(0.05, 0.06, 0.07, 0.96)
-	sb.set_content_margin_all(28)
-	sb.border_color = Color(0.9, 0.75, 0.3)
-	sb.set_border_width_all(2)
-	panel.add_theme_stylebox_override("panel", sb)
+	panel.add_theme_stylebox_override("panel", _box())
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 14)
 	panel.add_child(v)
@@ -178,46 +171,60 @@ func _start(id: String) -> void:
 	preset = id
 	brain.setup(friendlies, hostiles, graph, skills["presets"][id])
 	get_tree().paused = false
-	_status.text = "Outside the building. Pick a direction (W A S D), then G to go."
+	_status.text = "Outside the building. Right-click a door to stack on it."
 	_refresh_labels()
 
 
 # ------------------------------------------------------------- input
 
 func _unhandled_input(e: InputEvent) -> void:
-	if e is InputEventMouseButton and e.pressed:
-		cams.mouse(e)
+	if preset == "":
 		return
-	if not (e is InputEventKey) or not e.pressed or e.echo or preset == "":
+	if e is InputEventMouseMotion:
+		_hover(e.position)
+		return
+	if e is InputEventMouseButton and e.pressed:
+		if e.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
+			cams.mouse(e)
+		elif not over and e.button_index == MOUSE_BUTTON_LEFT:
+			_left_click(e.position, e.shift_pressed)
+		elif not over and e.button_index == MOUSE_BUTTON_RIGHT:
+			_right_click(e.position)
+		return
+	if not (e is InputEventKey) or not e.pressed or e.echo:
 		return
 	var k: int = (e as InputEventKey).physical_keycode
-	if over and k != KEY_R:
+	if over and k != KEY_R and k != KEY_ESCAPE:
+		return
+	if _panel.visible and k in [KEY_1, KEY_2, KEY_3, KEY_4, KEY_ENTER, KEY_KP_ENTER, KEY_BACKSPACE]:
+		_panel.key(k)
 		return
 	match k:
 		KEY_1, KEY_2, KEY_3, KEY_4:
 			var u = friendlies[k - KEY_1]
-			if _selected == [u]:
-				_selected = []
+			if e.shift_pressed:
+				if _selected.has(u):
+					_selected.erase(u)
+				else:
+					_selected.append(u)
 			else:
-				_selected = [u]
+				_selected = [] if _selected == [u] else [u]
 		KEY_Q:
 			_selected = []
-		KEY_W, KEY_A, KEY_S, KEY_D:
-			_pending_dir = DIRS[k]
-			_pending_name = DIR_NAMES[k]
-			_update_preview()
-		KEY_G, KEY_ENTER:
-			_go()
 		KEY_H:
 			brain.hold(_selected)
+			_panel.close()
 		KEY_X:
 			brain.pull_out()
+			_panel.close()
 		KEY_T:
 			brain.set_loud(not brain.loud)
 		KEY_K:
 			var hacker = _selected[0] if not _selected.is_empty() else brain.alive().back()
 			if hacker != null:
 				brain.hack(hacker, CAM_HUB, float(skills["hack"]["seconds"]), _on_hacked)
+		KEY_F:
+			cams.follow = not cams.follow
 		KEY_SPACE:
 			get_tree().paused = not get_tree().paused
 		KEY_B:
@@ -232,46 +239,105 @@ func _unhandled_input(e: InputEvent) -> void:
 			Engine.time_scale = 1.0
 			get_tree().reload_current_scene()
 		KEY_ESCAPE:
-			preset_choice = ""
-			get_tree().paused = false
-			Engine.time_scale = 1.0
-			get_tree().reload_current_scene()
+			if _panel.visible:
+				_panel.close()
+			else:
+				preset_choice = ""
+				get_tree().paused = false
+				Engine.time_scale = 1.0
+				get_tree().reload_current_scene()
 	_refresh_labels()
 
 
-func _update_preview() -> void:
-	_pending_exit = {}
-	if _pending_dir == Vector3.ZERO:
-		_marker.visible = false
-		_preview_label.text = ""
-		return
-	if _selected.is_empty():
-		_pending_exit = brain.preview(_pending_dir)
-		if _pending_exit.is_empty():
-			_preview_label.text = "No door that way."
-			_marker.visible = false
-			return
-		var door = _pending_exit["door"]
-		_marker.global_position = door.center + Vector3(0, 0.05, 0)
-		_marker.visible = true
-		var to_name: String = graph.room(_pending_exit["to"])["name"]
-		_preview_label.text = "G:  clear %s  (the %s door)%s" % [to_name, _pending_name, "   - already clear" if brain.cleared.has(_pending_exit["to"]) else ""]
-	else:
-		_marker.visible = false
-		_preview_label.text = "G:  %s takes a spot to the %s and covers it" % [_selected[0].callsign, _pending_name]
+func _who() -> Array:
+	return (_selected if not _selected.is_empty() else friendlies).filter(func(u): return not u.is_dead)
 
 
-func _go() -> void:
-	if _pending_dir == Vector3.ZERO:
-		return
-	if _selected.is_empty():
-		if not _pending_exit.is_empty():
-			brain.advance(_pending_exit)
+func _unit_under(screen: Vector2):
+	var cam: Camera3D = get_viewport().get_camera_3d()
+	var best = null
+	var best_d := PICK_PX
+	for u in friendlies:
+		if u.is_dead or cam.is_position_behind(u.global_position):
+			continue
+		var p: Vector2 = cam.unproject_position(u.global_position + Vector3(0, 1.0, 0))
+		var d := p.distance_to(screen)
+		if d < best_d:
+			best_d = d
+			best = u
+	return best
+
+
+func _ground_under(screen: Vector2) -> Variant:
+	var cam: Camera3D = get_viewport().get_camera_3d()
+	var from := cam.project_ray_origin(screen)
+	var dir := cam.project_ray_normal(screen)
+	if absf(dir.y) < 0.001:
+		return null
+	var t := -from.y / dir.y
+	if t < 0.0:
+		return null
+	return from + dir * t
+
+
+func _door_near(p: Vector3):
+	var best = null
+	var best_d := 1.6
+	for d in doors:
+		var dd: float = Vector2(d.center.x - p.x, d.center.z - p.z).length()
+		if dd < best_d:
+			best_d = dd
+			best = d
+	return best
+
+
+func _left_click(pos: Vector2, add: bool) -> void:
+	var u = _unit_under(pos)
+	if u == null:
+		if not add:
+			_selected = []
+	elif add:
+		if _selected.has(u):
+			_selected.erase(u)
+		else:
+			_selected.append(u)
 	else:
-		for u in _selected:
-			brain.defend(u, _pending_dir)
-	_pending_dir = Vector3.ZERO
-	_update_preview()
+		_selected = [u]
+	_refresh_labels()
+
+
+func _right_click(pos: Vector2) -> void:
+	var g = _ground_under(pos)
+	if g == null:
+		return
+	var door = _door_near(g)
+	var who := _who()
+	if who.is_empty():
+		return
+	if door != null:
+		brain.stack_on(door, who)
+		_panel.open_for(door, brain, who, graph)
+	else:
+		_panel.close()
+		brain.move_to(who, g)
+
+
+func _hover(pos: Vector2) -> void:
+	var g = _ground_under(pos)
+	var txt := ""
+	if g != null:
+		var door = _door_near(g)
+		if door != null:
+			var n: Vector3 = door.normal()
+			var a: String = graph.room(graph.room_at(door.center + n * 0.8))["name"]
+			var b: String = graph.room(graph.room_at(door.center - n * 0.8))["name"]
+			txt = "Right-click: stack on this door  (%s / %s)" % [a, b]
+	_hover_label.text = txt
+	_hover_label.position = pos + Vector2(18, 12)
+
+
+func execute_plan(plan: Dictionary) -> void:
+	brain.execute(plan)
 
 
 # ------------------------------------------------------------- the running fight
@@ -291,8 +357,8 @@ func _process(delta: float) -> void:
 	_mode_label.text = "%s     %s     %s%s" % [
 		"LOUD" if brain.loud else "QUIET", cams.view_name(),
 		"PAUSED   " if get_tree().paused else "", "SLOW MOTION" if Engine.time_scale < 0.99 else ""]
-	if _pending_dir != Vector3.ZERO and _selected.is_empty():
-		_update_preview()
+	if _panel.visible:
+		_panel.refresh()
 
 
 func _physics_process(delta: float) -> void:
@@ -334,6 +400,7 @@ func _on_hacked() -> void:
 
 
 func _on_room_cleared(id: String) -> void:
+	_panel.close()
 	var r: Rect2 = graph.room(id)["rect"]
 	var m := MeshInstance3D.new()
 	var plane := PlaneMesh.new()
@@ -379,6 +446,7 @@ func _finish(why: String) -> void:
 	if over:
 		return
 	over = true
+	_panel.close()
 	Engine.time_scale = 1.0
 	var kia: int = friendlies.filter(func(f): return f.is_dead).size()
 	var wounded: int = friendlies.filter(func(f): return not f.is_dead and f.is_wounded()).size()
@@ -408,12 +476,7 @@ func _finish(why: String) -> void:
 	for t in tags:
 		lines.append("+ " + t)
 	var panel := PanelContainer.new()
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(0.05, 0.06, 0.07, 0.95)
-	sb.border_color = Color(0.9, 0.75, 0.3)
-	sb.set_border_width_all(3)
-	sb.set_content_margin_all(26)
-	panel.add_theme_stylebox_override("panel", sb)
+	panel.add_theme_stylebox_override("panel", _box())
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 8)
 	panel.add_child(v)
@@ -445,47 +508,44 @@ func _build_hud() -> void:
 	_hud = CanvasLayer.new()
 	_hud.layer = 5
 	add_child(_hud)
-	_help = _lab("\n".join([
-		"W A S D  pick a direction     G  go     H  hold     X  pull out     T  quiet / loud",
-		"1-4  pick one soldier (then a direction + G = he covers that way)     Q  whole squad     K  hack the camera hub",
-		"Space  pause     B  slow motion     V  drone / CCTV     E  end     R  restart     Esc  pick another squad",
+	var help := _lab("\n".join([
+		"LEFT click a soldier = select him (Shift adds)    click empty ground or Q = whole squad    1-4 also select",
+		"RIGHT click a door = stack on it, then build the breach plan    RIGHT click ground = move there",
+		"H hold   X pull out   T quiet/loud   K hack the camera hub   Space pause   B slow motion   V drone/CCTV",
+		"WASD pan   wheel zoom   F follow squad   E end   R restart   Esc pick another squad",
 	]), 15, Color(0.9, 0.9, 0.9))
-	_help.position = Vector2(16, 10)
-	_hud.add_child(_help)
+	help.position = Vector2(16, 10)
+	_hud.add_child(help)
 	_status = _lab("", 19, Color(1.0, 0.85, 0.4))
-	_status.position = Vector2(16, 88)
+	_status.position = Vector2(16, 112)
 	_hud.add_child(_status)
-	_preview_label = _lab("", 19, Color(0.6, 1.0, 0.65))
-	_preview_label.position = Vector2(16, 118)
-	_hud.add_child(_preview_label)
 	_sel_label = _lab("", 17, Color(0.75, 0.9, 1.0))
-	_sel_label.position = Vector2(16, 850)
+	_sel_label.position = Vector2(16, 864)
 	_hud.add_child(_sel_label)
 	_mode_label = _lab("", 17, Color(0.95, 0.95, 0.95))
-	_mode_label.position = Vector2(1100, 850)
+	_mode_label.position = Vector2(1100, 864)
 	_hud.add_child(_mode_label)
+	_hover_label = _lab("", 15, Color(0.6, 1.0, 0.65))
+	_hud.add_child(_hover_label)
+	_panel = BreachPanel.new()
+	_panel.main = self
+	_hud.add_child(_panel)
 
 
 func _refresh_labels() -> void:
 	for u in friendlies:
-		u.set_selected(_selected.has(u))
-	var who: String = "WHOLE SQUAD" if _selected.is_empty() else _selected[0].callsign
-	_sel_label.text = "Orders go to: %s      Squad: %s" % [who, skills["presets"][preset]["name"] if preset != "" else "-"]
+		u.set_selected(_selected.has(u) or (_selected.is_empty() and not u.is_dead))
+	var who: String = "WHOLE SQUAD" if _selected.is_empty() else ", ".join(_selected.map(func(u): return u.callsign))
+	_sel_label.text = "Selected: %s      Squad: %s" % [who, skills["presets"][preset]["name"] if preset != "" else "-"]
 
 
-func _build_marker() -> void:
-	_marker = MeshInstance3D.new()
-	var t := TorusMesh.new()
-	t.inner_radius = 0.75
-	t.outer_radius = 0.95
-	_marker.mesh = t
-	var m := StandardMaterial3D.new()
-	m.albedo_color = Color(0.5, 1.0, 0.55)
-	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	m.no_depth_test = true
-	_marker.material_override = m
-	_marker.visible = false
-	add_child(_marker)
+func _box() -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.05, 0.06, 0.07, 0.95)
+	sb.border_color = Color(0.9, 0.75, 0.3)
+	sb.set_border_width_all(2)
+	sb.set_content_margin_all(24)
+	return sb
 
 
 func _lab(text: String, size: int, col: Color) -> Label:

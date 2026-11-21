@@ -43,7 +43,7 @@ terminal/    the garage + laptop: terminal.gd (flow, HUD, OS viewport), room3d.g
 art/         garage.glb (loaded) + audio/; art/src/ (.gdignore) holds make_garage.py and garage.blend
 sim/         terminal_state.gd (laptop/game state), lab_state.gd (hacking lab engine), loot.gd (rarity drops), plus old counter-terror rules (network.gd to invert later)
 data/terminal/  T1 content: days, contacts/conversations, sites, files, shell
-tactical/watch/   watch-and-decide combat prototype (room_graph, squad_brain, watch_cams, watch_main); data/watch/skills.json
+tactical/watch/   watch-and-decide combat prototype (room_graph, squad_brain, breach_panel, watch_cams, watch_main); data/watch/skills.json
 people/ hq/ world/ tactical/   old counter-terror code (portraits, roster, map drawing, tactical engine) to reuse
 ```
 
@@ -57,4 +57,5 @@ people/ hq/ world/ tactical/   old counter-terror code (portraits, roster, map d
 - T2a built: 3D garage around the laptop (placeholder Blender models, four views, clickable objects, lean in/out). Godot has Blender import disabled; .blend files live in art/src/ which Godot ignores.
 - T3 built: the Annex hacking lab in the Probe app (data/labs/annex.json, data/loot.json). Unlocked on night 4 via kettle's forum thread. The night clock pauses during labs; each command costs minutes.
 - 2026-11-20 late: design core rewritten (GAME_DESIGN section 0: op loop, three ways to run an op, watch-and-decide combat, op report, two economies, named legends + numbers, multiple win paths). Next build: the combat prototype (docs/COMBAT_PROTOTYPE.md), after the user answers its gap questions. The old tactical engine is NOT dead: it gets reused for this.
-- Combat prototype built (tactical/watch/, title screen button). Awaiting user playtest: does watching trained squads feel good?
+- Combat prototype built (tactical/watch/, title screen button). Controls v2: select + right-click door = stack, breach plan panel, right-click ground = move. Garage and drone have depth of field.
+- NEXT (user, 2026-11-20): back to the beginning. The PC intro must work really well (the laptop is your world until the war brings you out), plus the base bench framework and a first hacking-tools bench (espionage maybe its own table). Ask the gap questions first.

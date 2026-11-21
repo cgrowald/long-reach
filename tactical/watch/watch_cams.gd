@@ -31,6 +31,9 @@ var _overlay: CanvasLayer
 var _cam_label: Label
 var _height := 16.0
 var _focus := Vector3(0, 0, 14)
+var follow := true
+var _dof: CameraAttributesPractical
+var _rain: GPUParticles3D
 
 
 func setup(p_main, p_graph) -> void:
@@ -41,6 +44,13 @@ func setup(p_main, p_graph) -> void:
 	drone.fov = 55.0
 	main.add_child(drone)
 	drone.make_current()
+	# Depth of field: sharp where the squad is, soft in front and behind.
+	_dof = CameraAttributesPractical.new()
+	_dof.dof_blur_far_enabled = true
+	_dof.dof_blur_near_enabled = true
+	_dof.dof_blur_amount = 0.2
+	drone.attributes = _dof
+	_grade_and_weather()
 	for c in CCTV:
 		var cam := Camera3D.new()
 		cam.fov = 78.0
@@ -78,10 +88,31 @@ func _process(delta: float) -> void:
 
 
 func _place_drone(w: float) -> void:
-	if main.brain != null and not main.brain.alive().is_empty():
+	var pan := Vector3.ZERO
+	if Input.is_physical_key_pressed(KEY_W):
+		pan.z -= 1.0
+	if Input.is_physical_key_pressed(KEY_S):
+		pan.z += 1.0
+	if Input.is_physical_key_pressed(KEY_A):
+		pan.x -= 1.0
+	if Input.is_physical_key_pressed(KEY_D):
+		pan.x += 1.0
+	if pan != Vector3.ZERO:
+		follow = false
+		_focus += pan.normalized() * _height * 0.04
+	elif follow and main.brain != null and not main.brain.alive().is_empty():
 		_focus = _focus.lerp(main.brain.centroid(), w)
 	drone.global_position = _focus + Vector3(0.0, _height, _height * 0.62)
 	drone.look_at(_focus)
+	if _dof != null:
+		var dist: float = drone.global_position.distance_to(_focus)
+		# Tilt-shift: a thin sharp band around the squad, soft above and below.
+		_dof.dof_blur_far_distance = dist + 2.5
+		_dof.dof_blur_far_transition = 6.0
+		_dof.dof_blur_near_distance = maxf(0.5, dist - 3.5)
+		_dof.dof_blur_near_transition = 3.0
+	if _rain != null:
+		_rain.global_position = _focus + Vector3(0, 12, 2)
 
 
 func mouse(e: InputEventMouseButton) -> void:
@@ -109,3 +140,39 @@ func sees(h) -> bool:
 	if view == 0 or h.is_dead:
 		return false
 	return graph.room_at(h.global_position) == str(CCTV[view - 1]["room"])
+
+
+## The muted, slightly cold look of the reference footage, and rain over the squad.
+func _grade_and_weather() -> void:
+	for we in main.find_children("*", "WorldEnvironment", true, false):
+		var env: Environment = we.environment
+		env.adjustment_enabled = true
+		env.adjustment_saturation = 0.72
+		env.adjustment_contrast = 1.12
+		env.adjustment_brightness = 0.95
+		env.fog_enabled = true
+		env.fog_light_color = Color(0.62, 0.66, 0.7)
+		env.fog_density = 0.006
+	_rain = GPUParticles3D.new()
+	_rain.amount = 1400
+	_rain.lifetime = 1.4
+	_rain.visibility_aabb = AABB(Vector3(-30, -20, -30), Vector3(60, 40, 60))
+	var pm := ParticleProcessMaterial.new()
+	pm.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
+	pm.emission_box_extents = Vector3(22, 1, 22)
+	pm.direction = Vector3(0.15, -1, 0.05)
+	pm.spread = 3.0
+	pm.initial_velocity_min = 13.0
+	pm.initial_velocity_max = 16.0
+	pm.gravity = Vector3(0, -9.8, 0)
+	_rain.process_material = pm
+	var streak := QuadMesh.new()
+	streak.size = Vector2(0.025, 0.55)
+	var m := StandardMaterial3D.new()
+	m.albedo_color = Color(0.8, 0.85, 0.95, 0.35)
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.billboard_mode = BaseMaterial3D.BILLBOARD_FIXED_Y
+	streak.material = m
+	_rain.draw_pass_1 = streak
+	main.add_child(_rain)

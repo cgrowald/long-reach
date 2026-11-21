@@ -81,8 +81,70 @@ func preview(dir: Vector3) -> Dictionary:
 	return graph.best_exit(current_room(), centroid(), dir, cleared)
 
 
-## Clear the room behind this exit.
-func advance(exit: Dictionary) -> void:
+## Stack the chosen soldiers on a door (by doctrine) and wait for a breach plan.
+func stack_on(door, who: Array) -> void:
+	var squad: Array = who.filter(func(u): return not u.is_dead)
+	if squad.is_empty():
+		return
+	var c := Vector3.ZERO
+	for u in squad:
+		c += u.global_position
+	c /= squad.size()
+	var n: Vector3 = door.normal()
+	if (c - door.center).dot(n) > 0.0:
+		n = -n                       # into = away from where the stackers are
+	var to: String = graph.room_at(door.center + n * 0.8)
+	advance({"door": door, "into": n, "to": to}, squad, false)
+
+
+## Move the chosen soldiers to a point, spread out a little, facing on the way they went.
+func move_to(who: Array, point: Vector3) -> void:
+	var squad: Array = who.filter(func(u): return not u.is_dead)
+	if squad.size() == alive().size():
+		_cancel()
+	var i := 0
+	for u in squad:
+		var off := Vector3((i % 2) * 1.1 - 0.55, 0.0, (i / 2) * 1.1) if squad.size() > 1 else Vector3.ZERO
+		var dest: Vector3 = _nav(point + off)
+		var dir: Vector3 = (dest - u.global_position)
+		dir.y = 0.0
+		u.stop()
+		u.set_pace(Unit.Pace.RUN if loud else Unit.Pace.WALK)
+		u.order_move(dest, false)
+		if dir.length() > 0.5:
+			u.order_face(dest + dir.normalized() * 5.0)
+		i += 1
+	if not squad.is_empty():
+		bark.emit(squad[0], "Moving.")
+
+
+## Run the breach plan on the stacked door.
+## plan: {"method": "open"|"kick"|"charge", "grenade": "none"|"flashbang"|"frag", "order": [units], "pie": bool}
+func execute(plan: Dictionary) -> void:
+	if _op.is_empty() or not (str(_op["phase"]) in ["stacked", "approach"]):
+		return
+	_op["plan"] = plan
+	var ord: Array = plan.get("order", []).filter(func(u): return not u.is_dead)
+	for u in _op["order"]:
+		if not ord.has(u) and not u.is_dead:
+			ord.append(u)
+	_op["order"] = ord
+	if str(_op["phase"]) == "approach":
+		_op["auto"] = true      # still walking up: hit it as soon as they are stacked
+		return
+	_door_step()
+
+
+func stacked() -> bool:
+	return str(_op.get("phase", "")) == "stacked"
+
+
+func stacked_door():
+	return _op.get("door") if not _op.is_empty() else null
+
+
+## Clear the room behind this exit. auto = go straight in (old direction mode); else wait for a plan.
+func advance(exit: Dictionary, who: Array = [], auto: bool = true) -> void:
 	if exit.is_empty() or alive().is_empty():
 		return
 	_cancel()
@@ -90,7 +152,9 @@ func advance(exit: Dictionary) -> void:
 	var door = exit["door"]
 	var n: Vector3 = exit["into"]
 	var t: Vector3 = n.cross(UP).normalized()
-	var squad := alive()
+	var squad: Array = who.filter(func(u): return not u.is_dead) if not who.is_empty() else alive()
+	if squad.is_empty():
+		return
 	# Stack on the side of the door we can stand on and that's closer to us.
 	var base: Vector3 = door.center - n * 0.6
 	var side := 1.0
@@ -103,7 +167,7 @@ func advance(exit: Dictionary) -> void:
 			best = dist
 			side = s
 	_op = {"phase": "approach", "door": door, "n": n, "t": t, "side": side, "to": str(exit["to"]),
-		"time": 0.0, "stack": [], "order": squad}
+		"time": 0.0, "stack": [], "order": squad, "auto": auto}
 	var spacing: float = float(skill.get("stack_spacing", 1.0))
 	var jitter: float = float(skill.get("stack_jitter", 0.0))
 	var gap: float = float(skill.get("depart_gap", 0.4))
@@ -196,7 +260,14 @@ func _physics_process(delta: float) -> void:
 	match str(_op["phase"]):
 		"approach":
 			if _all_arrived() or float(_op["time"]) > 14.0:
-				_door_step()
+				if _op.get("auto", true):
+					_door_step()
+				else:
+					_op["phase"] = "stacked"
+					var st: Array = _op["order"].filter(func(u): return not u.is_dead)
+					if not st.is_empty():
+						bark.emit(st[st.size() - 1], "Stacked.")
+					status.emit("Stacked on the door to %s. Build the breach plan." % graph.room(_op["to"])["name"])
 		"pie":
 			# Done when the point man has finished his arc (or it's taking too long).
 			_op["pie_wait"] = float(_op.get("pie_wait", 0.0)) + delta
@@ -222,18 +293,40 @@ func _door_step() -> void:
 	_op["phase"] = "door"
 	var point = squad[0]
 	var inside: Vector3 = door.center + _op["n"] * 3.0
+	var plan: Dictionary = _op.get("plan", {})
+	var method: String = str(plan.get("method", "kick" if loud else "open"))
+	var grenade: String = str(plan.get("grenade", "flashbang" if loud else "none"))
+	var pie: bool = bool(plan.get("pie", (not loud) and skill.get("pies_doorway", false)))
 	var delay := 0.3
 	if not door.is_open:
-		if loud:
-			door.kick()
-			bark.emit(point, "Bang!")
-			for u in squad:
-				if u.throw_grenade("flashbang", graph.clamp_in(_op["to"], inside)):
-					delay = 1.0
-					break
-		else:
-			door.open()
-	if not loud and skill.get("pies_doorway", false):
+		match method:
+			"charge":
+				var breacher = null
+				for u in squad:
+					if u.can_do("breach"):
+						breacher = u
+						break
+				if breacher != null:
+					breacher.items["breach_charge"] = breacher.item_count("breach_charge") - 1
+					bark.emit(breacher, "Breaching!")
+					door.blow()
+					delay = 0.6
+				else:
+					door.kick()
+					bark.emit(point, "No charge. Kicking it!")
+			"kick":
+				door.kick()
+				bark.emit(point, "Kick!")
+			_:
+				door.open()
+	if grenade != "none":
+		for u in squad:
+			if u.throw_grenade(grenade, graph.clamp_in(_op["to"], inside)):
+				bark.emit(u, "Flash out!" if grenade == "flashbang" else "Frag out!")
+				delay = maxf(delay, 1.1)
+				pie = false       # after a bang, you go now, you don't slice
+				break
+	if pie:
 		# Slice the pie on the open doorway from outside: see (and shoot) into the room
 		# from cover before anyone steps into the doorway. The Door Kickers moment.
 		_op["phase"] = "pie"
@@ -331,7 +424,10 @@ func _check_clear(delta: float) -> void:
 
 
 func _all_arrived() -> bool:
-	for u in alive():
+	var who: Array = _op.get("order", alive()) if not _op.is_empty() else alive()
+	for u in who:
+		if u.is_dead:
+			continue
 		if u.is_moving():
 			return false
 	return true
