@@ -74,6 +74,27 @@ The regime hunts you the whole way. Everything you do leaves a trace. Get traced
 
 ---
 
+## 2B. Many ways to every need; you lean into one (direction, 2026-11-20)
+
+- **Every need has several ways to meet it**, and they connect across the game. Example, **meds**:
+  - make them at a bench;
+  - steal them;
+  - work at the hospital (cover job);
+  - exploit a hospital worker (blackmail, bribe, or hack their system).
+- **All paths are playable, but you physically do the piece you lean into.**
+  - The path you lean into is a hands-on minigame.
+  - Leaning in gives more benefits and more exact choices (better yield, finer control, special options).
+  - Paths you don't lean into resolve as simpler orders or are handled by recruits.
+  - **What you lean into may be what makes each run feel different.**
+- **Build bench by bench, need by need,** connecting each one to everything else (jobs, people, the OS, exposure).
+- **The hacking angle:**
+  - The OS is state-made and controls everything (cameras, doors, records, payroll, the hospital, the trains), so there are **backdoors to learn and exploit**.
+  - Hacking is a fresh, simple take on Hack The Box-style labs: much simpler and clearly pointed out, so you feel like a hacker without real security knowledge.
+  - This is the default protagonist's angle, since he doesn't do the big firefights.
+- **Big fights are possible later,** but doing them in person makes you a public icon on the state's TikTok-like feed. Fame is power and exposure. Way down the line.
+
+---
+
 ## 3. The core loop: one day (decided 2026-11-20)
 
 | Phase | Where | What you do |
@@ -378,6 +399,7 @@ Each milestone ends playable.
 
 | Date | Decision |
 |---|---|
+| 2026-11-20 | Direction: every need has several connected paths (meds: make, steal, hospital job, exploit a worker); you physically play the path you lean into, which gives more benefits and finer choices and may define how a run feels. Hacking angle: the state OS controls everything and has backdoors; simple, clearly signposted HTB-style labs. Big fights later make you a public icon on the state TikTok. Build bench by bench. First 10 h loop must be fun; weeks are fine. User's running thoughts live in the Obsidian Second Brain. |
 | 2026-11-20 | T2a built: placeholder 3D garage (pixel-rendered) around the laptop; views bench/laptop/window/door, clickable things with flavor text in data/terminal/room.json. See docs/ROOM_AND_BENCH.md. |
 | 2026-11-20 | Story structure: Pavel's arc is an opening side story that unlocks the insurgency; it ends (in one version) with finding Pavel, a "everything we left behind led us here" scene, handing him leadership, then giving it to a ring of trusted leaders. No single correct answer. The user writes ~10 opening stories; Claude then writes many more in that style (at dev time, stored as data) so it feels like an open world. |
 | 2026-11-20 | World feel: 1984-style control with new-age tech, but sloppy: unpatched systems, default passwords, poor education, dumb non-LLM AI; flaws everywhere are the player's toolbox. Start date Mon 14 Oct 2041; the laptop shows full date, weekday and time. Story: Claude writes the premise and beats (docs/STORY_PREMISE.md), the user writes the scenes. |
