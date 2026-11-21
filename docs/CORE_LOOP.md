@@ -98,6 +98,20 @@ This answers "hacking is just a small part": it's one path of four, and you lean
 
 **F. Benches: gear for you, or for your people?** Decided: both. Hand-made for you first, automated into "standard issue" later with machines and workers that cost money.
 
+## 5b. Decided (user, 2026-11-21)
+- **A. Combat:** yes, exactly. Routine jobs your people do are XCOM-style send-aways. The big ops you choose to watch are watch-and-decide. Same squad, same stars.
+- **B. Going out:** walled off with placeholder text until we build it. It doesn't need to be as deep as Shadows of Doubt.
+- **C. Typing:** yes, keep both. That's the Iron Nest feel: you're *in* the world, but this world's hacking tools are minigames, not boring scripts.
+- **D. Upgrades:** rig modules are **built at the bench**. The good stuff is **illegal tech you can't just buy**. Getting it is why you join the insurgency network and grow your cell, which eventually becomes the biggest one.
+- **E. Pressure:** **the state's "gestapo" (the Bureau) coming to find you.**
+  - The player should want this game because they want to overthrow the government.
+  - Every choice you make brings you closer to getting caught, and there are mechanics to get away from that.
+  - Think of the cure meter in Plague Inc., but as a **government detective hunting you**, and deeper than a single meter.
+  - Family needs come later, as extra pressure, not the main one.
+- **F. Benches:** both (already decided).
+
+**Next design job: the hunt.** What does the detective actually do (evidence, leads, trails, suspects, warrants)? What do you do back (cover tracks, misdirect, frame, bribe, move, lie low)? How does each job's trace feed it? It has to be readable (always warned, never a random death) and richer than one meter. Research: Plague Inc.'s cure, the Nemesis system, Payday's heat, Shadows of Doubt's investigations, Hitman's notoriety, Mount & Blade's manhunts.
+
 ## 6. The smallest slice that proves the loop (only once A to F are settled)
 One week. One need with a deadline. Two paths to meet it (hack, or exploit a person) on the same job engine. One bench that makes cards. Loot scored by tier. Heat. A night ledger. Placeholder everything else.
 
