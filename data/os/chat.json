@@ -1,0 +1,57 @@
+{
+	"_note": "Systemic messages. No story: each night the game picks a few of these by weight and conditions, fills the {slots} from the generated town, and sends them. Replies can have effects (do) and an answer back. Write more of these freely (see docs/WRITING_GUIDE.md).",
+	"per_night": [2, 4],
+	"templates": [
+		{"id": "mira_milk", "from": "family:mira", "weight": 3, "msgs": ["are you still in the garage", "we need milk. and bread if there's bread"], "replies": [
+			{"text": "I'll get it tomorrow.", "answer": ["ok. come to bed"]},
+			{"text": "Almost done.", "answer": ["you always say that"], "do": [{"set": {"mira_annoyed": true}}]}
+		]},
+		{"id": "mira_lena", "from": "family:mira", "weight": 2, "msgs": ["Lena asked if you're angry at her", "because you're always in the garage"], "replies": [
+			{"text": "Tell her I'll take her to the park Sunday.", "answer": ["she'll hold you to that"], "do": [{"set": {"promised_park": true}}]},
+			{"text": "I'm not angry. Just busy.", "answer": ["tell her yourself"]}
+		]},
+		{"id": "agnes_radio", "from": "family:agnes", "weight": 2, "msgs": ["Tomas the kitchen radio only plays the Marshal now.", "Your father could fix anything. Can you?"], "replies": [
+			{"text": "I'll look at it.", "do": [{"job": {"device": "kitchen radio", "pay": 0, "from": "family:agnes"}}], "answer": ["Good boy."]},
+			{"text": "That's the new rule, Mum. They all do that.", "answer": ["Your father would have fixed it anyway."]}
+		]},
+		{"id": "neighbor_repair", "from": "neighbor", "weight": 5, "msgs": ["hi, it's {first} from {street}", "my {device} died. people say you're good with electronics", "i can pay {pay} VM"], "replies": [
+			{"text": "Bring it by. I'll fix it.", "do": [{"job": {"device": "{device}", "pay": "{pay}", "from": "{from}"}}], "answer": ["thank you! leaving it by your garage door"]},
+			{"text": "Sorry, too busy.", "answer": ["oh. ok"]}
+		]},
+		{"id": "viktor_beer", "from": "circle:viktor", "weight": 2, "msgs": ["Tomas!! Beers this week? 🍺", "Precinct is crazy. Everyone's a provocateur now 😄"], "replies": [
+			{"text": "Sure. Saturday.", "answer": ["👍"], "do": [{"set": {"viktor_saturday": true}}]},
+			{"text": "Crazy how?", "answer": ["New quotas. We have to bring in 3 a week. Don't ask."], "do": [{"notebook": "Viktor: the precinct has arrest quotas now. 3 a week."}]}
+		]},
+		{"id": "hana_group", "from": "circle:hana", "weight": 2, "if": {"met_hana": true}, "msgs": ["reading group moved. same day.", "bring nothing"], "replies": [
+			{"text": "I'll be there.", "answer": ["delete this"]},
+			{"text": "Not this week.", "answer": ["ok. careful"]}
+		]},
+		{"id": "koval_shift", "from": "boss", "weight": 2, "msgs": ["Halden. Saturday shift. Quota.", "This is not a question."], "replies": [
+			{"text": "Yes, boss.", "do": [{"money": 40}], "answer": ["Good."]},
+			{"text": "I can't this Saturday.", "do": [{"set": {"koval_annoyed": true}}], "answer": ["Noted. Everything is noted."]}
+		]},
+		{"id": "citizencare_tip", "from": "state", "weight": 3, "msgs": ["CITIZENCARE: Reminder. {rule}", "Thank you for your compliance."], "replies": []},
+		{"id": "lottery", "from": "state", "weight": 2, "msgs": ["STATE LOTTERY: You have not played this week. Patriots play.", "Reply PLAY to buy a ticket (5 VM)."], "replies": [
+			{"text": "PLAY", "do": [{"money": -5}, {"lottery": true}], "answer": ["Thank you. Results Sunday on State Television."]},
+			{"text": "STOP", "answer": ["STOP is not a recognized command. Thank you for your interest."]}
+		]},
+		{"id": "forum_dm_lead", "from": "forum", "weight": 3, "if": {"forum_login": true}, "msgs": ["kettle: the {business} on {street}. their back office still runs old software.", "worth a look if you have the tools."], "replies": [
+			{"text": "Thanks.", "do": [{"lead": "{business_id}"}], "answer": ["you didn't hear it from me"]},
+			{"text": "Why tell me?", "answer": ["because someone should do something with it"], "do": [{"lead": "{business_id}"}]}
+		]},
+		{"id": "forum_seller", "from": "forum", "weight": 2, "if": {"forum_login": true}, "msgs": ["moth: friend of a friend sells tools. lockpicks, blank badges, a printer without dots.", "it's on the lantern market now. cash only."], "replies": [
+			{"text": "Good to know.", "do": [{"set": {"grey_market": true}}], "answer": ["don't buy everything at once. they notice."]}
+		]},
+		{"id": "spam_ministry", "from": "state", "weight": 2, "msgs": ["MINISTRY OF INFORMATION: Photos on Nod about checkpoints are fakes made abroad.", "Report fakes. Earn Citizen Points."], "replies": []},
+		{"id": "neighbor_gossip", "from": "neighbor", "weight": 2, "msgs": ["did you hear {other} from {street} got taken last night?", "they say {other_trait}"], "replies": [
+			{"text": "Who took them?", "answer": ["who do you think"]},
+			{"text": "I don't want to know.", "answer": ["smart"]}
+		]}
+	],
+	"devices": ["radio", "phone", "laptop", "television", "doorbell", "hearing aid", "kettle (smart)", "baby monitor"],
+	"bureau": {
+		"1": ["BUREAU OF CIVIC ORDER: AUTOMATED NOTICE.", "Your recent activity has been noted. No action is required at this time.", "Thank you for being a visible citizen."],
+		"2": ["BUREAU OF CIVIC ORDER: WARNING 1 OF 1.", "Certain online activity associated with your citizen number is under review.", "Your Nod posts will be shown to fewer people for your protection."],
+		"3": ["BUREAU OF CIVIC ORDER: A home visit has been scheduled.", "Date: soon. Time: unannounced.", "Please keep your residence in an inspectable condition."]
+	}
+}

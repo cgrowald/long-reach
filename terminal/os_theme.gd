@@ -1,13 +1,13 @@
 extends RefCounted
-## Look of HEARTH OS: grey-blue state-issue windows, teal title bars, a plain system font.
+## Look of HEARTH GNU/State: drab beige-grey state-issue windows, a dull state-red title bar, a plain system font.
 
 const BG := Color(0.11, 0.13, 0.16)
-const PANEL := Color(0.86, 0.87, 0.85)
-const PANEL_DARK := Color(0.74, 0.76, 0.75)
-const TITLE := Color(0.13, 0.33, 0.38)
-const TITLE_DIM := Color(0.36, 0.42, 0.45)
-const INK := Color(0.08, 0.09, 0.1)
-const DIM := Color(0.42, 0.45, 0.48)
+const PANEL := Color(0.80, 0.78, 0.72)
+const PANEL_DARK := Color(0.66, 0.64, 0.58)
+const TITLE := Color(0.42, 0.17, 0.13)
+const TITLE_DIM := Color(0.47, 0.45, 0.41)
+const INK := Color(0.12, 0.11, 0.10)
+const DIM := Color(0.40, 0.38, 0.34)
 const ACCENT := Color(0.79, 0.64, 0.16)
 const DANGER := Color(0.75, 0.22, 0.2)
 
@@ -38,10 +38,10 @@ static func make() -> Theme:
 	t.set_color("font_color", "Label", INK)
 	t.set_color("default_color", "RichTextLabel", INK)
 
-	t.set_stylebox("normal", "Button", box(Color(0.9, 0.91, 0.89), Color(0.45, 0.48, 0.5), 1, 2))
-	t.set_stylebox("hover", "Button", box(Color(0.96, 0.96, 0.93), TITLE, 1, 2))
-	t.set_stylebox("pressed", "Button", box(Color(0.74, 0.78, 0.78), TITLE, 1, 2))
-	t.set_stylebox("hover_pressed", "Button", box(Color(0.74, 0.78, 0.78), TITLE, 1, 2))
+	t.set_stylebox("normal", "Button", box(Color(0.86, 0.84, 0.78), Color(0.45, 0.43, 0.38), 1, 0))
+	t.set_stylebox("hover", "Button", box(Color(0.92, 0.90, 0.84), TITLE, 1, 0))
+	t.set_stylebox("pressed", "Button", box(Color(0.70, 0.68, 0.62), TITLE, 1, 0))
+	t.set_stylebox("hover_pressed", "Button", box(Color(0.70, 0.68, 0.62), TITLE, 1, 0))
 	t.set_stylebox("disabled", "Button", box(Color(0.84, 0.85, 0.83), Color(0.7, 0.72, 0.72), 1, 2))
 	t.set_stylebox("focus", "Button", StyleBoxEmpty.new())
 	for c in ["font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color", "font_focus_color"]:
@@ -59,7 +59,7 @@ static func make() -> Theme:
 	t.set_color("selection_color", "LineEdit", Color(0.5, 0.7, 0.75))
 
 	t.set_stylebox("panel", "PanelContainer", box(PANEL, PANEL_DARK, 0, 0))
-	t.set_stylebox("panel", "ItemList", box(Color(1, 1, 1), Color(0.6, 0.62, 0.62), 1, 2))
+	t.set_stylebox("panel", "ItemList", box(Color(0.95, 0.94, 0.90), Color(0.55, 0.53, 0.48), 1, 0))
 	t.set_color("font_color", "ItemList", INK)
 	t.set_color("font_selected_color", "ItemList", Color.WHITE)
 	t.set_stylebox("selected", "ItemList", box(TITLE, TITLE, 0, 0))

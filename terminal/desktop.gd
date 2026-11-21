@@ -13,7 +13,24 @@ const APPS := {
 	"console": {"title": "dev console", "script": "res://terminal/apps/console_app.gd", "size": Vector2(640, 400), "tile": ">_", "color": Color(0.12, 0.12, 0.12)},
 	"mines": {"title": "Field Clearance", "script": "res://terminal/apps/mines_app.gd", "size": Vector2(330, 400), "tile": "FIELD", "color": Color(0.45, 0.5, 0.3)},
 	"probe": {"title": "Probe", "script": "res://terminal/apps/probe_app.gd", "size": Vector2(1040, 640), "tile": "PROBE", "color": Color(0.1, 0.35, 0.2)},
+	"market": {"title": "Market (Approved)", "label": "Market", "script": "res://terminal/apps/market_app.gd", "size": Vector2(900, 560), "tile": "MKT", "color": Color(0.5, 0.38, 0.2)},
+	"workshop": {"title": "Workshop Planner v0.1", "label": "Workshop", "script": "res://terminal/apps/workshop_app.gd", "size": Vector2(900, 560), "tile": "WKSP", "color": Color(0.35, 0.33, 0.3)},
+	"nod": {"title": "Nod - Citizen Social", "label": "Nod", "script": "res://terminal/apps/nod_app.gd", "size": Vector2(760, 560), "tile": "NOD", "color": Color(0.55, 0.2, 0.18)},
+	"map": {"title": "Map of Kessel (Approved Areas)", "label": "Map", "script": "res://terminal/apps/map_app.gd", "size": Vector2(860, 560), "tile": "MAP", "color": Color(0.3, 0.42, 0.32)},
 }
+
+
+## Which programs show on the desktop right now (and in Applications).
+func app_ids() -> Array:
+	var ids: Array = ["messages", "browser", "files"]
+	if state.mode == "sandbox":
+		ids.append_array(["market", "workshop", "nod", "map"])
+	ids.append("mines")
+	if state.has_flag("console_unlocked"):
+		ids.append("console")
+	if state.has_flag("probe_installed"):
+		ids.append("probe")
+	return ids
 const TASKBAR_H := 32
 
 var state
@@ -79,12 +96,7 @@ func setup(st, sound) -> void:
 func _rebuild_icons() -> void:
 	for c in _icons.get_children():
 		c.queue_free()
-	var ids: Array = ["messages", "browser", "files", "mines"]
-	if state.has_flag("console_unlocked"):
-		ids.append("console")
-	if state.has_flag("probe_installed"):
-		ids.append("probe")
-	for id in ids:
+	for id in app_ids():
 		_icons.add_child(_make_icon(id))
 
 
@@ -120,7 +132,7 @@ func _make_icon(id: String) -> Control:
 		_badge.position = Vector2(32, -6)
 		tile.add_child(_badge)
 	box.add_child(tile)
-	var name := T.label(str(a["title"]).split(" ")[0], 13, Color.WHITE)
+	var name := T.label(str(a.get("label", str(a["title"]).split(" ")[0])), 13, Color.WHITE)
 	name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.9))
 	name.add_theme_constant_override("shadow_offset_x", 1)
@@ -212,7 +224,7 @@ func _build_taskbar() -> void:
 	row.add_theme_constant_override("separation", 6)
 	bar.add_child(row)
 	var start := Button.new()
-	start.text = "HEARTH"
+	start.text = "Applications"
 	start.focus_mode = Control.FOCUS_NONE
 	start.add_theme_font_size_override("font_size", 13)
 	start.pressed.connect(_toggle_start)
@@ -247,9 +259,14 @@ func _build_taskbar() -> void:
 	_start_menu.add_theme_stylebox_override("panel", ms)
 	var col := VBoxContainer.new()
 	_start_menu.add_child(col)
-	var head := T.label("HEARTH OS 7.2", 13, T.DIM)
+	var head := T.label("HEARTH GNU/State 7.2  -  Applications", 13, T.DIM)
 	col.add_child(head)
-	for item in [["About HEARTH OS", "about"], ["Citizen Portal", "portal"], ["Close the lid (end the night)", "shutdown"]]:
+	var items: Array = []
+	for id in ["messages", "browser", "files", "market", "workshop", "nod", "map", "mines", "probe", "console"]:
+		if id in app_ids():
+			items.append(["   " + str(APPS[id]["title"]), "app:" + id])
+	items.append_array([["About HEARTH GNU/State", "about"], ["Citizen Portal", "portal"], ["Close the lid (end the night)", "shutdown"]])
+	for item in items:
 		var b := Button.new()
 		b.text = item[0]
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
@@ -276,6 +293,9 @@ func _hide_start() -> void:
 
 func _start_item(what: String) -> void:
 	_hide_start()
+	if what.begins_with("app:"):
+		open_app(what.substr(4))
+		return
 	match what:
 		"about":
 			var l := RichTextLabel.new()
@@ -323,7 +343,7 @@ func _refresh() -> void:
 		var u: int = state.unread_total()
 		_badge.text = str(u)
 		_badge.visible = u > 0
-	var want := 4 + (1 if state.has_flag("console_unlocked") else 0) + (1 if state.has_flag("probe_installed") else 0)
+	var want: int = app_ids().size()
 	if _icons.get_child_count() != want:
 		_rebuild_icons()
 

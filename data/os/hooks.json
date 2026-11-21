@@ -1,0 +1,23 @@
+{
+	"_note": "Opening-story hooks for the sandbox: Pavel's arc as conditions, not days. Fired when their conditions are met (day_min, flags, time).",
+	"triggers": [
+		{"id": "sb_lantern_who", "day_min": 2, "if": {"lantern_contacted": true}, "do": [{"msg": "lantern_who", "delay": 4}]},
+		{"id": "sb_lantern_forum", "day_min": 2, "at": "22:20", "if": {"lantern_trust": true}, "do": [{"msg": "lantern_forum_sb"}]},
+		{"id": "sb_hana", "day_min": 3, "do": [{"set": {"met_hana": true}}, {"notebook": "Hana from the next line asked about Pavel. She runs a reading group."}]},
+		{"id": "sb_nudge", "day_min": 1, "at": "22:40", "if": {"!lantern_contacted": true}, "do": [{"toast": "Pavel's notebook lies open next to the laptop."}]}
+	],
+	"start_jobs": [
+		{"device": "Pavel's cracked phone", "pay": 0, "from": "pavel", "on_done": [{"add_file": "pavel_photo"}, {"add_file": "pavel_plates"}, {"notebook": "Pavel's phone works again. Photos copied to the laptop."}]}
+	],
+	"start_money": 180,
+	"fixed_contacts": {
+		"family:mira": {"name": "Mira"},
+		"family:agnes": {"name": "Mum"},
+		"circle:viktor": {"name": "Viktor"},
+		"circle:hana": {"name": "Hana"},
+		"boss": {"name": "Koval (shift boss)"},
+		"state": {"name": "CitizenCare"},
+		"bureau": {"name": "BUREAU OF CIVIC ORDER"},
+		"forum": {"name": "lantern (forum DMs)"}
+	}
+}

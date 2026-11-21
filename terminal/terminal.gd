@@ -264,7 +264,7 @@ func _title() -> void:
 	if State.has_save():
 		opts.insert(0, {"text": "Continue (day %d)" % _saved_day()})
 	opts.append({"text": "Combat prototype: watch and decide"})
-	card.show_title("UPRISING", "T1 prototype: the laptop\n\nA terminal-only slice of the first week. Headphones recommended.", opts)
+	card.show_title("UPRISING", "Kessel, 2041. Your garage, your laptop, your town.\n\nThe open PC (step 1 of the rebuild). Headphones recommended.", opts)
 	card.chosen.connect(func(i):
 		card.queue_free()
 		if i == opts.size() - 1:
@@ -274,7 +274,7 @@ func _title() -> void:
 			state.load_save()
 		else:
 			State.delete_save()
-			state.new_game()
+			state.new_sandbox()
 		_start_day())
 
 
@@ -315,8 +315,15 @@ func _boot() -> void:
 	bg.size = SCREEN.size
 	screen.add_child(bg)
 	bg.add_child(bios)
-	var lines := ["LUMO BIOS v2.11   (c) State Electronics Combine", "", "CPU ........ OK", "Memory ..... 4096 MB OK",
-		"Battery .... %d%%" % int(state.battery), "Network .... weak signal", "", "Loading HEARTH OS 7.2 ..."]
+	var lines := ["LUMO BIOS v2.11   (c) State Electronics Combine", "",
+		"[    0.000000] HEARTH GNU/State 7.2 \"Obedience\" (kernel 5.10.0-approved)",
+		"[    0.112300] citizen: number 0447-2219-KS loaded",
+		"[    0.400221] battery: %d%% (adequate)" % int(state.battery),
+		"[    0.912000] wlan0: signal weak. this is fine.",
+		"[    1.004300] citizencare.service: started (reporting)",
+		"[    1.220000] fun.service: not found",
+		"[    1.300000] Reached target: Compliance.", "",
+		"Starting HEARTH desktop (approved) ..."]
 	sfx.play("beep", -12.0)
 	var tw := create_tween()
 	_boot_tween = tw

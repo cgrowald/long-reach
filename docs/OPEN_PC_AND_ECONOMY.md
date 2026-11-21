@@ -172,7 +172,46 @@ All stylized steps, never real procedures.
   - people you rescue or free;
   - **rented operators from an inner circle,** after completing quests for them. They're limited use: already high-level, like the legends, but **yours for about 3 days.** "Like a rented high-rated FIFA card."
 
-## 9. Gameplay gaps: where things don't mesh yet
+### Round 3 (user, 2026-11-20): the three open gaps, answered
+- **The laptop in the late game:** you work with people to support your supply lines, and you **own businesses** you have to manage. Example: guns need metal, the refinery needs its own inputs to run, so you source and supply them. This ties directly into commanding the war.
+- **Three progressions, distinct but feeding each other:**
+  - **your skills create your gear;**
+  - **your gear upgrades your people;**
+  - **not all people are soldiers:** some are workers. Knowing people teaches you new things and speeds up table jobs, which eventually get automated.
+- **Why hit each target type:**
+  - **Gun store:** guns and ammo.
+  - **Refinery:** war materials for gear, meds, tech enhancements, building guns.
+  - **Ministry:** more dirt, which pulls in more people (followers, recruits).
+
+## 9. Step 1 as built (2026-11-20): the open OS
+
+**New game starts the sandbox** (the old scripted week stays only for tests).
+
+- **Generated town** (`sim/world_gen.gd`, `data/os/world.json`): 14 businesses, each with staff and a weak spot; about 40 residents with traits; a new mix every run (same seed = same town).
+- **Endless days** (`terminal_state.gd`, sandbox mode):
+  - day 1 is Pavel's box;
+  - every morning after that is a generated card with today's rule, your wage (+60 VM), and a headline.
+- **Pavel's arc as hooks** (`data/os/hooks.json`), not days:
+  - lantern answers the night after you write;
+  - lantern gives the forum address;
+  - Hana appears on day 3;
+  - **Pavel's cracked phone is a repair job at the HACKING station** (fixing it gives his photos).
+- **Systemic messages** (`data/os/chat.json`): 2-4 a night, picked by weight and conditions, slots filled from the town. They come from Mira, your mum, Viktor, Hana, Koval, CitizenCare spam, neighbours asking for repairs (paid side jobs), forum DMs pointing at a weak business (a lead), a grey seller (opens the lantern market).
+- **The Bureau of Civic Order** writes when your heat level rises.
+- **Market (Approved)** (`data/os/market.json`): 30 items in 7 departments.
+  - Legal, REGISTERED (more than 2 a day raises heat) or GREY (needs the lantern market, raises heat).
+  - Sold by this town's actual shops. Kits open stations.
+- **Workshop Planner v0.1** (`data/os/stations.json`): 5 stations and 16 recipes, with parts, tools and hours. Making is instant for now and costs its hours from the night (the hands-on bench games are step 3).
+- **Nod - Citizen Social:** a generated feed, your posts, followers, account status. Posting loot raises heat.
+- **Map of Kessel (Approved Areas):** every place, leads in red, targets starred, why each is worth hitting. Going out is step 2.
+- **Generated internet:** `netstate.vd/biz/<id>` shop pages (stock, staff, your notes) and `netstate.vd/citizens/<id>` directory pages. Search finds them.
+- **Look:**
+  - drab beige-grey "HEARTH GNU/State 7.2 Obedience";
+  - a dull state-red title bar;
+  - a kernel-log boot ("fun.service: not found", "Reached target: Compliance");
+  - an Applications menu.
+
+## 10. Gameplay gaps: where things don't mesh yet
 
 1. **Going out into the world.** Skimming on the bus, keypads, cars, POIs, the coffee shop computer: how is "being out" played? The biggest missing piece.
 2. **Time.** A night on the laptop, a bench job, a trip to the hospital, a raid: what does each cost in hours? Without a time budget there's no tension.

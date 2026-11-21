@@ -1,0 +1,28 @@
+{
+	"_note": "Garage stations. All exist from day one, labelled; buying the kit opens one. Recipes are what the station can make. The hands-on minigames come in step 3; until then 'Make' is instant and marked as a placeholder.",
+	"stations": {
+		"hacking": {"name": "HACKING", "kit": "kit_hacking", "blurb": "Solder, flash, build gadgets. Repair neighbours' electronics for cash."},
+		"gunsmith": {"name": "GUNSMITH", "kit": "kit_gunsmith", "blurb": "Clean, repair, finish parts, build rifles. Reload ammunition."},
+		"espionage": {"name": "ESPIONAGE", "kit": "kit_espionage", "blurb": "Bugs, trackers, forged badges, disguises."},
+		"medical": {"name": "MEDICAL", "kit": "kit_medical", "blurb": "Patch up your people. Later: field kits."},
+		"printing": {"name": "PRINTING", "kit": "kit_printing", "blurb": "Flyers and papers without the citizen serial."}
+	},
+	"recipes": {
+		"data_siphon": {"station": "hacking", "name": "Data siphon (USB)", "hours": 2, "parts": {"usb_blank": 1, "board": 1, "solder": 1}, "desc": "Plug into any PC you can touch for ten seconds. Takes everything."},
+		"badge_cloner": {"station": "hacking", "name": "Badge cloner", "hours": 3, "parts": {"nfc_mod": 1, "board": 1, "battery": 1, "solder": 1}, "desc": "Copy an access badge when you get close (bus, queue, lift)."},
+		"keypad_reader": {"station": "hacking", "name": "Keypad reader", "hours": 3, "parts": {"thermal": 1, "board": 1, "battery": 1}, "desc": "Read a door code from the warmth left on the keys."},
+		"rogue_hotspot": {"station": "hacking", "name": "Rogue hotspot", "hours": 3, "parts": {"board": 1, "antenna": 1, "battery": 1, "wire": 1}, "desc": "Sit in a cafe. Catch what connects."},
+		"multitool": {"station": "hacking", "name": "Pocket multitool", "hours": 4, "parts": {"board": 1, "radio_mod": 1, "nfc_mod": 1, "battery": 1, "antenna": 1}, "desc": "Gates, garage doors, cheap badges, remotes."},
+		"car_relay": {"station": "hacking", "name": "Car relay", "hours": 5, "parts": {"radio_mod": 2, "antenna": 2, "battery": 2, "board": 1}, "desc": "Open and start a car whose key is in the owner's pocket.", "requires": "multitool"},
+		"radio_scanner": {"station": "hacking", "name": "Radio scanner", "hours": 3, "parts": {"radio_mod": 1, "antenna": 1, "scanner_crystal": 1, "battery": 1}, "desc": "Hear the precinct. Warning before raids."},
+		"repair_job": {"station": "hacking", "name": "Repair a neighbour's device", "hours": 2, "parts": {"solder": 1}, "needs_job": true, "desc": "Fix it, get paid. Practice that pays."},
+		"clean_rifle": {"station": "gunsmith", "name": "Clean and repair a firearm", "hours": 1, "parts": {"spring_kit": 1}, "desc": "Keeps a looted gun working."},
+		"finish_receiver": {"station": "gunsmith", "name": "Finish a receiver", "hours": 4, "parts": {"receiver_blank": 1}, "tools": ["drill", "files", "vise"], "desc": "Drill to the line, file to fit."},
+		"ammo_batch": {"station": "gunsmith", "name": "Load a batch of ammunition", "hours": 2, "parts": {"brass": 1}, "tools": ["reload_press"], "desc": "Load, press, eject. In rhythm."},
+		"room_bug": {"station": "espionage", "name": "Room bug", "hours": 2, "parts": {"radio_mod": 1, "battery": 1, "wire": 1}, "desc": "Hide it in a room. Listen later."},
+		"gps_tracker": {"station": "espionage", "name": "GPS tracker", "hours": 2, "parts": {"board": 1, "battery": 1, "antenna": 1}, "desc": "Under a bumper. Know where they go."},
+		"forged_badge": {"station": "espionage", "name": "Forged staff badge", "hours": 2, "parts": {"badge_blank": 1}, "desc": "Copy a real one. The details matter."},
+		"field_kit": {"station": "medical", "name": "Field first aid kit", "hours": 1, "parts": {"bandages": 2, "painkillers": 1}, "desc": "Keeps one of your people alive one more minute."},
+		"flyers": {"station": "printing", "name": "A stack of flyers", "hours": 1, "parts": {}, "desc": "Paper the town. No serial dots."}
+	}
+}

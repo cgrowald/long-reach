@@ -39,6 +39,7 @@
 		"lantern_whoareyou": {"contact": "lantern", "msgs": ["someone who knew him.", "thursday."]},
 		"lantern_ok": {"contact": "lantern", "msgs": ["good."]},
 		"lantern_photos": {"contact": "lantern", "msgs": ["one more thing.", "photos talk.", "don't post anything until you know what yours say."], "do": [{"notebook": "Lantern: \"photos talk.\""}]},
+		"lantern_forum_sb": {"contact": "lantern", "msgs": ["the forum. type this: lantern.vx", "the password is the river. you'll work out which.", "read before you post. buy quietly. not everything at once."], "do": [{"notebook": "Forum: lantern.vx  -  password: the river"}]},
 		"lantern_forum": {"contact": "lantern", "msgs": ["you're in.", "read the pinned thread before you post anything. i mean it."]},
 		"lantern_safetunnel": {"contact": "lantern", "msgs": ["the tunnel you installed. safetunnel.", "it's theirs. everything you did through it went straight to the ministry.", "uninstall it. then assume they saw tonight."], "do": [{"set": {"safetunnel_revealed": true}}], "replies": [
 			{"text": "How was I supposed to know?", "goto": "lantern_howknow"},

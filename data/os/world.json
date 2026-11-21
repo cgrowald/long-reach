@@ -1,0 +1,59 @@
+{
+	"_note": "Ingredients for the generated town. Every run mixes these into businesses, people and places. Business 'kind' decides its web page, what it sells and whether it's a POI on the map.",
+	"currency": "VM",
+	"towns": ["Kessel"],
+	"streets": ["Tannery Street", "Registry Street", "Unity Avenue", "Foundry Lane", "Grenz Road", "Oster Embankment", "Plant Road", "Willow Court", "Marshal's Square", "Station Street", "Bakers Row", "Quota Street"],
+	"first_names": ["Tomas", "Anka", "Jiri", "Vera", "Oskar", "Lida", "Marek", "Ilse", "Pavol", "Dora", "Emil", "Hedda", "Radek", "Sonja", "Viktor", "Hana", "Bruno", "Ludmila", "Felix", "Greta", "Karel", "Mila", "Otto", "Zofia", "Arno", "Beata", "Stefan", "Irena", "Leo", "Nadia"],
+	"last_names": ["Novak", "Horak", "Brandt", "Kolar", "Mares", "Duda", "Varga", "Sorin", "Petrov", "Lind", "Koval", "Weiss", "Stanek", "Hruby", "Zeman", "Fiala", "Benes", "Kral", "Pokorny", "Sedlak", "Ruzicka", "Vondra"],
+	"traits": {
+		"debt": "owes money to the wrong people",
+		"gambler": "plays the state lottery every day and loses",
+		"affair": "is seeing someone they shouldn't",
+		"loyal": "believes every word on State Television",
+		"gossip": "tells the whole street everything",
+		"bitter": "lost someone at a checkpoint",
+		"careless": "writes passwords on sticky notes",
+		"ambitious": "wants a Party card more than anything"
+	},
+	"business_kinds": {
+		"electronics": {"label": "Electronics shop", "names": ["Voltage & Sons", "Radio Kessel", "Circuit House No. 2", "Brightwire Repairs"], "sells": ["electronics"], "poi": false, "flavor": ["Repairs while you wait (wait not guaranteed).", "All radios pre-tuned to State Radio for your convenience.", "Now accepting Citizen Points."]},
+		"hardware": {"label": "Hardware store", "names": ["Foundry Tools", "Novak Hardware", "The Useful Store", "Plant Road Supply"], "sells": ["tools", "kits"], "poi": false, "flavor": ["Everything for the productive citizen.", "Drills, files, vises. Questions are not answered.", "Ladders sold to registered households only."]},
+		"pharmacy": {"label": "Pharmacy", "names": ["State Pharmacy No. 4", "Willow Chemist", "The Green Cross"], "sells": ["medical"], "poi": true, "flavor": ["Prescriptions filled in the order received. Order not guaranteed.", "Bandages back in stock (limit 1)."]},
+		"gun_store": {"label": "Licensed gun shop", "names": ["Steel Heron Arms", "Marshal's Choice Sporting", "Kessel Shooting Club Supply"], "sells": ["firearms"], "poi": true, "target": true, "flavor": ["Licensed sportsmen only. Purchases reported for your safety.", "Hunting season: every season."]},
+		"cafe": {"label": "Cafe", "names": ["Sela's Internet Cafe", "The Quiet Cup", "Cafe Unity"], "sells": [], "poi": true, "public_pc": true, "flavor": ["ID required at the counter.", "Free Wi-Fi (monitored)."]},
+		"lounge": {"label": "Computer lounge", "names": ["NetPoint 24", "Byte Hall", "The Terminal Room"], "sells": [], "poi": true, "public_pc": true, "flavor": ["Twelve machines. Eleven work.", "Open all night. Curfew applies."]},
+		"hospital": {"label": "Hospital", "names": ["Kessel General", "Saint Brigid Hospital (renamed: Hospital No. 1)"], "sells": [], "poi": true, "flavor": ["Visiting hours have been suspended.", "Please bring your own blankets."]},
+		"police": {"label": "Police station", "names": ["Kessel Police Precinct", "Civic Order Post 3"], "sells": [], "poi": true, "flavor": ["Report suspicious neighbours at the front desk.", "Lost property is State property."]},
+		"ministry": {"label": "Ministry office", "names": ["Interior Ministry - Kessel Annex", "Ministry of Information - Regional Office"], "sells": [], "poi": true, "target": true, "flavor": ["Citizen Records Kiosk in the lobby.", "Appointments by letter only."]},
+		"refinery": {"label": "Metal refinery", "names": ["Kessel Metalworks", "State Refinery East"], "sells": [], "poi": true, "target": true, "flavor": ["Exceeding quota since 2031.", "Unauthorized persons will be."]},
+		"market": {"label": "Food market", "names": ["Central Market", "Quota Street Market", "Station Street Hall"], "sells": [], "poi": true, "flavor": ["Bread on Tuesdays.", "Queue starts at 05:00."]},
+		"plant": {"label": "Truck plant", "names": ["Truck Plant No. 2"], "sells": [], "poi": true, "workplace": true, "flavor": ["Ninth quota record in a row."]}
+	},
+	"town_layout": {"electronics": 2, "hardware": 2, "pharmacy": 1, "gun_store": 1, "cafe": 1, "lounge": 1, "hospital": 1, "police": 1, "ministry": 1, "refinery": 1, "market": 1, "plant": 1},
+	"rules": [
+		"Internet cafes must record every customer's ID.",
+		"Curfew from 23:00 to 05:00.",
+		"Unregistered encryption software is a criminal offense.",
+		"Electronics purchases over 50 VM must be registered with your citizen number.",
+		"Two-factor codes now expire after 30 seconds.",
+		"Gatherings of more than 5 people require a permit.",
+		"Radio receivers must be pre-tuned to State Radio.",
+		"Printers must carry the citizen serial mark.",
+		"Hardware stores must report drill and file purchases to the precinct.",
+		"Public computers now log keystrokes for citizen safety.",
+		"Posting on Nod requires a verified citizen number.",
+		"The Oster bridge checkpoint now checks phones."
+	],
+	"news": [
+		"Marshal Darvan inspects {business} and declares it 'adequate'.",
+		"{person}, {job}, honored for reporting a neighbour.",
+		"Power cuts in {street} are 'scheduled maintenance', says Ministry.",
+		"{business} exceeds quota for the ninth time running.",
+		"Interior Ministry: {n} foreign-funded provocateurs detained in the eastern province.",
+		"Weather: rain. The Ministry of Agriculture thanks the rain.",
+		"Bread delivery to {business} delayed 'for quality reasons'.",
+		"State Television: photos circulating on Nod are fakes made abroad.",
+		"New checkpoint opens on {street}. 'Honest citizens pass in minutes.'",
+		"{person} wins the State Lottery. Prize: a framed portrait of the Marshal."
+	]
+}
