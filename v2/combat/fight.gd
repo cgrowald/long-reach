@@ -14,6 +14,7 @@ const SquadAI := preload("res://v2/combat/squad_ai.gd")
 const EnemyAI := preload("res://v2/combat/enemy_ai.gd")
 const Audio := preload("res://v2/combat/combat_audio.gd")
 const FEED := preload("res://v2/combat/feedcam.gdshader")
+const Loadout := preload("res://v2/sim/loadout.gd")
 
 const SHOUTS := [
 	{"id": "stack", "label": "STACK", "needs": "door", "say": "Stack up on that door."},
@@ -128,11 +129,12 @@ func _environment() -> void:
 func _spawn() -> void:
 	var sp: Array = data["start"]["pos"]
 	var i := 0
-	for d in data.get("squad", []):
+	for d in _squad_defs():
 		var a: Node3D = Actor.new()
 		world.add_child(a)
 		var def: Dictionary = (d as Dictionary).duplicate()
-		def["id"] = "f%d" % i
+		if not def.has("id"):
+			def["id"] = "f%d" % i
 		a.setup_actor(def, "us", level)
 		a.position = Vector3(float(sp[0]) + (i % 2) * 0.8 - 0.4, 0, float(sp[1]) + 0.3 - int(i / 2) * 0.9)
 		a.face_yaw = 0.0
@@ -536,6 +538,9 @@ func _input(e: InputEvent) -> void:
 
 
 func _leave() -> void:
+	if from_garage:
+		_return_home()
+		return
 	if game:
 		game.goto("res://v2/title.tscn")
 	else:
@@ -765,7 +770,7 @@ func _draw_report() -> void:
 		Pal.text(hud, Vector2(r.position.x + 8, y), "(none: they ran it on their own)", 8, Color(0.6, 0.6, 0.6))
 	_restart_r = Rect2(r.end - Vector2(150, 20), Vector2(64, 14))
 	_title_r = Rect2(r.end - Vector2(80, 20), Vector2(72, 14))
-	for b in [[_restart_r, "Run it again"], [_title_r, "Title"]]:
+	for b in [[_restart_r, "Run it again"], [_title_r, "Back home" if from_garage else "Title"]]:
 		hud.draw_rect(b[0], Color(0.2, 0.2, 0.2))
 		hud.draw_rect(b[0], Color(0.7, 0.7, 0.6), false, 1.0)
 		Pal.text(hud, (b[0] as Rect2).position + Vector2(0, 2), b[1], 8, Color(1, 1, 1), HORIZONTAL_ALIGNMENT_CENTER, (b[0] as Rect2).size.x)
@@ -809,3 +814,52 @@ func _draw_objection() -> void:
 	hud.draw_rect(r, Color(1, 0.6, 0.2), false, 1.0)
 	Pal.text(hud, r.position + Vector2(6, 3), t1, 8, Color(1, 0.8, 0.5))
 	Pal.text(hud, r.position + Vector2(6, 14), t2, 8, Color(0.9, 0.9, 0.9))
+
+
+## Who goes: your people in their kit when sent from the gear cage; the test squad otherwise.
+var from_garage := false
+
+func _squad_defs() -> Array:
+	if game and game.state != null and game.has_meta("op_team"):
+		from_garage = true
+		var out: Array = []
+		for pid in game.get_meta("op_team"):
+			var p := Loadout.person(game.state, pid)
+			if not p.is_empty() and p.get("alive", true):
+				out.append(Loadout.to_fighter(game.state, p))
+		if not out.is_empty():
+			return out
+	return data.get("squad", [])
+
+
+## Back to the garage with what happened: the dead, what got used, the loot, the night spent.
+func _return_home() -> void:
+	var st = game.state
+	var results: Array = []
+	for a in squad:
+		var start_mags := int(a.st["mags"])
+		var used_mags := maxi(0, start_mags - 1 - a.mags)
+		var start_meds := int(a.st["meds"])
+		results.append({"id": a.id, "state": a.state,
+			"used": {"mags": used_mags, "meds": maxi(0, start_meds - a.meds), "flash": maxi(0, int(a.st["flash"]) - a.flashes), "charges": maxi(0, int(a.st["charges"]) - a.charges)}})
+	var loot: Array = []
+	var loot_map := {"smg": "guard_smg", "carbine": "bureau_carbine", "pistol": "service_pistol"}
+	for e in (enemies if outcome == "success" else []):          # you only strip the fallen if you held the field
+		if e.state in ["dead", "down", "cuffed", "surrendered"]:
+			var wid: String = (e.get_meta("def") as Dictionary).get("gear", {}).get("weapon", "")
+			if loot_map.has(wid):
+				loot.append(loot_map[wid])
+				if wid != "pistol":
+					st.supplies["mag_30"] = int(st.supplies.get("mag_30", 0)) + 1
+				else:
+					st.supplies["mag_pistol"] = int(st.supplies.get("mag_pistol", 0)) + 1
+	var notes := Loadout.apply_op(st, results, loot)
+	if sq.have_objective:
+		st.items.append({"id": st.next_item_id, "name": "Shipping manifests", "type": "intel", "tag": "plan",
+			"worth": "Which trucks carry what, and when.", "source": data.get("name", ""), "day": st.day, "stars": 0, "quality": 0.0, "hand": true, "perks": []})
+		st.next_item_id += 1
+	st.minute = st.end_minute          # an op takes the night
+	game.remove_meta("op_team")
+	game.set_meta("op_notes", notes)
+	game.autosave()
+	game.goto("res://v2/garage.tscn")

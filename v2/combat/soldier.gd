@@ -13,11 +13,14 @@ const CAMO := {
 	"multicam": [Color(0.33, 0.32, 0.24), Color(0.26, 0.24, 0.17), Color(0.38, 0.36, 0.27), Color(0.2, 0.22, 0.15), Color(0.13, 0.12, 0.1)],
 	"woodland": [Color(0.3, 0.33, 0.22), Color(0.2, 0.23, 0.15), Color(0.35, 0.29, 0.2), Color(0.1, 0.1, 0.08), Color(0.28, 0.3, 0.2)],
 	"black": [Color(0.12, 0.12, 0.13), Color(0.09, 0.09, 0.1), Color(0.15, 0.15, 0.16), Color(0.07, 0.07, 0.08), Color(0.11, 0.11, 0.12)],
+	"street": [Color(0.24, 0.2, 0.17), Color(0.2, 0.17, 0.15), Color(0.27, 0.23, 0.19), Color(0.18, 0.16, 0.14), Color(0.14, 0.12, 0.11)],
+	"denim": [Color(0.2, 0.24, 0.32), Color(0.17, 0.2, 0.27), Color(0.23, 0.27, 0.35), Color(0.15, 0.18, 0.24), Color(0.2, 0.23, 0.3)],
 }
 const FLAT := {
 	"coyote": Color(0.36, 0.3, 0.21), "ranger": Color(0.21, 0.24, 0.17), "black": Color(0.07, 0.07, 0.075),
 	"skin": Color(0.5, 0.38, 0.3), "glove": Color(0.15, 0.14, 0.12), "red": Color(0.6, 0.09, 0.07),
 	"metal": Color(0.26, 0.27, 0.28), "strap": Color(0.2, 0.2, 0.17), "tan": Color(0.6, 0.52, 0.38),
+	"wood": Color(0.34, 0.21, 0.12), "woven": Color(0.2, 0.36, 0.46),
 }
 
 static var _src := {}           # part name -> original Mesh from the glb
@@ -46,6 +49,7 @@ var move_speed := 0.0            # m/s, forward along the body's facing
 var aim_yaw := 0.0               # radians, relative to the body
 var aim_pitch := -0.05
 var raised := 1.0                # 1 = rifle up (aiming), 0 = low ready
+var armed := true                # carrying a long gun (no gun: arms hang, nothing to aim)
 var crouch := 0.25               # 0 = upright, 1 = deep tactical crouch
 var _phase := 0.0
 var _t := 0.0
@@ -60,10 +64,13 @@ func setup(p_loadout: Dictionary) -> void:
 	var camo: String = loadout.get("camo", "multicam")
 	hips = _joint(self, Vector3(0, 1.0, 0))
 	_hang(hips, "Body_Pelvis", camo)
-	_hang(hips, "Gear_Belt", camo)
+	var rig_mesh: String = loadout.get("rig_mesh", "Gear_Carrier")
+	if rig_mesh != "":
+		_hang(hips, "Gear_Belt", camo)
 	chest = _joint(hips, Vector3(0, 0.02, 0))
 	_hang(chest, "Body_Chest", camo)
-	_hang(chest, "Gear_Carrier", camo)
+	if rig_mesh != "":
+		_hang(chest, rig_mesh, camo)
 	match str(loadout.get("back", "")):
 		"pack":
 			_hang(chest, "Gear_Pack", camo)
@@ -78,6 +85,8 @@ func setup(p_loadout: Dictionary) -> void:
 			_hang(neck, "Gear_Helmet", camo)
 		"cap":
 			_hang(neck, "Gear_Cap", camo)
+		"beanie":
+			_hang(neck, "Gear_Beanie", camo)
 	if loadout.get("mask", false):
 		_hang(neck, "Gear_GasMask", camo)
 	cam_mount = _joint(neck, Vector3(0.15, 0.215, -0.1))
@@ -98,7 +107,10 @@ func setup(p_loadout: Dictionary) -> void:
 		ankle[s] = _joint(knee[s], Vector3(0, -0.4, 0))
 		_hang(ankle[s], "Body_Boot_" + s, camo)
 	rifle = _joint(chest, Vector3(0.13, 0.37, -0.1))
-	_hang(rifle, "Gear_Rifle", camo)
+	var wm: String = loadout.get("weapon_mesh", "Gear_Rifle")
+	armed = wm != ""
+	if armed:
+		_hang(rifle, wm, camo)
 	light = SpotLight3D.new()
 	light.position = Vector3(0.042, -0.01, -0.75)
 	light.light_color = Color(0.92, 0.95, 1.0)
@@ -162,6 +174,8 @@ static func painted(part: String, camo: String) -> Mesh:
 		return BoxMesh.new()
 	var out := ArrayMesh.new()
 	var pal: Array = CAMO.get(camo, CAMO["multicam"])
+	if camo == "street" and (part.begins_with("Body_Thigh") or part.begins_with("Body_Shin") or part == "Body_Pelvis"):
+		pal = CAMO["denim"]        # street clothes: a jacket up top, jeans below
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(key)
 	for si in src.get_surface_count():
@@ -194,6 +208,8 @@ static func painted(part: String, camo: String) -> Mesh:
 				col = pal[idx]
 			else:
 				col = FLAT.get(mname, Color(0.4, 0.4, 0.4))
+				if mname == "woven" and absf(c.y - 0.19) < 0.028:
+					col = Color(0.78, 0.74, 0.6)          # the market bag's cream stripe
 			col = col * rng.randf_range(0.9, 1.08)
 			col.a = 1.0
 			for k in 3:
@@ -277,6 +293,13 @@ func _pose(_delta: float) -> void:
 	var pitch := lerpf(-0.45, aim_pitch + 0.12 + crouch * 0.08, raised)
 	rifle.rotation = Vector3(pitch + _kick * 0.06, 0.04, 0)
 	rifle.position = Vector3(0.12, lerpf(0.3, 0.37, raised), lerpf(-0.05, -0.1, raised) + _kick * 0.035)
+	if not armed:
+		# nothing in their hands: arms hang loose, a little forward
+		for arm in ["L", "R"]:
+			var asx := -1.0 if arm == "L" else 1.0
+			(shoulder[arm] as Node3D).rotation = Vector3(0.12 + sin(_phase + (0.0 if arm == "L" else PI)) * 0.25 * clampf(move_speed, 0.0, 1.0), 0, asx * 0.1)
+			(elbow[arm] as Node3D).rotation = Vector3(0.3, 0, 0)
+		return
 	# hands on the rifle (2-bone IK), elbows out and down
 	var grip := rifle.to_global(Vector3(0, -0.1, -0.31))
 	var fore := rifle.to_global(Vector3(-0.01, -0.09, -0.6))

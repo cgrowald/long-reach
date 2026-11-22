@@ -31,7 +31,7 @@
 				{"verb": "pour", "text": "Soak the strips in vodka, up to the line"},
 				{"verb": "fit", "parts": ["strip", "strip", "strip"], "text": "Roll the strips into a pack"}
 			],
-			"makes": {"type": "med", "heal": 10},
+			"makes": {"type": "med", "heal": 10, "gear": "bandage"},
 			"perks": [{"min": 0.7, "text": "Sterile: +5 heal"}, {"min": 0.9, "text": "Tight roll: stops bleeding faster"}]
 		},
 		{
@@ -43,7 +43,7 @@
 				{"verb": "sew", "count": 6, "text": "Stitch the pad to a strip"},
 				{"verb": "fit", "parts": ["pad", "tape"], "text": "Wrap and tape it"}
 			],
-			"makes": {"type": "med", "heal": 25},
+			"makes": {"type": "med", "heal": 25, "gear": "dressing"},
 			"perks": [{"min": 0.75, "text": "Pressure pad: +10 heal"}, {"min": 0.92, "text": "Field-grade: usable mid-fight"}]
 		},
 		{
@@ -55,7 +55,7 @@
 				{"verb": "sew", "count": 8, "text": "Stitch the panel to the straps"},
 				{"verb": "fit", "parts": ["pouch", "pouch", "buckle"], "text": "Tape on the pouches and the buckle"}
 			],
-			"makes": {"type": "rig", "grid": [3, 2], "plates": "none"},
+			"makes": {"type": "rig", "grid": [3, 2], "plates": "none", "gear": "rig_market"},
 			"grid_bonus": [{"min": 0.85, "add": [1, 0]}],
 			"perks": [{"min": 0.7, "text": "Doesn't rattle: quieter"}, {"min": 0.9, "text": "Quick-release: drop it and run"}]
 		},
@@ -67,7 +67,7 @@
 				{"verb": "sew", "count": 10, "text": "Box-stitch the webbing"},
 				{"verb": "fit", "parts": ["pouch", "pouch", "pouch", "buckle"], "text": "Mount the pouches"}
 			],
-			"makes": {"type": "rig", "grid": [4, 2], "plates": "soft insert"},
+			"makes": {"type": "rig", "grid": [4, 2], "plates": "soft insert", "gear": "rig_chest"},
 			"grid_bonus": [{"min": 0.88, "add": [0, 1]}],
 			"perks": [{"min": 0.8, "text": "Balanced: no speed penalty"}]
 		},

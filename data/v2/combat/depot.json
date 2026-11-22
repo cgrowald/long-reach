@@ -57,6 +57,8 @@
 			"bench_rifle": {"name": "Bench rifle (yours)", "acc": 0.6, "dmg": 34, "burst": 3, "rate": 0.11, "recoil": 0.22, "mag": 30, "reload": 2.8, "ads": 0.5, "jam": 0.012},
 			"pistol": {"name": "Service pistol", "acc": 0.42, "dmg": 24, "burst": 2, "rate": 0.25, "recoil": 0.3, "mag": 15, "reload": 2.0, "ads": 0.35, "jam": 0.01},
 			"smg": {"name": "Guard SMG", "acc": 0.45, "dmg": 22, "burst": 4, "rate": 0.08, "recoil": 0.28, "mag": 30, "reload": 2.4, "ads": 0.4, "jam": 0.015},
+			"bolt_rifle": {"name": "Worn bolt action", "acc": 0.74, "dmg": 52, "burst": 1, "rate": 1.3, "recoil": 0.1, "mag": 5, "reload": 4.0, "ads": 0.6, "jam": 0.004},
+			"pump_shotgun": {"name": "Cheap pump shotgun", "acc": 0.62, "dmg": 62, "burst": 1, "rate": 0.95, "recoil": 0.3, "mag": 5, "reload": 4.6, "ads": 0.42, "jam": 0.01, "falloff": 9.0},
 			"carbine": {"name": "Bureau carbine", "acc": 0.6, "dmg": 36, "burst": 3, "rate": 0.1, "recoil": 0.16, "mag": 30, "reload": 2.3, "ads": 0.38, "jam": 0.003}
 		},
 		"rounds": {

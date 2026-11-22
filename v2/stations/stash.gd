@@ -6,6 +6,9 @@ const Crafting := preload("res://v2/sim/crafting.gd")
 
 func build() -> void:
 	var body := frame("THE STASH")
+	var cage_b := Kit.button("Gear cage >", func() -> void: garage.open_screen("cage"), game)
+	add_child(cage_b)
+	cage_b.position = Vector2(size.x - 120, 20)
 	var h := HBoxContainer.new()
 	h.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	h.add_theme_constant_override("separation", 10)

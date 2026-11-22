@@ -20,6 +20,7 @@ const SCREENS := {
 	"corkboard": preload("res://v2/stations/corkboard.gd"), "clipboard": preload("res://v2/stations/clipboard.gd"),
 	"warroom": preload("res://v2/stations/warroom.gd"), "outside": preload("res://v2/stations/outside.gd"),
 	"sleep": preload("res://v2/stations/sleep.gd"), "stash": preload("res://v2/stations/stash.gd"),
+	"cage": preload("res://v2/stations/cage.gd"),
 }
 
 var game: Node
@@ -77,6 +78,13 @@ func _ready() -> void:
 	game.settings_changed.connect(_apply_settings)
 	_apply_settings()
 	game.ambience.volume_db = -12.0
+	if game.has_meta("op_notes"):
+		var notes: Array = game.get_meta("op_notes")
+		game.remove_meta("op_notes")
+		var txt := "You're back. The night is gone.
+" + "
+".join(PackedStringArray(notes))
+		Menus.message.call_deferred(_overlay_layer, game, txt, Callable(), "AFTER THE OP")
 	refresh()
 	if not game.state.morning_seen:
 		Overlays.day_card(_overlay_layer, game, func() -> void: game.state.morning_seen = true)

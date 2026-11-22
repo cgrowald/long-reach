@@ -71,10 +71,12 @@ func setup_actor(def: Dictionary, p_team: String, p_level: Node3D) -> void:
 	bio = str(def.get("line", ""))
 	setup(def)
 	fighter_name = str(def.get("name", id))
+	if not armed:
+		weapons_free = false        # nothing to shoot with: they follow, patch, zip-tie
 	st = Rules.stats(def.get("gear", {}), trait_name)
 	plate_dur = float(st["plate_dur"])
 	mag_rounds = int(st["mag"])
-	mags = int(st["mags"]) - 1
+	mags = maxi(0, int(st["mags"]) - 1)
 	meds = int(st["meds"])
 	flashes = int(st["flash"])
 	charges = int(st["charges"])

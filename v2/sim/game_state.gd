@@ -24,6 +24,8 @@ var items: Array = []                  # the stash: crafted items (dicts, see cr
 var mastery: Dictionary = {}           # recipe id -> {made, good, sum}
 var next_item_id: int = 1
 var os: Dictionary = {}               # HEARTH OS: wallpaper, installed programs, edited files (path -> text)
+var people: Array = []                # your people and their kit (v2/sim/loadout.gd)
+var supplies: Dictionary = {}          # bulk carried things: clips, shells, mags, flashes, charges
 
 
 static func new_game(p_seed: int) -> RefCounted:
@@ -38,6 +40,7 @@ static func new_game(p_seed: int) -> RefCounted:
 	var rec := Content.get_file("recipes")
 	s.materials = (rec.get("start_materials", {}) as Dictionary).duplicate()
 	s.tools = (rec.get("start_tools", []) as Array).duplicate()
+	load("res://v2/sim/loadout.gd").start(s)
 	return s
 
 
@@ -100,7 +103,7 @@ func to_dict() -> Dictionary:
 		"money": money, "attention": attention, "pool": pool, "unlocked": unlocked, "flags": flags,
 		"rule_index": rule_index, "morning_seen": morning_seen, "playtime": playtime, "log": ledger,
 		"materials": materials, "tools": tools, "items": items, "mastery": mastery, "next_item_id": next_item_id,
-		"os": os,
+		"os": os, "people": people, "supplies": supplies,
 	}
 
 
@@ -131,6 +134,22 @@ static func from_dict(d: Dictionary) -> RefCounted:
 	s.mastery = d.get("mastery", {})
 	s.next_item_id = int(d.get("next_item_id", 1))
 	s.os = d.get("os", {})
+	s.people = d.get("people", [])
+	if not d.has("people"):
+		load("res://v2/sim/loadout.gd").start(s)       # an older save: give it Pavel's three and the start kit
+	for p in s.people:
+		for k in p.get("kit", {}):
+			p["kit"][k] = int(p["kit"][k])
+		for e in p.get("grid", []):
+			e["x"] = int(e["x"])
+			e["y"] = int(e["y"])
+			if e.has("item"):
+				e["item"] = int(e["item"])
+		p["level"] = int(p.get("level", 1))
+		p["ops"] = int(p.get("ops", 0))
+	var sup: Dictionary = d.get("supplies", {})
+	for k in sup:
+		s.supplies[k] = int(sup[k])
 	if s.os.has("wallpaper"):
 		s.os["wallpaper"] = int(s.os["wallpaper"])
 	return s

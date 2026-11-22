@@ -129,3 +129,36 @@
 6. **Money:** intel and loot pay (the market behind the market, client jobs, stolen fuel cards and payroll, your people's day jobs); it buys materials, tools, rounds, bribes and safehouses. Your cover job pays a little.
 7. **Map size:** three or four generated cities, then the capital. The home city is taken zone by zone, building by building.
 8. **When the Bureau finds you:** a warning (a car outside, a neighbour's tip), then a raid you defend at home with your people, in the same fight engine: run, hide the gear, or fight. Losing costs a safehouse and gear.
+
+## 8. The opening and the first fights (user, 2026-11-22)
+- **The first hour is mostly the computer.** The game nudges you in the right direction, and Pavel's work pays off if you decide to follow that beginning.
+- **A random start every time.** Following Pavel is a choice, not a rail: choose it and you get his old friends and network, which is what starts the ops at night.
+- **The first fights are small guerrilla work** before you run a real army:
+  - hitting a bar where a politician drinks;
+  - a daytime checkpoint ambush (the user's reference: a scene in *The Devil's Own* where a military checkpoint gets hit).
+  - "So you can really feel like you're equipping your army."
+- **Maybe no guns at first: fists only.** Killing the politician sparks the first story moment, a cutscene-like zoom out to anarchy: *oh shit, it's hitting the fan.* That's the drive to keep pushing.
+- **It may kill all your people.** Then the game pushes you to hack something, get loot, sell it, and buy (gear for) new people. That's the loop.
+- *Claude's notes:*
+  - fists and melee would be a new combat layer (a short scuffle system), not free;
+  - "the politician dies → zoom out" can be the first time the world map appears, with the news, the city reacting, and Bureau heat jumping.
+
+## 9. Gear on your people (decided, user 2026-11-22; the build after the rundown)
+- **A gear cage in the garage:** the fighter stands there in 3D; pick who; slots and the rig grid sit beside them. What you put on shows on the model instantly, and in the fight.
+- **The rig grid: drag items into cells.** Mags, meds, flashes and charges each take cells. The market-bag rig gives 3x2, the chest rig 4x2, the plate carrier 4x3 plus a plate slot. What fits is exactly what they carry.
+- **First kit:** street clothes, junk, and one bad gun to share (a worn bolt action, a cheap pump shotgun). Fists and melee come as their own build later.
+- **Where gear comes from:** the benches, the black market (junk-tier guns and plates, paid with money from intel), and loot stripped off enemies after ops.
+
+### Built (2026-11-22): gear on your people
+- **New game:** Pavel's three (Viktor, Ada, Ivo) join in street clothes. The stash holds a worn bolt action, a cheap pump shotgun, two pipes, a cap and a beanie; supplies are rifle clips and shells (`data/v2/gear.json`).
+- **The gear cage** (Shelves > Gear cage, `v2/stations/cage.gd`):
+  - your people on the left;
+  - them in 3D in the middle, turning, wearing exactly their kit;
+  - eight slots (primary, sidearm, head, face, rig, plate, back, clothes);
+  - the rig grid (pick a supply or a crafted bandage, click a cell; right-click takes it out), and auto-pack;
+  - their numbers underneath.
+  - Plates need a carrier. Crafted rigs and meds from the benches are gear now.
+- **Send them** from the cage: the raid uses your people in their kit (no gun = they follow and help, but don't shoot). Coming home applies the dead (their kit is lost with them), the clips, meds and flashes used, the loot (only if you held the field), and the manifests; the night is spent, and a note waits in the garage. It all saves (`v2/sim/loadout.gd`, GameState `people` and `supplies`).
+- **New models:** the bolt action, the pump shotgun, the striped market-bag rig, a webbing chest rig, a beanie; street clothes (jacket and jeans).
+- **Found by playing:** cheap guns have no weapon lights, so the cams are nearly black. Lights become an attachment to make or buy.
+- **Not yet:** the black market, recruiting new people, fists and melee, attachments as items, Pavel's opening beats.

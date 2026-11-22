@@ -24,7 +24,7 @@ PAL = {
 	"camo": (0.38, 0.37, 0.28), "coyote": (0.47, 0.39, 0.27), "ranger": (0.26, 0.29, 0.21),
 	"black": (0.08, 0.08, 0.08), "skin": (0.62, 0.47, 0.37), "glove": (0.16, 0.15, 0.13),
 	"lens": (0.85, 0.95, 1.0), "red": (0.65, 0.08, 0.06), "metal": (0.25, 0.26, 0.27),
-	"strap": (0.2, 0.2, 0.17), "tan": (0.6, 0.52, 0.38),
+	"strap": (0.2, 0.2, 0.17), "tan": (0.6, 0.52, 0.38), "wood": (0.36, 0.22, 0.12), "woven": (0.22, 0.38, 0.48),
 }
 _mats = {}
 
@@ -197,6 +197,57 @@ r.cyl((0.042, 0.69, -0.01), 0.017, 0.09, "black", rot=(90, 0, 0))               
 r.cyl((0.042, 0.737, -0.01), 0.015, 0.008, "lens", rot=(90, 0, 0))
 r.chunk((0, 0.62, -0.065), (0.026, 0.032, 0.075), "black", cuts=0, rnd=0.15)                  # vertical grip
 r.build()
+
+# ------------------------------------------------------------------ starter weapons (origin = butt, forward +Y)
+
+b = Part("Gear_BoltRifle")
+b.chunk((0, 0.16, -0.035), (0.045, 0.34, 0.09), "wood", cuts=0, rnd=0.1, taper=(0.75, 1.0))       # wooden stock
+b.chunk((0, 0.48, -0.01), (0.05, 0.34, 0.06), "wood", cuts=0, rnd=0.1)                            # fore-end
+b.cyl((0, 0.47, 0.025), 0.016, 0.36, "metal", rot=(90, 0, 0))                                      # receiver tube
+b.cyl((0, 0.84, 0.02), 0.011, 0.42, "metal", rot=(90, 0, 0))                                       # long barrel
+b.chunk((0.035, 0.42, 0.03), (0.04, 0.012, 0.012), "metal", cuts=0, rnd=0.0)                      # bolt handle
+b.chunk((0, 0.4, 0.07), (0.03, 0.14, 0.035), "black", cuts=0, rnd=0.1)                            # old scope
+b.chunk((0, 0.38, -0.06), (0.025, 0.05, 0.04), "metal", cuts=0, rnd=0.0)                          # trigger guard
+b.build()
+
+s = Part("Gear_Shotgun")
+s.chunk((0, 0.14, -0.03), (0.045, 0.28, 0.085), "black", cuts=0, rnd=0.1, taper=(0.8, 1.0))      # polymer stock
+s.chunk((0, 0.4, 0.0), (0.05, 0.24, 0.07), "metal", cuts=0, rnd=0.05)                             # receiver
+s.cyl((0, 0.72, 0.018), 0.014, 0.48, "metal", rot=(90, 0, 0))                                      # barrel
+s.cyl((0, 0.66, -0.018), 0.015, 0.34, "metal", rot=(90, 0, 0))                                     # tube under it
+s.chunk((0, 0.64, -0.02), (0.05, 0.14, 0.05), "black", cuts=0, rnd=0.2)                           # the pump
+s.chunk((0, 0.33, -0.07), (0.03, 0.04, 0.08), "black", cuts=0, rnd=0.1, rot=(22, 0, 0))          # grip
+s.build()
+
+# ------------------------------------------------------------------ rigs (joint = waist, on the chest part)
+
+m = Part("Gear_RigMarket")           # a striped woven market bag, cut and sewn into pouches (docs/refs/polish/market_rig_01)
+m.chunk((0, 0.165, 0.2), (0.34, 0.09, 0.2), "woven", cuts=1, rnd=0.12, jit=0.03)
+for i in range(3):
+	m.chunk((-0.11 + i * 0.11, 0.215, 0.16), (0.095, 0.04, 0.13), "woven", cuts=0, rnd=0.15)        # pouches
+	m.chunk((-0.11 + i * 0.11, 0.236, 0.225), (0.09, 0.012, 0.04), "woven", cuts=0, rnd=0.0)       # flaps
+for sx in (-1, 1):
+	m.chunk((sx * 0.11, 0.06, 0.4), (0.05, 0.3, 0.025), "ranger", cuts=0, rnd=0.0)                # salvaged straps
+	m.chunk((sx * 0.11, 0.175, 0.31), (0.05, 0.02, 0.04), "black", cuts=0, rnd=0.0)               # buckles
+	m.chunk((sx * 0.11, -0.13, 0.25), (0.05, 0.025, 0.3), "ranger", cuts=0, rnd=0.0)
+m.chunk((0, 0.165, 0.32), (0.05, 0.02, 0.05), "tan", cuts=0, rnd=0.1)                             # handle stub
+m.chunk((0.19, 0.17, 0.2), (0.015, 0.03, 0.05), "red", cuts=0, rnd=0.1)                           # pull loop
+m.build()
+
+w = Part("Gear_RigChest")
+w.chunk((0, 0.16, 0.2), (0.36, 0.08, 0.18), "ranger", cuts=1, rnd=0.12, jit=0.03)
+for i in range(4):
+	w.chunk((-0.135 + i * 0.09, 0.21, 0.17), (0.08, 0.05, 0.14), "ranger", cuts=0, rnd=0.12)
+	w.chunk((-0.135 + i * 0.09, 0.215, 0.245), (0.06, 0.03, 0.02), "black", cuts=0, rnd=0.0)
+for sx in (-1, 1):
+	w.chunk((sx * 0.12, 0.0, 0.41), (0.055, 0.32, 0.03), "ranger", cuts=0, rnd=0.0)
+	w.chunk((sx * 0.12, -0.14, 0.24), (0.055, 0.03, 0.34), "ranger", cuts=0, rnd=0.0)
+w.build()
+
+bn = Part("Gear_Beanie")
+bn.chunk((0, -0.005, 0.18), (0.21, 0.23, 0.13), "black", cuts=2, rnd=0.6, taper=(1.03, 0.75))
+bn.chunk((0, -0.005, 0.12), (0.215, 0.235, 0.04), "black", cuts=1, rnd=0.5)
+bn.build()
 
 bpy.ops.wm.save_as_mainfile(filepath=os.path.join(HERE, "soldier.blend"))
 bpy.ops.export_scene.gltf(filepath=os.path.join(ART, "soldier.glb"), export_format="GLB", export_apply=True, export_yup=True)

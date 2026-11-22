@@ -25,7 +25,7 @@ static func stats(gear: Dictionary, trait_id := "") -> Dictionary:
 		"pen": float(r.get("pen", 1.0)), "armor_dmg": float(r.get("armor", 1.0)),
 		"burst": int(w.get("burst", 3)), "rate": float(w.get("rate", 0.12)), "recoil": float(w.get("recoil", 0.2)),
 		"mag": int(w.get("mag", 30)), "reload": float(w.get("reload", 2.5)), "ads": float(w.get("ads", 0.45)),
-		"jam": float(w.get("jam", 0.01)), "spot": false,
+		"jam": float(w.get("jam", 0.01)), "spot": false, "falloff": float(w.get("falloff", 0.0)),
 		"plate": int(gear.get("plate", 0)), "mags": int(gear.get("mags", 3)), "meds": int(gear.get("meds", 1)),
 		"flash": int(gear.get("flash", 0)), "charges": int(gear.get("charges", 0)),
 	}
@@ -60,6 +60,8 @@ static func stats(gear: Dictionary, trait_id := "") -> Dictionary:
 static func hit_chance(st: Dictionary, dist: float, shooter_moving: bool, target_moving: bool, cover: float, shot_in_burst: int) -> float:
 	var c := float(st["acc"])
 	c *= clampf(1.15 - dist / 30.0, 0.35, 1.1)
+	if float(st.get("falloff", 0.0)) > 0.0:
+		c *= clampf(1.5 - dist / float(st["falloff"]) * 0.7, 0.15, 1.3)      # a shotgun: brutal close, useless far
 	if shooter_moving:
 		c *= 0.6
 	if target_moving:
