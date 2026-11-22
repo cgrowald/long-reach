@@ -87,6 +87,7 @@ func tick(delta: float) -> void:
 				if not e.moving():
 					e.state = "fled"
 					e.crouch = 0.9
+		e.light_wanted = ai["mode"] in ["alert", "react", "combat"]
 		_nerve(e, ai)
 		e.tick(delta)
 	noises.clear()

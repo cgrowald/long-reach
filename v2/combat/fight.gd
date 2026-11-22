@@ -61,6 +61,9 @@ var _esc_t := -10.0
 var _restart_r := Rect2()
 var _title_r := Rect2()
 var _env: Environment
+var _look_drag := false
+var board: Control
+const OpsBoard := preload("res://v2/combat/ops_board.gd")
 
 
 func _ready() -> void:
@@ -82,7 +85,10 @@ func _ready() -> void:
 	sq = SquadAI.new()
 	var sp: Array = data["start"]["pos"]
 	sq.setup(squad, enemies, level, en, Vector3(sp[0], 0, sp[1]))
-	sq.log_line.connect(func(t: String) -> void: _event(t))
+	sq.log_line.connect(func(t: String) -> void:
+		_event(t)
+		if t.begins_with("YOU overruled"):
+			shout_log.append({"t": t_op, "text": t}))
 	sq.objective_done.connect(func() -> void: _event("OBJECTIVE COMPLETE: get out"))
 	sq.exfil_done.connect(func() -> void: _end("success"))
 	_cameras()
@@ -91,6 +97,9 @@ func _ready() -> void:
 	hud.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	view.ui.add_child(hud)
 	hud.draw.connect(_draw_hud)
+	board = OpsBoard.new()
+	view.ui.add_child(board)
+	board.setup(self, _have_blueprint())
 	_event("In position. %s." % str(data.get("objective", {}).get("text", "")))
 
 
@@ -281,12 +290,20 @@ func _process(delta: float) -> void:
 		b["t"] = float(b["t"]) + (0.0 if paused else delta)
 	barks = barks.filter(func(b: Dictionary) -> bool: return float(b["t"]) < 6.0)
 	_update_cameras(delta)
+	if board:
+		board.size = Vector2(112, hud.size.y - TILE.y - 62)
+		board.position = Vector2(hud.size.x - board.size.x - 6, 50)
+	if not paused and phase == "op":
+		_cctv_spot()
 	if pending >= 0:
 		hover_target = _pick_target(SHOUTS[pending]["needs"])
 	hud.queue_redraw()
 
 
 ## Nobody stands inside anybody: people closer than a shoulder-width push apart.
+## Moving as one ("hive mind"): someone walking has right of way, and a teammate standing in the path
+## steps aside; two of ours both on the move just flow past each other; standing people keep a
+## shoulder's width apart. Enemies and ours always push apart.
 func _separate() -> void:
 	var people: Array = (squad + enemies).filter(func(a) -> bool: return a.state == "ok" or a.state == "surrendered")
 	for i in people.size():
@@ -296,13 +313,28 @@ func _separate() -> void:
 			var d: Vector3 = b.global_position - a.global_position
 			d.y = 0.0
 			var dist := d.length()
-			# two of ours both on the move (filing through a door) don't shove each other sideways
-			if a.team == b.team and a.moving() and b.moving() and dist > 0.3 and level.near_door(a.global_position) and level.near_door(b.global_position):
+			if dist >= 0.6:
 				continue
-			if dist < 0.55:
-				var push := (d.normalized() if dist > 0.001 else Vector3(1, 0, 0)) * (0.55 - dist) * 0.5
-				a.nudge(-push)
-				b.nudge(push)
+			var dirn := d.normalized() if dist > 0.001 else Vector3(1, 0, 0)
+			if a.team == b.team:
+				var am: bool = a.moving()
+				var bm: bool = b.moving()
+				if am and bm:
+					continue
+				if am != bm:
+					# the one standing still makes room, sideways to the walker's line
+					var walker = a if am else b
+					var stander = b if am else a
+					var wdir: Vector3 = (walker.path[0] as Vector3) - walker.global_position
+					wdir.y = 0.0
+					var side := Vector3(-wdir.z, 0, wdir.x).normalized()
+					if side.dot(stander.global_position - walker.global_position) < 0.0:
+						side = -side
+					stander.nudge(side * 0.04)
+					continue
+			var push := dirn * (0.55 - dist) * 0.5
+			a.nudge(-push)
+			b.nudge(push)
 
 
 func _end(how: String) -> void:
@@ -333,6 +365,11 @@ func _on_said(who, text: String) -> void:
 
 func _shout(i: int, target = null) -> void:
 	var s: Dictionary = SHOUTS[i]
+	issue(s["id"], s["label"], s["say"], target)
+
+
+## Give an order (from the shout wheel or the ops board): log it, say it on the radio, pass it on.
+func issue(id: String, label: String, say_line: String, target = null) -> void:
 	var who := recipients.duplicate()
 	var to_txt := "ALL" if who.is_empty() else ", ".join(PackedStringArray(who.map(func(a) -> String: return _first(a).to_upper())))
 	var what := ""
@@ -344,11 +381,11 @@ func _shout(i: int, target = null) -> void:
 		what = "that spot"
 	elif target != null:
 		what = _first(target) if target.team == "us" else str(target.fighter_name)
-	var line := "%s %s" % [s["label"], what]
+	var line := "%s %s" % [label, what]
 	shout_log.append({"t": t_op, "text": "YOU > %s: %s" % [to_txt, line.strip_edges()]})
-	barks.append({"name": "YOU", "text": s["say"], "t": 0.0, "col": Color(1, 1, 1)})
+	barks.append({"name": "YOU", "text": say_line, "t": 0.0, "col": Color(1, 1, 1)})
 	Audio.play_at(world, "squelch", main_cam.global_position, -10.0)
-	sq.order(s["id"], target, who)
+	sq.order(id, target, who)
 
 
 ## What's under the mouse on the main feed, for the shout that's waiting.
@@ -408,6 +445,8 @@ func _input(e: InputEvent) -> void:
 			_leave()
 		return
 	if e is InputEventMouseButton:
+		if board and Rect2(board.position, board.size).has_point(view.ui.get_local_mouse_position()) and not wheel_open:
+			return          # the ops board handles its own clicks
 		var mp := view.ui.get_local_mouse_position() as Vector2
 		if e.button_index == MOUSE_BUTTON_RIGHT:
 			if e.pressed:
@@ -440,6 +479,18 @@ func _input(e: InputEvent) -> void:
 					_shout(pending, target)
 					pending = -1
 				get_viewport().set_input_as_handled()
+			else:
+				# no shout waiting: press on the feed, drag, let go = ask the wearer to look there
+				_look_drag = true
+				get_viewport().set_input_as_handled()
+		elif e.button_index == MOUSE_BUTTON_LEFT and not e.pressed and _look_drag:
+			_look_drag = false
+			var wearer = _main_actor()
+			if wearer != null and wearer.alive():
+				var lt := _pick_target("point")
+				if not lt.is_empty():
+					wearer.order_look(lt["point"])
+					shout_log.append({"t": t_op, "text": "YOU > %s: LOOK there" % _first(wearer).to_upper()})
 	elif e is InputEventMouseMotion and wheel_open:
 		var v: Vector2 = view.ui.get_local_mouse_position() - wheel_c
 		if v.length() < 10.0:
@@ -461,6 +512,11 @@ func _input(e: InputEvent) -> void:
 			main_i = (main_i + 1) % feeds.size()
 		elif k == KEY_SPACE or k == KEY_P:
 			paused = not paused
+		elif k == KEY_B:
+			if not sq.objection.is_empty():
+				var by = sq.objection["by"]
+				shout_log.append({"t": t_op, "text": "YOU > OK, %s's way: %s" % [_first(by).to_upper(), sq.objection["suggest_label"]]})
+				sq.accept_suggestion()
 		elif k == KEY_G:
 			_shout(9)
 		elif k == KEY_H:
@@ -617,6 +673,7 @@ func _draw_hud() -> void:
 				hud.draw_arc(sp, 9.0 + sin(t_op * 8.0) * 1.5, 0, TAU, 16, Color(1, 0.3, 0.85), 1.0)
 		hud.draw_rect(Rect2(mp + Vector2(10, -6), Vector2(tag.length() * 5 + 6, 11)), Color(0, 0, 0, 0.7))
 		Pal.text(hud, mp + Vector2(13, -5), tag, 8, Color(1, 0.3, 0.85) if ok else Color(0.8, 0.8, 0.8))
+	_draw_objection()
 	if phase == "report":
 		_draw_report()
 
@@ -712,3 +769,43 @@ func _draw_report() -> void:
 		hud.draw_rect(b[0], Color(0.2, 0.2, 0.2))
 		hud.draw_rect(b[0], Color(0.7, 0.7, 0.6), false, 1.0)
 		Pal.text(hud, (b[0] as Rect2).position + Vector2(0, 2), b[1], 8, Color(1, 1, 1), HORIZONTAL_ALIGNMENT_CENTER, (b[0] as Rect2).size.x)
+
+
+## The plan on the board: the depot's blueprint comes with the hack (the Jobs app). Run from the title
+## screen (no save), it's there for testing.
+func _have_blueprint() -> bool:
+	if game == null or game.state == null:
+		return true
+	return (game.state.os.get("jobs_done", []) as Array).has("freight_depot")
+
+
+## Hacked cameras see too: anyone in a camera's view gets marked for the team (and the board).
+func _cctv_spot() -> void:
+	for f in feeds:
+		if f["kind"] != "cctv":
+			continue
+		var cam: Camera3D = f["cam"]
+		var fwd := -cam.global_basis.z
+		for e in enemies:
+			if e.state != "ok":
+				continue
+			var to: Vector3 = e.chest_pos() - cam.global_position
+			if to.length() < 16.0 and to.normalized().dot(fwd) > 0.8 and level.clear_line(cam.global_position, e.chest_pos()):
+				e.set_meta("seen_t", sq._t)
+				e.set_meta("seen_pos", e.global_position)
+
+
+func _draw_objection() -> void:
+	var o: Dictionary = sq.objection
+	if o.is_empty() or sq._t - float(o["t"]) > 12.0:
+		return
+	var w := hud.size.x
+	var by = o["by"]
+	var t1 := "%s OBJECTS: %s" % [_first(by).to_upper(), o["reason"]]
+	var t2 := "[B] their way: %s      [same order again] do it anyway" % o["suggest_label"]
+	var bw := maxf(t1.length(), t2.length()) * 5.0 + 12.0
+	var r := Rect2(Vector2((w - bw) * 0.5, 52), Vector2(bw, 26))
+	hud.draw_rect(r, Color(0.1, 0.05, 0.03, 0.88))
+	hud.draw_rect(r, Color(1, 0.6, 0.2), false, 1.0)
+	Pal.text(hud, r.position + Vector2(6, 3), t1, 8, Color(1, 0.8, 0.5))
+	Pal.text(hud, r.position + Vector2(6, 14), t2, 8, Color(0.9, 0.9, 0.9))

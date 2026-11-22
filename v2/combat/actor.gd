@@ -12,7 +12,7 @@ signal fired(who, target)
 
 const Rules := preload("res://v2/combat/rules.gd")
 const Audio := preload("res://v2/combat/combat_audio.gd")
-const WALK := 0.85
+const WALK := 0.7
 const RUN := 1.9
 
 var id := ""
@@ -42,6 +42,8 @@ var speed := WALK
 var face_yaw := 0.0              # body facing (world yaw)
 var target = null                # actor being engaged
 var look_at_point = null         # Vector3 to watch when nobody to shoot
+var look_order = null            # where YOU told them to look (beats everything but a live target)
+var look_order_t := 0.0
 var aim_time := 0.0
 var burst_left := 0
 var shot_t := 0.0
@@ -50,6 +52,8 @@ var reloading := 0.0
 var bandaging := 0.0
 var busy := 0.0                  # doing something with the hands (patching, cuffing, picking up)
 var weapons_free := true
+var light_wanted := false         # the squad / enemy brain wants the weapon light on (entering, clearing, alert)
+var has_light := false
 var shots := 0
 var last_shot_t := -100.0       # when this person last fired (a muzzle flash gives you away)
 var hits := 0
@@ -75,7 +79,8 @@ func setup_actor(def: Dictionary, p_team: String, p_level: Node3D) -> void:
 	flashes = int(st["flash"])
 	charges = int(st["charges"])
 	rng.seed = hash(id)
-	if not st.get("spot", false) and light:
+	has_light = bool(st.get("spot", false))
+	if light:
 		light.visible = false
 
 
@@ -123,6 +128,10 @@ func moving() -> bool:
 
 func tick(delta: float) -> void:
 	_say_cd = maxf(0.0, _say_cd - delta)
+	if look_order != null:
+		look_order_t -= delta
+		if look_order_t <= 0.0:
+			look_order = null
 	if state == "dead" or state == "fled" or state == "cuffed":
 		move_speed = 0.0
 		return
@@ -170,6 +179,8 @@ func tick(delta: float) -> void:
 	var look = null
 	if target != null and is_instance_valid(target):
 		look = target.chest_pos()
+	elif look_order != null:
+		look = look_order
 	elif look_at_point != null:
 		look = look_at_point
 	if look != null:
@@ -177,13 +188,18 @@ func tick(delta: float) -> void:
 		want = atan2(-lv.x, -lv.z)
 	elif v.length() > 0.05:
 		want = atan2(-v.x, -v.z)
-	var turn := clampf(wrapf(want - face_yaw, -PI, PI), -delta * 4.5, delta * 4.5)
+	# how fast they come round: quicker hands (reactions) and a handier weapon (ergonomics) turn faster
+	var turn_rate := clampf(5.6 - float(st.get("react", 0.5)) * 3.5 - float(st.get("ads", 0.45)) * 2.0, 2.0, 5.0)
+	var turn := clampf(wrapf(want - face_yaw, -PI, PI), -delta * turn_rate, delta * turn_rate)
 	face_yaw = wrapf(face_yaw + turn, -PI, PI)
 	rotation.y = face_yaw
 	aim_yaw = clampf(wrapf(want - face_yaw, -PI, PI), -0.6, 0.6)
 	# the rifle comes up when there's something to point at
-	raised = move_toward(raised, 1.0 if (target != null or look_at_point != null) else 0.55, delta * 3.0)
+	raised = move_toward(raised, 1.0 if (target != null or look_at_point != null or look_order != null) else 0.55, delta * 3.0)
 	_weapon(delta)
+	# the weapon light: on to engage or to go into the dark, off again once it's clear (lights give you away)
+	if light:
+		light.visible = has_light and (target != null or light_wanted or flashing())
 	_self_aid(delta)
 
 
@@ -456,3 +472,10 @@ func bark_custom(text: String) -> void:
 ## Fired in the last two seconds: the muzzle flash shows where you are.
 func flashing() -> bool:
 	return Time.get_ticks_msec() / 1000.0 - last_shot_t < 2.0 / maxf(Engine.time_scale, 0.01)
+
+
+## You asked them to look somewhere. Turning speed is their own (it's in the tick: training, ergonomics).
+func order_look(p: Vector3) -> void:
+	look_order = p + Vector3(0, 1.2, 0)
+	look_order_t = 7.0
+	say(["Checking.", "Eyes on it.", "Looking."][rng.randi() % 3], true)

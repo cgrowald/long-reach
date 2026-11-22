@@ -216,3 +216,22 @@ Title screen > **Combat: depot raid** (`v2/combat/fight.tscn`, content in `data/
 - **The ops board plus the cams:** point on a paper floor plan, watch through the cams. The plan comes from intel; without it, rooms get sketched as they're walked.
 - **Pushback:** the reason plus their way, or prod (the same shout again) to make them go anyway, slower and shakier. The report logs the overruled objection.
 - **Look:** drag on the main feed to make the wearer turn, at their own speed.
+
+## Build: commanding from the van (2026-11-22)
+- **The ops board** (`v2/combat/ops_board.gd`), right side:
+  - the blueprint (from the depot hack; always on when testing from the title), or a sketch filled in as they walk;
+  - your four as numbered dots with a facing tick;
+  - enemies as red X's where seen, fading to "?";
+  - cleared rooms shaded, the locked door in red, the objective marked.
+  - **Left-click a dot:** watch their cam and talk to them. **Right-click** a door, room or dot for orders: stack up; open & clear; kick & clear; flash & clear; **breach, flash & wait**; blow it; move here; clear through to here; watch this spot; hold; medic.
+- **Danger read and pushback** (`squad_ai.gd` `danger()`, `threshold()`):
+  - Risky orders are weighed: an unknown room, enemies known inside (seen by them **or by the hacked CCTV**), being under fire, wounded, low on ammo. A flash lowers it.
+  - Over the front fighter's nerve (from their trait), they object with the reason and a suggestion.
+  - **B** takes their way; **the same order again** forces it: they go, shaken (slower reactions for 20 s), and the report logs "YOU overruled …".
+  - Doctrine uses the same read: it flashes rooms it knows are occupied.
+- **Look:** press on the main feed, drag, let go, and the wearer turns there ("Eyes on it."). They turn at their own speed (reactions plus weapon ergonomics) and still snap to threats.
+- **Moving as one:** whoever's walking has right of way; a teammate standing in the way steps aside; walkers flow past each other. "Room's clear, moving."
+- **A fluid stack:** the closest fills the front spot on their own side of the door, nobody reshuffles, entry follows the stack (criss-cross), the furthest back holds the hall. The front man opens the door; whoever carries the flash or the charge uses it.
+- **Lights:** on to enter, clear or engage; off once the room is clear and while they stack (the dark hides them). Guards light up when alerted.
+- **Slow is smooth:** walking at 0.7 m/s, 1.3 s between entries, a 2.2 s breath at the door, and every room (empty or not) held about 3.5 s before "Clear".
+- **Still rough:** brief overlaps while filing through doors; balance; no reload or bandage animations; the user's own play recordings would help tune the moves.
