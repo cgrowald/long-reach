@@ -12,7 +12,7 @@ signal fired(who, target)
 
 const Rules := preload("res://v2/combat/rules.gd")
 const Audio := preload("res://v2/combat/combat_audio.gd")
-const WALK := 0.7
+const WALK := 0.85
 const RUN := 1.9
 
 var id := ""

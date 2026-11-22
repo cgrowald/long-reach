@@ -235,3 +235,18 @@ Title screen > **Combat: depot raid** (`v2/combat/fight.tscn`, content in `data/
 - **Lights:** on to enter, clear or engage; off once the room is clear and while they stack (the dark hides them). Guards light up when alerted.
 - **Slow is smooth:** walking at 0.7 m/s, 1.3 s between entries, a 2.2 s breath at the door, and every room (empty or not) held about 3.5 s before "Clear".
 - **Still rough:** brief overlaps while filing through doors; balance; no reload or bandage animations; the user's own play recordings would help tune the moves.
+
+## 10. How the user clears (army-taught; the next doctrine pass, 2026-11-22)
+*"I would take the team in and clear room by room, always leaving one for security in the hall."*
+- **The first in the stack opens the door**, with the handle or a tool.
+- **The first man chooses** how to enter: a **J-hook** (buttonhook around the frame) or **straight in**, and left or right. **The second always goes opposite, the third opposite of that**, and so on.
+- They clear, **call clear, then move out**. Repeat room by room.
+- **One stays in the hall for security**, always.
+- **Reloading:** take a knee. **Another operator HAS to tell them to stand up**, because who knows if that's in the line of fire.
+- **Exploit every PC** and take all data and intel, room by room.
+- **Leaving the building: bounding overwatch.** They don't walk backwards: the back two bound while covering each other's retreat.
+- **Speed:** keep walking at 0.85 m/s. The "dipping in" the user saw was when *they* were in control: now that the team waits for an order, it works.
+- **Clicking:** with the head turned it's still hard to see the door to click; on the board, a fighter dot sat on top of the door. *Fixed: right-click on the board prefers the door.* More UI cleanup to come.
+- **Verdict:** "This is what I was afraid to tackle and what could ruin the game, but this is exactly what I wanted." Tweak slowly over time.
+
+**Later:** better weapons lower the TTK; specific targets field better-armoured enemies, which needs better rounds and more ammo.

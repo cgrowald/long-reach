@@ -186,7 +186,7 @@ func _gui_input(e: InputEvent) -> void:
 				return
 		menu.clear()
 		return
-	var hit := _hit(p)
+	var hit := _hit(p, e.button_index == MOUSE_BUTTON_RIGHT)
 	if e.button_index == MOUSE_BUTTON_LEFT:
 		if hit.has("fighter"):
 			var a = hit["fighter"]
@@ -224,14 +224,32 @@ func _gui_input(e: InputEvent) -> void:
 		]
 
 
-func _hit(p: Vector2) -> Dictionary:
+## What's under the cursor. Right-click (orders) prefers a door over a fighter standing next to it;
+## left-click (pick who to watch) prefers the fighter. Doors get a generous target.
+func _hit(p: Vector2, prefer_door := false) -> Dictionary:
 	var lv = fight.level
-	for a in fight.squad:
-		if a.state != "dead" and to_board(a.global_position).distance_to(p) < 6.0:
-			return {"fighter": a}
+	var door := {}
+	var dd := 9.0
 	for d in lv.doors:
-		if (known.get(d["a"], false) or known.get(d["b"], false)) and to_board(lv.door_world(d)).distance_to(p) < 6.0:
-			return {"door": d}
+		if known.get(d["a"], false) or known.get(d["b"], false):
+			var dist := to_board(lv.door_world(d)).distance_to(p)
+			if dist < dd:
+				dd = dist
+				door = d
+	var who = null
+	var fd := 6.0
+	for a in fight.squad:
+		if a.state != "dead":
+			var dist := to_board(a.global_position).distance_to(p)
+			if dist < fd:
+				fd = dist
+				who = a
+	if prefer_door and not door.is_empty():
+		return {"door": door}
+	if who != null:
+		return {"fighter": who}
+	if not door.is_empty():
+		return {"door": door}
 	var w := to_world(p)
 	var r: String = lv.room_at(w)
 	if r != "" and known.get(r, false):
