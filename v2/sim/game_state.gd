@@ -23,6 +23,7 @@ var tools: Array = []                  # tool ids you own
 var items: Array = []                  # the stash: crafted items (dicts, see crafting.gd)
 var mastery: Dictionary = {}           # recipe id -> {made, good, sum}
 var next_item_id: int = 1
+var os: Dictionary = {}               # HEARTH OS: wallpaper, installed programs, edited files (path -> text)
 
 
 static func new_game(p_seed: int) -> RefCounted:
@@ -99,6 +100,7 @@ func to_dict() -> Dictionary:
 		"money": money, "attention": attention, "pool": pool, "unlocked": unlocked, "flags": flags,
 		"rule_index": rule_index, "morning_seen": morning_seen, "playtime": playtime, "log": ledger,
 		"materials": materials, "tools": tools, "items": items, "mastery": mastery, "next_item_id": next_item_id,
+		"os": os,
 	}
 
 
@@ -128,4 +130,7 @@ static func from_dict(d: Dictionary) -> RefCounted:
 				it[k] = int(it[k])
 	s.mastery = d.get("mastery", {})
 	s.next_item_id = int(d.get("next_item_id", 1))
+	s.os = d.get("os", {})
+	if s.os.has("wallpaper"):
+		s.os["wallpaper"] = int(s.os["wallpaper"])
 	return s

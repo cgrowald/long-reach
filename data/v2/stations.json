@@ -8,8 +8,8 @@
 		{"id": "west", "name": "The wall", "look": [-2.8, 0.1, 0.85]}
 	],
 	"stations": [
-		{"id": "pc", "name": "PC", "hint": "HEARTH OS. Mail, market, Nod.", "facing": "north",
-			"objects": ["PC_"], "cam": [-0.35, 0.62, 1.03], "look": [-0.35, 1.3, 1.0], "hours": 0.5, "screen": "pc"},
+		{"id": "pc", "name": "PC", "hint": "HEARTH OS. Free to use.", "facing": "north",
+			"objects": ["PC_"], "cam": [-0.35, 0.62, 1.03], "look": [-0.35, 1.3, 1.0], "hours": 0.0, "screen": "pc"},
 		{"id": "rig", "name": "Hack rig", "hint": "Run a job.", "facing": "north",
 			"objects": ["Rig_"], "cam": [0.52, 0.72, 1.2], "look": [0.52, 1.35, 0.88], "hours": 2.0, "screen": "rig"},
 		{"id": "phone", "name": "Phone", "hint": "Messages.", "facing": "north",

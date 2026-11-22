@@ -1,0 +1,146 @@
+{
+	"_note": "HEARTH OS content (placeholder text by Claude; the user may rewrite any of it). Folders are objects, files are strings.",
+	"version": "HEARTH GNU/State 4.1 \"Steadfast\"",
+	"user": "citizen",
+	"password": "hearth123",
+	"boot": [
+		"HEARTH BIOS v2.11  (c) Ministry of Information Systems",
+		"CPU: StateCore Duo @ 1.20GHz   Memory test: 524288K OK",
+		"Detecting drives... HDA0: STATE-ISSUE 40GB   HDA1: none (good)",
+		"Loading HEARTH GNU/State 4.1 \"Steadfast\" ...",
+		"[  OK  ] Mounted /home (inspected)",
+		"[  OK  ] Started hearthd-telemetry (everything you do, kindly noted)",
+		"[  OK  ] Started Citizen Loyalty Monitor",
+		"[  OK  ] Started StateNet connection (one network for one people)",
+		"[ FAIL ] Started printer daemon (it has never worked)",
+		"[  OK  ] Started Gratitude Reminder Service",
+		"[ WARN ] /dev/usb0: unknown device ignored (that's the box)",
+		"[  OK  ] Reached target Obedience.",
+		"",
+		"HEARTH GNU/State 4.1  tty1"
+	],
+	"desktop": [
+		{"name": "Computer", "icon": "computer", "app": "files", "arg": "/"},
+		{"name": "Home", "icon": "home", "app": "files", "arg": "/home/citizen"},
+		{"name": "Trash", "icon": "trash", "app": "files", "arg": "/home/citizen/.trash"},
+		{"name": "Terminal", "icon": "terminal", "app": "terminal"},
+		{"name": "StateNet", "icon": "globe", "app": "browser"},
+		{"name": "Mail", "icon": "mail", "app": "mail"},
+		{"name": "commands", "icon": "note", "app": "notepad", "arg": "/home/citizen/commands.txt"},
+		{"name": "Software", "icon": "package", "app": "software"}
+	],
+	"apps": [
+		{"id": "files", "name": "Files", "icon": "folder", "size": [300, 190], "keys": "explorer folders documents"},
+		{"id": "terminal", "name": "Terminal", "icon": "terminal", "size": [280, 170], "keys": "shell console command bash"},
+		{"id": "browser", "name": "StateNet", "icon": "globe", "size": [330, 210], "keys": "web internet browser"},
+		{"id": "mail", "name": "Mail", "icon": "mail", "size": [300, 180], "keys": "email inbox messages"},
+		{"id": "notepad", "name": "Notes", "icon": "note", "size": [230, 170], "keys": "text editor notepad write"},
+		{"id": "software", "name": "Software", "icon": "package", "size": [280, 180], "keys": "install programs packages store"},
+		{"id": "monitor", "name": "Monitor", "icon": "chart", "size": [260, 180], "keys": "system processes cpu task manager"},
+		{"id": "settings", "name": "Preferences", "icon": "gear", "size": [270, 170], "keys": "settings control panel wallpaper appearance"},
+		{"id": "war", "name": "War room", "icon": "war", "locked": true, "keys": "map squads"}
+	],
+	"commands_note": "THINGS KETTLE TOLD ME (keep this hidden)\n\npassword: hearth123  (everyone's is)\n\nin the Terminal:\n  ls          what's in this folder\n  cd NAME     go into a folder\n  cd ..       back out\n  cat FILE    read a file\n  ps          what's running\n  pkg list    programs you can get\n  help        everything else\n\nTab finishes a name. Up arrow = last command.\nNever type kill on hearthd. Just don't.",
+	"fs": {
+		"home": {
+			"citizen": {
+				"Documents": {
+					"shift_schedule.txt": "SHIFT SCHEDULE - Valdenmark Municipal Water, Sector 4\n\nMon-Fri 06:00-18:00\nOvertime is voluntary and mandatory.\n\nReminder: gratitude breaks are at 10:00 and 15:00.",
+					"rent_notice.txt": "NOTICE OF RENT ADJUSTMENT\n\nYour rent has been adjusted upward in recognition of the Marshal's birthday.\nThank you for your gladness.",
+					"hana_list.txt": "Hana's list:\n- bread\n- the good tea if they have it (they won't)\n- fix the garage light\n- talk to me"
+				},
+				"Pictures": {
+					"family.img": "img:family|Hana and the kids, the summer before the curfews.",
+					"marshal_official.img": "img:marshal|Official portrait (mandatory in every home folder)."
+				},
+				"Downloads": {
+					"hearth_update_7731.prog": "prog:update|This update makes your computer better and has no other effects."
+				},
+				".trash": {
+					"letter_to_ministry.txt": "To the Ministry,\n\nI am writing to complain about\n\n[deleted]",
+					"resignation.txt": "I quit.\n\n(never sent)"
+				},
+				"notes.txt": "",
+				"commands.txt": "@commands_note"
+			},
+			"hearthd": "Permission denied."
+		},
+		"etc": {
+			"motd": "Welcome, citizen. You are being helped.",
+			"hearth": {
+				"telemetry.conf": "# hearthd-telemetry\nreport_interval = always\nreport_target = hearth.gov/telemetry\nanonymize = no\n# TODO(ministry): fix the usb whitelist, anything external is ignored",
+				"version": "HEARTH GNU/State 4.1 \"Steadfast\""
+			}
+		},
+		"bin": {
+			"ls.bin": "prog:system|", "cat.bin": "prog:system|", "kill.bin": "prog:system|", "pkg.bin": "prog:system|"
+		},
+		"tmp": {
+			"cache_8812.log": "[telemetry] user opened folder /home/citizen/Pictures\n[telemetry] user lingered on family.img for 41s\n[telemetry] sentiment: unclear"
+		}
+	},
+	"processes": [
+		{"name": "hearthd-telemetry", "user": "hearthd", "cpu": 41, "mem": 220},
+		{"name": "loyalty-monitor", "user": "hearthd", "cpu": 12, "mem": 96},
+		{"name": "gratitude-reminder", "user": "hearthd", "cpu": 3, "mem": 18},
+		{"name": "statenet", "user": "root", "cpu": 6, "mem": 44},
+		{"name": "desktop", "user": "citizen", "cpu": 4, "mem": 60},
+		{"name": "printerd", "user": "root", "cpu": 0, "mem": 2}
+	],
+	"programs": [
+		{"id": "pscan", "name": "pscan", "size": "120 KB", "desc": "Finds open doors on a network. Needs the box and a port scanner gadget."},
+		{"id": "crack", "name": "crackle", "size": "340 KB", "desc": "Guesses passwords the dumb way. Needs the box."},
+		{"id": "sniff", "name": "sniffer", "size": "210 KB", "desc": "Listens to what passes by. Needs the box and an antenna."},
+		{"id": "solitaire", "name": "Patience", "size": "80 KB", "desc": "State-approved solitaire. Every game is winnable through effort."}
+	],
+	"mail": [
+		{"from": "Bureau of Civic Order", "subject": "Courtesy notice", "body": "Citizen,\n\nThis is an automated courtesy notice. No action is required.\n\nYet.\n\n- BCO"},
+		{"from": "Hana", "subject": "dinner", "body": "Are you still in the garage? Dinner's cold. The kids asked where you were. I said working.\n\nAre you working?"},
+		{"from": "kettle", "subject": "(no subject)", "body": "got something for you. not on here. hearth reads everything.\n\nbuild the box first. the one that sits outside the machine. you'll see."},
+		{"from": "StateNet Rewards", "subject": "You have earned 0 Gratitude Points!", "body": "Congratulations! Your Gratitude balance is 0.\nRedeem your points at any Ministry kiosk for a feeling of belonging."}
+	],
+	"home_page": "hearth.gov",
+	"sites": {
+		"hearth.gov": {
+			"title": "HEARTH.GOV - One Hearth. One People.",
+			"body": ["Good evening, citizen.", "TODAY: The Marshal opens a new bridge. It is the best bridge.", "Crime is down 400% thanks to you.", "Report a neighbour: it's easy and it's kind."],
+			"links": [["Today's news", "news.hearth"], ["The People's Market", "market.hearth"], ["Nod (social)", "nod.net"], ["Report a neighbour", "report.hearth"]]
+		},
+		"news.hearth": {
+			"title": "HEARTH NEWS",
+			"body": ["MARSHAL'S BIRTHDAY: celebrations mandatory, joy encouraged.", "WEATHER: pleasant, as decreed.", "Sector 9 'troubles' were a gas leak. There was no Sector 9.", "SPORTS: our team won again. The other team has been reassigned."],
+			"links": [["Back to HEARTH.GOV", "hearth.gov"]]
+		},
+		"market.hearth": {
+			"title": "The People's Market",
+			"body": ["Soldering iron .......... 45 cr  (REGISTERED SALE)", "Scrap circuit boards x5 .. 12 cr", "Duct tape ............... 4 cr", "Hunting rifle ........... permit required", "Something you want isn't here? Then you don't want it."],
+			"links": [["Back to HEARTH.GOV", "hearth.gov"]]
+		},
+		"nod.net": {
+			"title": "Nod - nod along",
+			"body": ["#MarshalBirthday is trending.", "@proud_dad_77: my son drew the Marshal. he got the chin right!", "@sector4_watch: someone's garage light is on late again...", "Followers: 0. Post something nice."],
+			"links": [["Back to HEARTH.GOV", "hearth.gov"]]
+		},
+		"report.hearth": {
+			"title": "Report a Neighbour",
+			"body": ["Name of neighbour: ____________", "What did they do? ( ) Too quiet  ( ) Too loud  ( ) Garage light", "Reports are anonymous* (*not anonymous)"],
+			"links": [["Back to HEARTH.GOV", "hearth.gov"]],
+			"hidden": [["...", "lantern.onion"]]
+		},
+		"lantern.onion": {
+			"title": "the lantern",
+			"body": ["you weren't supposed to find this from here. good.", "the market behind the market opens once you have the box.", "ask kettle about the usb whitelist."],
+			"links": [["leave", "hearth.gov"]]
+		}
+	},
+	"man": {
+		"ls": "ls [folder]  - list what's in a folder.",
+		"cd": "cd FOLDER  - go into a folder. cd .. goes back out. cd alone goes home.",
+		"cat": "cat FILE  - print a file.",
+		"ps": "ps  - list running processes.",
+		"kill": "kill NAME  - stop a process (if you're allowed).",
+		"pkg": "pkg list | pkg install NAME  - programs from the State software center.",
+		"open": "open FILE  - open a file or folder in its app.",
+		"whoami": "whoami  - who you are, according to the State."
+	}
+}
