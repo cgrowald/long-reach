@@ -121,12 +121,16 @@ static func raid(parent: Control, game: Node, garage: Node) -> Control:
 	v.add_child(timer_l)
 	var items := ["Laptop: wipe it", "Rig: hide it in the pit", "Notes: burn them", "Parts: out the back"]
 	for it in items:
-		var b: Button
-		b = Kit.button(it, func() -> void:
-			b.disabled = true
-			b.text = it + "  (done)"
+		var holder: Array = []
+		var b: Button = Kit.button(it, func() -> void:
+			var me: Button = holder[0]
+			if me.disabled:
+				return
+			me.disabled = true
+			me.text = it + "  (done)"
 			game.sfx.play("drop_002", 0.8, -4.0)
 			garage.shake(0.2), game)
+		holder.append(b)
 		v.add_child(b)
 	v.add_child(Kit.label("Placeholder: the raid isn't simulated yet.", Pal.DIM, 8))
 	var left := [20.0]
