@@ -7,7 +7,7 @@ signal closed
 signal focus_me
 
 const P := preload("res://v2/os/os_pal.gd")
-const TITLE_H := 12.0
+const TITLE_H := 14.0
 const MIN_SIZE := Vector2(120, 70)
 
 var title := ""
@@ -61,7 +61,7 @@ func set_active(on: bool) -> void:
 
 
 func _buttons() -> Array:
-	var y := 4.0
+	var y := 5.0
 	var w := 10.0
 	var x := size.x - 4.0 - w
 	return [Rect2(x - 2 * (w + 1), y, w, 9), Rect2(x - (w + 1) - 1, y, w, 9), Rect2(x, y, w, 9)]
@@ -74,9 +74,9 @@ func _draw() -> void:
 		P.grad_h(self, bar, P.TITLE_A, P.TITLE_B)
 	else:
 		P.grad_h(self, bar, P.TITLE_OFF_A, P.TITLE_OFF_B)
-	P.icon(self, icon, Vector2(5, 4), 10.0)
+	P.icon(self, icon, Vector2(5, 5), 10.0)
 	var tw := size.x - 60.0
-	P.text(self, Vector2(17, 4), _fit(title, tw), Color.WHITE if active else P.FACE_L)
+	P.text(self, Vector2(17, 4), P.fit(title, tw), Color.WHITE if active else P.FACE_L)
 	var b := _buttons()
 	for i in 3:
 		var r: Rect2 = b[i]
@@ -99,10 +99,6 @@ func _draw() -> void:
 			var o := 3.0 + i * 3.0
 			draw_line(size - Vector2(o, 2), size - Vector2(2, o), P.FACE_D)
 
-
-func _fit(s: String, w: float) -> String:
-	var n := int(w / 4.6)
-	return s if s.length() <= n else s.substr(0, maxi(1, n - 2)) + ".."
 
 
 func _gui_input(e: InputEvent) -> void:

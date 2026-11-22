@@ -22,7 +22,7 @@ const APPS := {
 	"viewer": preload("res://v2/os/apps/viewer.gd"),
 	"alert": preload("res://v2/os/apps/alert.gd"),
 }
-const TASKBAR_H := 14.0
+const TASKBAR_H := 16.0
 
 var game: Node
 var on_leave: Callable
@@ -147,7 +147,7 @@ func _show_desktop() -> void:
 	for d in data().get("desktop", []):
 		var def: Dictionary = d
 		var t: Control = Tile.new()
-		t.setup(def["icon"], def["name"], true)
+		t.setup(def["icon"], def["name"], true, Vector2(52, 32))
 		t.position = Vector2(x, y)
 		_icons.add_child(t)
 		_tiles.append(t)
@@ -156,7 +156,7 @@ func _show_desktop() -> void:
 		y += 34.0
 		if y + 34.0 > size.y - TASKBAR_H:
 			y = 4.0
-			x += 46.0
+			x += 54.0
 	windows_layer = Control.new()
 	windows_layer.position = Vector2.ZERO
 	windows_layer.size = size - Vector2(0, TASKBAR_H)

@@ -28,17 +28,56 @@ const WALLPAPERS := [
 	{"name": "Ministry Grey", "a": Color(0.5, 0.5, 0.49), "b": Color(0.26, 0.26, 0.27), "line": Color(1, 1, 1, 0.12)},
 ]
 
-const FS := 8   # font size everywhere
+const FS := 9   # font size everywhere in the OS
 
 static var _theme: Theme
+static var _font: Font
+static var _mono: Font
 
 
+## Tahoma: the Windows 2000 interface font, made to be read small. Crisp (no smoothing) to stay pixel.
+## (SystemFont: fine on Windows; bundle a font file before shipping.)
 static func font() -> Font:
-	return Pal.font()
+	if _font == null:
+		var f := SystemFont.new()
+		f.font_names = PackedStringArray(["Tahoma", "Verdana", "DejaVu Sans", "Arial", "sans-serif"])
+		f.antialiasing = TextServer.FONT_ANTIALIASING_NONE
+		f.hinting = TextServer.HINTING_NORMAL
+		f.subpixel_positioning = TextServer.SUBPIXEL_POSITIONING_DISABLED
+		_font = f
+	return _font
+
+
+## The terminal keeps a monospace font (it's a terminal), one size up from before.
+static func mono() -> Font:
+	if _mono == null:
+		var f := SystemFont.new()
+		f.font_names = PackedStringArray(["Lucida Console", "Consolas", "Courier New", "monospace"])
+		f.antialiasing = TextServer.FONT_ANTIALIASING_NONE
+		f.hinting = TextServer.HINTING_NORMAL
+		f.subpixel_positioning = TextServer.SUBPIXEL_POSITIONING_DISABLED
+		_mono = f
+	return _mono
 
 
 static func text(ci: CanvasItem, pos: Vector2, s: String, col := INK, align := HORIZONTAL_ALIGNMENT_LEFT, width := -1.0) -> void:
-	Pal.text(ci, pos, s, FS, col, align, width)
+	var f := font()
+	ci.draw_string(f, Vector2(pos.x, pos.y + f.get_ascent(FS)).round(), s, align, width, FS, col)
+
+
+## Width of a string in the OS font.
+static func tw(s: String) -> float:
+	return font().get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, FS).x
+
+
+## Cut a string to fit a width, ending in "..".
+static func fit(s: String, w: float) -> String:
+	if tw(s) <= w:
+		return s
+	var t := s
+	while t.length() > 1 and tw(t + "..") > w:
+		t = t.substr(0, t.length() - 1)
+	return t + ".."
 
 
 ## Raised (or sunken) Win2000 bevel.

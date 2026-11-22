@@ -15,8 +15,8 @@ func setup(p_os: Control) -> void:
 	os = p_os
 	theme = P.theme()
 	mouse_filter = Control.MOUSE_FILTER_STOP
-	size = Vector2(160, 176)
-	position = Vector2(2, os.size.y - 14.0 - size.y)
+	size = Vector2(160, 184)
+	position = Vector2(2, os.size.y - 16.0 - size.y)
 	_search = LineEdit.new()
 	_search.placeholder_text = "Search applications..."
 	_search.text_changed.connect(func(_t: String) -> void: _fill())
@@ -24,11 +24,11 @@ func setup(p_os: Control) -> void:
 		if _first != "":
 			os.launch(_first))
 	add_child(_search)
-	_search.position = Vector2(6, 26)
+	_search.position = Vector2(6, 30)
 	_search.size = Vector2(size.x - 12, 13)
 	_grid = GridContainer.new()
 	_grid.columns = 3
-	_grid.position = Vector2(6, 44)
+	_grid.position = Vector2(6, 48)
 	add_child(_grid)
 	var leave := Button.new()
 	leave.text = "Leave the PC"
@@ -81,13 +81,13 @@ func _fill() -> void:
 
 func _draw() -> void:
 	P.bevel(self, Rect2(Vector2.ZERO, size), P.FACE, true)
-	P.grad_h(self, Rect2(2, 2, size.x - 4, 20), P.BRAND.darkened(0.25), P.BRAND.lightened(0.1))
-	P.icon(self, "user", Vector2(5, 4), 16.0)
-	P.text(self, Vector2(24, 4), str(os.data().get("user", "citizen")), Color.WHITE)
-	P.text(self, Vector2(24, 12), "HEARTH GNU/State", Color(1, 1, 1, 0.75))
+	P.grad_h(self, Rect2(2, 2, size.x - 4, 25), P.BRAND.darkened(0.25), P.BRAND.lightened(0.1))
+	P.icon(self, "user", Vector2(5, 6), 16.0)
+	P.text(self, Vector2(24, 3), str(os.data().get("user", "citizen")), Color.WHITE)
+	P.text(self, Vector2(24, 14), "HEARTH GNU/State", Color(1, 1, 1, 0.75))
 	draw_line(Vector2(4, size.y - 21), Vector2(size.x - 4, size.y - 21), P.FACE_D)
 	if _first == "" and _search and _search.text != "":
-		P.text(self, Vector2(8, 50), "Nothing found. Try 'web' or 'files'.", P.INK_DIM)
+		P.text(self, Vector2(8, 54), "Nothing found. Try 'web' or 'files'.", P.INK_DIM)
 
 
 func _gui_input(e: InputEvent) -> void:

@@ -3,7 +3,7 @@ extends Control
 
 const P := preload("res://v2/os/os_pal.gd")
 
-const START_W := 44.0
+const START_W := 50.0
 const QUICK := [["terminal", "terminal"], ["browser", "globe"], ["files", "folder"]]
 
 var os: Control
@@ -21,7 +21,7 @@ func _process(delta: float) -> void:
 
 
 func _quick_rect(i: int) -> Rect2:
-	return Rect2(START_W + 4 + i * 12, 2, 11, 10)
+	return Rect2(START_W + 4 + i * 12, 3, 11, 10)
 
 
 func _win_area() -> Rect2:
@@ -47,7 +47,7 @@ func _tray() -> Rect2:
 
 func _note_rect() -> Rect2:
 	var t := _tray()
-	return Rect2(t.position.x + 2, 2, 10, 10)
+	return Rect2(t.position.x + 2, 3, 10, 10)
 
 
 func _draw() -> void:
@@ -56,8 +56,8 @@ func _draw() -> void:
 	var sr := Rect2(2, 1, START_W, size.y - 2)
 	var open: bool = os.start_menu != null and is_instance_valid(os.start_menu)
 	P.bevel(self, sr, P.FACE, not open)
-	P.icon(self, "hearth", sr.position + Vector2(2, 1), 10.0)
-	P.text(self, sr.position + Vector2(14, 1), "HEARTH", P.INK)
+	P.icon(self, "hearth", sr.position + Vector2(2, 2), 10.0)
+	P.text(self, sr.position + Vector2(14, 2), "HEARTH", P.INK)
 	draw_line(Vector2(START_W + 2, 2), Vector2(START_W + 2, size.y - 2), P.FACE_D)
 	for i in QUICK.size():
 		P.icon(self, QUICK[i][1], _quick_rect(i).position, 10.0)
@@ -69,18 +69,14 @@ func _draw() -> void:
 		var r: Rect2 = rs[i]
 		var pressed: bool = w.active and not w.minimized
 		P.bevel(self, r, P.FACE.lightened(0.08) if pressed else P.FACE, not pressed)
-		P.icon(self, w.icon, r.position + Vector2(2, 1), 9.0)
-		var n := int((r.size.x - 14) / 4.6)
-		var t: String = w.title
-		if t.length() > n:
-			t = t.substr(0, maxi(1, n - 1)) + "."
-		P.text(self, r.position + Vector2(13, 1), t, P.INK)
+		P.icon(self, w.icon, r.position + Vector2(2, 2), 9.0)
+		P.text(self, r.position + Vector2(13, 1), P.fit(w.title, r.size.x - 15), P.INK)
 	# tray
 	var tr := _tray()
 	P.bevel(self, tr, P.FACE, false)
 	P.icon(self, "note", _note_rect().position, 10.0)
 	var watched := fmod(_blink, 3.0) < 0.25
-	P.icon(self, "network", tr.position + Vector2(14, 1), 10.0)
+	P.icon(self, "network", tr.position + Vector2(14, 2), 10.0)
 	if watched:
 		draw_circle(tr.position + Vector2(23, 3), 2.0, P.BAD)
 	P.text(self, Vector2(tr.position.x + 28, 3), os.game.state.clock_text(), P.INK, HORIZONTAL_ALIGNMENT_RIGHT, tr.size.x - 31)

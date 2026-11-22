@@ -2,7 +2,7 @@ extends Control
 ## A right-click menu: items = [[label, Callable], ...]. A label of "-" draws a separator.
 
 const P := preload("res://v2/os/os_pal.gd")
-const ROW := 11.0
+const ROW := 12.0
 
 var os: Control
 var items: Array = []
@@ -15,7 +15,7 @@ func setup(p_os: Control, p_items: Array) -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	var w := 60.0
 	for it in items:
-		w = maxf(w, str(it[0]).length() * 4.6 + 16.0)
+		w = maxf(w, P.tw(str(it[0])) + 16.0)
 	size = Vector2(w, items.size() * ROW + 4)
 
 

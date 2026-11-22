@@ -22,6 +22,7 @@ func build() -> void:
 	_graph.draw.connect(_draw_graphs)
 	v.add_child(_graph)
 	_procs = P.label("")
+	_procs.add_theme_font_override("font", P.mono())
 	_procs.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	v.add_child(_procs)
 	_refresh_procs()

@@ -22,6 +22,7 @@ func build() -> void:
 	_out.scroll_following = true
 	_out.selection_enabled = true
 	_out.add_theme_color_override("default_color", FG)
+	_out.add_theme_font_override("normal_font", P.mono())
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = BG
 	sb.set_content_margin_all(3)
@@ -31,6 +32,7 @@ func build() -> void:
 	row.add_theme_constant_override("separation", 0)
 	v.add_child(row)
 	_prompt = P.label("", OK)
+	_prompt.add_theme_font_override("font", P.mono())
 	var psb := StyleBoxFlat.new()
 	psb.bg_color = BG
 	psb.content_margin_left = 3
@@ -43,6 +45,7 @@ func build() -> void:
 	_in.add_theme_stylebox_override("normal", isb)
 	_in.add_theme_stylebox_override("focus", isb)
 	_in.add_theme_color_override("font_color", FG)
+	_in.add_theme_font_override("font", P.mono())
 	_in.add_theme_color_override("caret_color", OK)
 	_in.keep_editing_on_text_submit = true
 	_in.text_submitted.connect(_submit)
