@@ -1,0 +1,72 @@
+{
+	"_note": "Placeholder content for the debug shell. All of it is dummy text until the real systems exist. The user may rewrite any of it.",
+	"town": "Ostrava Nine",
+	"day_start_hour": 18,
+	"day_end_hour": 26,
+	"start_money": 120,
+	"start_pool": 4120,
+	"rules": [
+		{"title": "Registered electronics", "text": "Every component sale over 20 cr is logged with your ID. (Placeholder: no effect yet.)"},
+		{"title": "Curfew moved to 22:00", "text": "Patrols on the ring road after ten. (Placeholder: no effect yet.)"},
+		{"title": "Marshal's birthday week", "text": "Nod is full of cake. Posts get less attention. (Placeholder: no effect yet.)"},
+		{"title": "Network maintenance", "text": "Ministry servers reboot at midnight. (Placeholder: no effect yet.)"},
+		{"title": "Checkpoint on Harbour Street", "text": "Papers are checked at the bridge. (Placeholder: no effect yet.)"}
+	],
+	"ledger": [
+		"The Bureau collected CCTV from the clinic.",
+		"Canvassing in the Harbour district.",
+		"A neighbour's flat was searched. Nothing found.",
+		"New camera on the corner of Tannery Lane.",
+		"The inspector filed a report. Nobody read it.",
+		"Patrols doubled near the depot.",
+		"Quiet night. Rain."
+	],
+	"needs": [
+		"Hana's insulin by Friday (placeholder)",
+		"Rent: 300 cr on day 7 (placeholder)",
+		"Kettle wants the depot shift roster (placeholder)"
+	],
+	"messages": [
+		{"from": "Hana", "text": "Are you still in the garage? Dinner's cold."},
+		{"from": "kettle", "text": "got something for you. not on the phone."},
+		{"from": "Bureau of Civic Order", "text": "Citizen, this is an automated courtesy notice. No action is required. Yet."},
+		{"from": "Unknown", "text": "Your neighbour asked about the lights in your garage."}
+	],
+	"inspector": {
+		"name": "Inspector V. Krall",
+		"rank": "District Inspector",
+		"traits": ["Methodical", "Vain"],
+		"facts": [
+			{"fact": "Lives in the Harbour district", "pinned": true},
+			{"fact": "Knows electronics", "pinned": true},
+			{"fact": "Out late on weeknights", "pinned": false},
+			{"fact": "Male, 30s, tall", "pinned": false},
+			{"fact": "Drives a grey van", "pinned": false}
+		]
+	},
+	"apps": [
+		{"id": "mail", "name": "Mail", "lines": ["3 unread.", "Bureau of Civic Order: courtesy notice.", "Hana: dinner.", "kettle: (encrypted)"]},
+		{"id": "market", "name": "Market", "lines": ["Soldering iron  45 cr  REGISTERED", "Scrap boards x5  12 cr", "Lantern market: locked"]},
+		{"id": "nod", "name": "Nod", "lines": ["Followers: 0", "#MarshalBirthday is trending.", "Post dirt: you have none yet."]},
+		{"id": "map", "name": "Map", "lines": ["Ostrava Nine", "Harbour, Tannery, the Ring, the Depot", "Going out: not built yet"]},
+		{"id": "war", "name": "War room", "lines": ["Remote link to the war room.", "Locked until you have a cell."], "locked": true}
+	],
+	"cards": [
+		{"name": "Port scan", "role": "SCAN", "chips": 5, "mult": 0},
+		{"name": "Default password", "role": "ACCESS", "chips": 30, "mult": 0},
+		{"name": "Phish", "role": "ACCESS", "chips": 25, "mult": 0},
+		{"name": "SSH key", "role": "ACCESS", "chips": 40, "mult": 0},
+		{"name": "Overflow", "role": "EXPLOIT", "chips": 0, "mult": 3},
+		{"name": "Privilege jump", "role": "EXPLOIT", "chips": 10, "mult": 2},
+		{"name": "Dump", "role": "PAYLOAD", "chips": 20, "mult": 1},
+		{"name": "Keylogger", "role": "PAYLOAD", "chips": 15, "mult": 1}
+	],
+	"targets": [
+		{"name": "Ministry mail server", "nodes": ["Firewall", "Shell", "Database", "Vault"], "defence": [60, 120, 240, 500]}
+	],
+	"squads": [
+		{"name": "Cell 1 (placeholder)", "people": ["Kettle", "Mira", "Ox"], "stars": 1},
+		{"name": "Cell 2 (placeholder)", "people": ["Unknown"], "stars": 0}
+	],
+	"districts": ["Harbour", "Tannery", "The Ring", "Old Town", "Depot", "Ministry Hill"]
+}

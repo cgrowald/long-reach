@@ -9,7 +9,7 @@
 - **The current loop is `docs/CORE_LOOP.md`:**
   - one "job" engine for every path (hack, exploit a person, break in, work there, later send people);
   - conflicts A to E decided (section 5b).
-- **The next design job is the hunt:** the Bureau detective, the main pressure (see `docs/HUNT.md` once it exists).
+- **The hunt is designed:** `docs/HUNT.md` (suspect pool, named inspector, clues; 4 questions decided). It is a layer on top of the job engine and is built only after a job is fun on its own.
 
 ## The v2 toys: ALREADY PLAYED, verdict given (do NOT ask the user to play them again)
 - **Built 2026-11-21 in `v2/`** (main scene `res://v2/menu.tscn`):

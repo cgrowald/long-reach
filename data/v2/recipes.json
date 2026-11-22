@@ -1,0 +1,96 @@
+{
+	"_note": "Bench crafting (docs/DRIVE.md section 3). Stylised and gamified: real-sounding names, never real procedures. bench = weapons / armor / meds / electronics. steps = the hands-on verbs in order (drill, file, cut, sew, tear, pour, fit, solder). needs = materials used. tool = which tool's multiplier applies. makes = the item. perks unlock at a quality. grid = rig pouch grid [columns, rows]; plates = what plate it takes.",
+	"materials": {
+		"shirt": {"name": "Old shirt"},
+		"alcohol": {"name": "Vodka (a shot)"},
+		"tape": {"name": "Duct tape"},
+		"bag": {"name": "Woven shopping bag"},
+		"strap": {"name": "Webbing strap"},
+		"buckle": {"name": "Plastic buckle"},
+		"alu": {"name": "Aluminium block"},
+		"pins": {"name": "Pins and springs"},
+		"board": {"name": "Scrap circuit board"},
+		"chips": {"name": "Salvaged chips"}
+	},
+	"start_materials": {"shirt": 4, "alcohol": 3, "tape": 3, "bag": 2, "strap": 3, "buckle": 1, "alu": 2, "pins": 2, "board": 2, "chips": 3},
+	"tools": {
+		"hands": {"name": "Your hands", "mult": 1.0},
+		"hand_drill": {"name": "Hand drill", "mult": 0.85},
+		"drill_press": {"name": "Drill press", "mult": 1.25},
+		"kitchen_scissors": {"name": "Kitchen scissors", "mult": 0.9},
+		"sewing_machine": {"name": "Sewing machine", "mult": 1.3},
+		"cheap_iron": {"name": "Cheap soldering iron", "mult": 0.9}
+	},
+	"start_tools": ["hands", "hand_drill", "kitchen_scissors", "cheap_iron"],
+	"recipes": [
+		{
+			"id": "bandage", "name": "Torn-shirt bandage", "bench": "meds", "tier": 1, "hours": 0.5,
+			"needs": {"shirt": 1, "alcohol": 1}, "tool": "hands", "material_mult": 0.9, "piece": "cloth",
+			"steps": [
+				{"verb": "tear", "count": 3, "text": "Tear the shirt into strips"},
+				{"verb": "pour", "text": "Soak the strips in vodka, up to the line"},
+				{"verb": "fit", "parts": ["strip", "strip", "strip"], "text": "Roll the strips into a pack"}
+			],
+			"makes": {"type": "med", "heal": 10},
+			"perks": [{"min": 0.7, "text": "Sterile: +5 heal"}, {"min": 0.9, "text": "Tight roll: stops bleeding faster"}]
+		},
+		{
+			"id": "field_dressing", "name": "Field dressing", "bench": "meds", "tier": 2, "hours": 1.0, "after": "bandage",
+			"needs": {"shirt": 1, "alcohol": 1, "tape": 1}, "tool": "kitchen_scissors", "material_mult": 1.0, "piece": "cloth",
+			"steps": [
+				{"verb": "cut", "text": "Cut a clean pad along the line"},
+				{"verb": "pour", "text": "Sterilise it"},
+				{"verb": "sew", "count": 6, "text": "Stitch the pad to a strip"},
+				{"verb": "fit", "parts": ["pad", "tape"], "text": "Wrap and tape it"}
+			],
+			"makes": {"type": "med", "heal": 25},
+			"perks": [{"min": 0.75, "text": "Pressure pad: +10 heal"}, {"min": 0.92, "text": "Field-grade: usable mid-fight"}]
+		},
+		{
+			"id": "ikea_rig", "name": "Shopping-bag rig", "bench": "armor", "tier": 1, "hours": 1.5,
+			"needs": {"bag": 1, "tape": 1, "strap": 1}, "tool": "kitchen_scissors", "material_mult": 0.8, "piece": "bag",
+			"steps": [
+				{"verb": "cut", "text": "Cut the front panel out of the bag"},
+				{"verb": "cut", "text": "Cut the shoulder straps"},
+				{"verb": "sew", "count": 8, "text": "Stitch the panel to the straps"},
+				{"verb": "fit", "parts": ["pouch", "pouch", "buckle"], "text": "Tape on the pouches and the buckle"}
+			],
+			"makes": {"type": "rig", "grid": [3, 2], "plates": "none"},
+			"grid_bonus": [{"min": 0.85, "add": [1, 0]}],
+			"perks": [{"min": 0.7, "text": "Doesn't rattle: quieter"}, {"min": 0.9, "text": "Quick-release: drop it and run"}]
+		},
+		{
+			"id": "chest_rig", "name": "Webbing chest rig", "bench": "armor", "tier": 2, "hours": 2.0, "after": "ikea_rig",
+			"needs": {"strap": 2, "buckle": 1, "tape": 1}, "tool": "kitchen_scissors", "material_mult": 1.0, "piece": "bag",
+			"steps": [
+				{"verb": "cut", "text": "Cut the webbing to length"},
+				{"verb": "sew", "count": 10, "text": "Box-stitch the webbing"},
+				{"verb": "fit", "parts": ["pouch", "pouch", "pouch", "buckle"], "text": "Mount the pouches"}
+			],
+			"makes": {"type": "rig", "grid": [4, 2], "plates": "soft insert"},
+			"grid_bonus": [{"min": 0.88, "add": [0, 1]}],
+			"perks": [{"min": 0.8, "text": "Balanced: no speed penalty"}]
+		},
+		{
+			"id": "receiver_rough", "name": "Rough upper (part)", "bench": "weapons", "tier": 1, "hours": 2.0,
+			"needs": {"alu": 1, "pins": 1}, "tool": "hand_drill", "material_mult": 1.0, "piece": "metal",
+			"steps": [
+				{"verb": "drill", "count": 3, "text": "Drill the marked holes to depth"},
+				{"verb": "file", "text": "File it down to the outline"},
+				{"verb": "fit", "parts": ["pin", "spring", "cover"], "text": "Fit the parts you made"}
+			],
+			"makes": {"type": "part", "slot": "upper"},
+			"perks": [{"min": 0.75, "text": "True: +accuracy"}, {"min": 0.92, "text": "Smooth: +reliability"}]
+		},
+		{
+			"id": "port_scanner", "name": "Port scanner (gadget)", "bench": "electronics", "tier": 1, "hours": 1.0,
+			"needs": {"board": 1, "chips": 1}, "tool": "cheap_iron", "material_mult": 0.9, "piece": "board",
+			"steps": [
+				{"verb": "fit", "parts": ["chip", "chip", "antenna"], "text": "Place the parts on the board"},
+				{"verb": "solder", "count": 5, "text": "Solder each joint"}
+			],
+			"makes": {"type": "gadget", "card": "Port scan"},
+			"perks": [{"min": 0.8, "text": "Clean signal: the card scores x2 on SCAN"}]
+		}
+	]
+}

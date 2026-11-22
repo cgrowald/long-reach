@@ -12,12 +12,13 @@ config_version=5
 
 config/name="Uprising"
 config/description="Underground resistance: start from nothing."
-run/main_scene="res://v2/menu.tscn"
+run/main_scene="res://v2/title.tscn"
 config/features=PackedStringArray("4.7", "Forward Plus")
 
 [autoload]
 
 Campaign="*res://people/campaign.gd"
+Game="*res://v2/game.gd"
 
 [display]
 

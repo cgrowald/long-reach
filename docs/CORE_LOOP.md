@@ -110,7 +110,7 @@ This answers "hacking is just a small part": it's one path of four, and you lean
   - Family needs come later, as extra pressure, not the main one.
 - **F. Benches:** both (already decided).
 
-**Next design job: the hunt.** What does the detective actually do (evidence, leads, trails, suspects, warrants)? What do you do back (cover tracks, misdirect, frame, bribe, move, lie low)? How does each job's trace feed it? It has to be readable (always warned, never a random death) and richer than one meter. Research: Plague Inc.'s cure, the Nemesis system, Payday's heat, Shadows of Doubt's investigations, Hitman's notoriety, Mount & Blade's manhunts.
+**The hunt is designed: see `docs/HUNT.md`** (suspect pool of real townspeople, Attention + Profile, a named inspector, clue lifecycle, every counter-move is a job; 4 questions decided 2026-11-21). The original brief: what does the detective actually do (evidence, leads, trails, suspects, warrants)? What do you do back (cover tracks, misdirect, frame, bribe, move, lie low)? How does each job's trace feed it? It has to be readable (always warned, never a random death) and richer than one meter. Research: Plague Inc.'s cure, the Nemesis system, Payday's heat, Shadows of Doubt's investigations, Hitman's notoriety, Mount & Blade's manhunts.
 
 ## 6. The smallest slice that proves the loop (only once A to F are settled)
 One week. One need with a deadline. Two paths to meet it (hack, or exploit a person) on the same job engine. One bench that makes cards. Loot scored by tier. Heat. A night ledger. Placeholder everything else.

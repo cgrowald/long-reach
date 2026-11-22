@@ -104,3 +104,9 @@ static func fmt_mult(m: float) -> String:
 	if is_equal_approx(m, roundf(m)):
 		return "%d" % int(roundf(m))
 	return "%.1f" % m
+
+
+## Draw wrapped text inside a width, top-left at pos.
+static func wrap(ci: CanvasItem, pos: Vector2, s: String, size: int, col: Color, width: float, max_lines := -1) -> void:
+	var f := font()
+	ci.draw_multiline_string(f, Vector2(pos.x, pos.y + f.get_ascent(size)).round(), s, HORIZONTAL_ALIGNMENT_LEFT, width, size, max_lines, col)
