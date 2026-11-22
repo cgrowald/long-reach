@@ -170,3 +170,49 @@ Title screen > **Combat: depot raid** (`v2/combat/fight.tscn`, content in `data/
   - real sounds;
   - the loadout screen and the link to the stash, the depot hack and the garage;
   - balance (it's random and swingy).
+
+## 9. Commanding from the van: what the first playtest showed (user, 2026-11-22)
+**The user's notes:**
+- Operators phased through walls and each other. *Fixed the same day.*
+- Giving commands is hard: you can't move the camera to show what you mean.
+- "Bang and clear" from a bad angle made them walk across the open doorway, then breach. *Fixed (split stacks).*
+- They should really think for themselves: if a command puts them in danger, they don't do it right away, maybe only after prodding, and that's what gets them killed. Learning how to command is the balance.
+- "Look this way" commands; they still fire on their own if an enemy appears. That awareness comes from training, reaction speed and weapon ergonomics.
+- When firing starts, people don't walk in front of each other's muzzles. *Done: they hold fire and wait for the gap.*
+- Slow is smooth, smooth is fast. That's the idea.
+- It's hard to get them moving through the objective. Maybe a drone, or "team, look this way", then telling them where to go. Or scrap the helmet cams and go Door Kickers. But the user loves the cams ("I haven't seen it in a popular game yet").
+- "Otherwise it's pretty fun so far. This is exactly what I was thinking."
+
+**What the research says:**
+- **SWAT 4:** you look at a door and open a menu that changes with what you're looking at: open & clear, flash & clear, pick the lock, blow it, stack up. Players' biggest complaint: they couldn't tell the team "breach, throw a flash, and wait." ([GameSpot](https://gamespot.com/reviews/swat-4-review/1900-6121423/), [GOG forum](https://www.gog.com/forum/swat_series/swat_4_is_there_a_way_to_tell_the_other_team_to_breachbangetc_when_not_near), [SWAT 4 guide](https://rentry.co/swat4-guide))
+- **Ready or Not:** great gunplay, let down by squad AI that freezes, ignores orders and moves through people. Players want hold fire and take cover. ([TechRadar](https://www.techradar.com/gaming/ready-or-not-review), [SI](https://videogames.si.com/reviews/ready-or-not-review))
+- **Rainbow Six 3:** plan the routes on a floor-plan map before the op; teams follow waypoints and wait for "go codes" so several teams enter at once. ([planning advice](https://www.cyberly.org/game-cheats/pc-walkthroughs/rainbow-six-3-raven-shield-general-planning-advice.html))
+- **Hesitation that works:** Days Gone gives each squad a confidence number from strength, weapons, armour and health; low confidence means retreat. Ghost Recon Wildlands' buddies "do what the player asks as well as the circumstances allow". The lesson across all of them: **make refusal legible and tied to state, never random.** ([80.lv on Days Gone](https://80.lv/articles/days-gone-squad-coordination-explained), [Game Developer on Wildlands](https://gamedeveloper.com/design/why-friendly-ai-cheat-in-ghost-recon-wildlands), [Game Developer on Halo 5 squad commands](https://www.gamedeveloper.com/design/the-playbook-how-to-improve-squad-commands-in-halo-5-and-other-shooters-))
+
+**Proposal (Claude):**
+1. **The ops board (point here, watch there).** A small floor plan beside the feeds, drawn like a paper plan with tokens (Radio Commander style), not a top-down battle view.
+   - Your people are dots from their radio trackers; enemies are marks only where someone saw them, fading to "last seen".
+   - You right-click a door or room on the board for a SWAT 4-style context menu, including the missing one: **breach, flash, and wait**.
+   - **The board comes from intel:** the depot hack gives you the blueprint and guard rota. Without intel, rooms are blank and get sketched in as your people walk them. That makes hacking pay off directly in fights.
+   - The fight itself is still only seen through the cams. The gear stays the star.
+2. **Look this way.** Drag on the main feed to ask the wearer to turn toward something. They do it at their own reaction speed (training plus weapon ergonomics), and they still snap to any threat on their own.
+3. **They think before obeying.** Every order gets a danger read:
+   - an unknown room, or one with known enemies;
+   - no flash ready;
+   - crossing a funnel, being under fire;
+   - wounded or low on ammo.
+   Each fighter has a threshold from training, trait and nerve.
+   - Over the threshold, they **push back with the reason and an alternative**: "Boss, we don't know what's in there. Let me bang it first." You get two buttons: their way, or **again = do it anyway**.
+   - Prodded, they go, but hesitantly (slower reactions), and the report says *ordered twice over Ada's objection*.
+   - Veterans object rarely and are usually right; rookies object to everything, or never and get killed.
+4. **Slow is smooth.** Training sets the doctrine pace:
+   - rookies rush or freeze;
+   - trained teams go slow and smooth;
+   - veterans go smooth and fast.
+   "Move to" on the board walks them through, clearing what's on the way.
+5. **Drones later:** the recon micro-drone becomes the free camera you fly. It's earned at the bench, so it's progression too.
+
+### Decided (user, 2026-11-22)
+- **The ops board plus the cams:** point on a paper floor plan, watch through the cams. The plan comes from intel; without it, rooms get sketched as they're walked.
+- **Pushback:** the reason plus their way, or prod (the same shout again) to make them go anyway, slower and shakier. The report logs the overruled objection.
+- **Look:** drag on the main feed to make the wearer turn, at their own speed.
