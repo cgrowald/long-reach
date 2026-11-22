@@ -125,3 +125,13 @@ Each piece ends playable in the shell. Nothing else in the game has to work yet.
 - [What The Red Strings Club teaches us about conversation (PC Gamer)](https://pcgamer.com/what-the-red-strings-club-teaches-us-about-conversation)
 - [Conversation as gameplay (Emily Short)](https://emshort.blog/2019/01/20/conversation-as-gameplay-talk/)
 - Griftlands, Backpack Battles, Schedule I, Gunsmith Simulator, Super Auto Pets: from Claude's own knowledge, not this search.
+
+## 10. First bench playtest (user, 2026-11-22)
+- **Verdict:** the tables are exactly what the user wanted; the feel is "pretty darn close for what they are, but still hella rough". This build is the new base of the game (tag `v2-base`).
+- **Every step must say plainly "this goes here, then this".** Done the same day: one pink "act here" marker (ring, arrow, label, drag arrow) follows the next target on every verb.
+- **Hacking bench:** green highlights on a green board were unreadable; soldering was spam-click until "cold joint". Done: darker board, copper pads, solder is now hold the iron on the lit pad and let go in the green.
+- **Weapons:** drilling is good. Next: real tools the way they're really used, in tiers (hand drill, drill press, files, jigs, vise).
+- **Rig:** should be cut strips, then an animation bending them, then sewing in the right places, then the pouches (the block placeholder is fine).
+- **Meds:** fine, just hard to tell what you're doing (the marker should help; better models next).
+- **The three blocks being placed** (the shared fit step) are fine for now.
+- **Still to do:** better models for every bench piece and tool; the rig strip/bend/sew flow; tool tiers.
