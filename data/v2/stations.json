@@ -10,8 +10,8 @@
 	"stations": [
 		{"id": "pc", "name": "PC", "hint": "HEARTH OS. Free to use.", "facing": "north",
 			"objects": ["PC_"], "cam": [-0.35, 0.62, 1.03], "look": [-0.35, 1.3, 1.0], "hours": 0.0, "screen": "pc"},
-		{"id": "rig", "name": "Hack rig", "hint": "Run a job.", "facing": "north",
-			"objects": ["Rig_"], "cam": [0.52, 0.72, 1.2], "look": [0.52, 1.35, 0.88], "hours": 2.0, "screen": "rig"},
+		{"id": "rig", "name": "The box", "hint": "Plug in gadgets. Jobs run from the PC.", "facing": "north",
+			"objects": ["Rig_"], "cam": [0.5, 0.8, 1.34], "look": [0.5, 1.2, 0.86], "hours": 0.0, "screen": "box"},
 		{"id": "phone", "name": "Phone", "hint": "Messages.", "facing": "north",
 			"objects": ["Phone_"], "cam": [0.8, 0.55, 1.1], "look": [0.92, 1.0, 0.8], "hours": 0.0, "screen": "phone"},
 		{"id": "bench_hack", "name": "Hacking bench", "hint": "Build gadgets and cards.", "facing": "east",

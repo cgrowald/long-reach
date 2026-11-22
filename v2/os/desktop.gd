@@ -21,12 +21,15 @@ const APPS := {
 	"settings": preload("res://v2/os/apps/settings.gd"),
 	"viewer": preload("res://v2/os/apps/viewer.gd"),
 	"alert": preload("res://v2/os/apps/alert.gd"),
+	"jobs": preload("res://v2/os/apps/jobs.gd"),
+	"job": preload("res://v2/os/apps/job.gd"),
 }
 const TASKBAR_H := 16.0
 
 var game: Node
 var on_leave: Callable
 var on_war: Callable
+var spend_hours: Callable      # (hours) -> bool, from the garage: hacking jobs cost time
 var phase := "boot"
 var _t := 0.0
 var _boot_lines: Array = []
@@ -191,7 +194,7 @@ func launch(id: String, a := "") -> Control:
 		alert("HEARTH", "No application is registered for '%s'." % id, "warn")
 		return null
 	# Single-instance apps just come to the front.
-	if id in ["mail", "software", "monitor", "settings"]:
+	if id in ["mail", "software", "monitor", "settings", "jobs"]:
 		for w in windows():
 			if w.app_id == id:
 				focus_window(w)

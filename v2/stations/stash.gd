@@ -41,14 +41,16 @@ func build() -> void:
 		var it: Dictionary = st.items[i]
 		var stars := "*".repeat(int(it.get("stars", 1)))
 		var line := "%s  %s  %d%%%s" % [it.get("name", "?"), stars, int(float(it.get("quality", 0)) * 100.0), "" if it.get("hand", true) else "  (batch)"]
+		if it.get("type", "") == "intel":
+			line = "%s  [INTEL: %s, from %s]" % [it.get("name", "?"), it.get("tag", "?"), it.get("source", "?")]
 		list.add_child(Kit.label(line, Pal.TEXT, 9))
 		var extra: Array = []
 		if it.has("grid"):
 			extra.append("grid %dx%d, plates %s" % [int(it["grid"][0]), int(it["grid"][1]), it.get("plates", "none")])
 		if it.has("heal"):
 			extra.append("heals %d" % int(it["heal"]))
-		if it.has("card"):
-			extra.append("card: %s" % it["card"])
+		if it.has("box_slot"):
+			extra.append("plugs into the box: %s" % str(it["box_slot"]).to_upper())
 		for p in it.get("perks", []):
 			extra.append(str(p))
 		if not extra.is_empty():

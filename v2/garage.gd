@@ -15,7 +15,7 @@ const GameState := preload("res://v2/sim/game_state.gd")
 const Content := preload("res://v2/sim/content.gd")
 
 const SCREENS := {
-	"pc": preload("res://v2/stations/pc.gd"), "rig": preload("res://v2/stations/rig.gd"),
+	"pc": preload("res://v2/stations/pc.gd"), "box": preload("res://v2/stations/box.gd"),
 	"phone": preload("res://v2/stations/phone.gd"), "bench": preload("res://v2/stations/bench.gd"),
 	"corkboard": preload("res://v2/stations/corkboard.gd"), "clipboard": preload("res://v2/stations/clipboard.gd"),
 	"warroom": preload("res://v2/stations/warroom.gd"), "outside": preload("res://v2/stations/outside.gd"),
@@ -49,6 +49,8 @@ func _ready() -> void:
 	world.setup()
 	world.lean_finished.connect(_on_lean_finished)
 	world.set_prefix_visible("Bench_Gun_Tarp", false)    # the gun bench is open now
+	world.set_prefix_visible("Rig_Slot", false)          # the box gets its own slots (v2/stations/box.gd)
+	world.set_prefix_visible("Rig_Cartridge", false)
 	var ui: Control = view.ui
 	_catcher = Control.new()
 	_catcher.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)

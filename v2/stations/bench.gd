@@ -181,8 +181,8 @@ func _show_result(item: Dictionary, f: Dictionary) -> void:
 		info.add_child(_grid_preview(item["grid"]))
 	if item.has("heal"):
 		info.add_child(Kit.label("Heals %d" % int(item["heal"]), Pal.TEXT, 8))
-	if item.has("card"):
-		info.add_child(Kit.label("Gives the hack card: %s" % item["card"], Pal.TEXT, 8, 200))
+	if item.has("box_slot"):
+		info.add_child(Kit.label("Plugs into the box (desk): %s slot" % str(item["box_slot"]).to_upper(), Pal.TEXT, 8, 200))
 	var m := Crafting.mastery(game.state, _recipe["id"])
 	info.add_child(Kit.label("Mastery: %d / %d good crafts%s" % [int(m["good"]), Crafting.BATCH_AFTER,
 		"  (batching unlocked)" if Crafting.can_batch(game.state, _recipe) else ""], Pal.DIM, 8, 200))

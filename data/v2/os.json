@@ -27,7 +27,8 @@
 		{"name": "StateNet", "icon": "globe", "app": "browser"},
 		{"name": "Mail", "icon": "mail", "app": "mail"},
 		{"name": "commands", "icon": "note", "app": "notepad", "arg": "/home/citizen/commands.txt"},
-		{"name": "Software", "icon": "package", "app": "software"}
+		{"name": "Software", "icon": "package", "app": "software"},
+		{"name": "Jobs", "icon": "target", "app": "jobs"}
 	],
 	"apps": [
 		{"id": "files", "name": "Files", "icon": "folder", "size": [300, 190], "keys": "explorer folders documents"},
@@ -38,6 +39,7 @@
 		{"id": "software", "name": "Software", "icon": "package", "size": [280, 180], "keys": "install programs packages store"},
 		{"id": "monitor", "name": "Monitor", "icon": "chart", "size": [260, 180], "keys": "system processes cpu task manager"},
 		{"id": "settings", "name": "Preferences", "icon": "gear", "size": [270, 170], "keys": "settings control panel wallpaper appearance"},
+		{"id": "jobs", "name": "Jobs", "icon": "target", "size": [300, 190], "keys": "hack hacking targets missions box"},
 		{"id": "war", "name": "War room", "icon": "war", "locked": true, "keys": "map squads"}
 	],
 	"commands_note": "THINGS KETTLE TOLD ME (keep this hidden)\n\npassword: hearth123  (everyone's is)\n\nin the Terminal:\n  ls          what's in this folder\n  cd NAME     go into a folder\n  cd ..       back out\n  cat FILE    read a file\n  ps          what's running\n  pkg list    programs you can get\n  help        everything else\n\nTab finishes a name. Up arrow = last command.\nNever type kill on hearthd. Just don't.",
@@ -88,9 +90,10 @@
 		{"name": "printerd", "user": "root", "cpu": 0, "mem": 2}
 	],
 	"programs": [
-		{"id": "pscan", "name": "pscan", "size": "120 KB", "desc": "Finds open doors on a network. Needs the box and a port scanner gadget."},
-		{"id": "crack", "name": "crackle", "size": "340 KB", "desc": "Guesses passwords the dumb way. Needs the box."},
-		{"id": "sniff", "name": "sniffer", "size": "210 KB", "desc": "Listens to what passes by. Needs the box and an antenna."},
+		{"id": "pscan", "name": "pscan", "size": "120 KB", "desc": "Finds the machines on a network, and the door in. Needed for jobs. A port scanner in the box widens it."},
+		{"id": "crack", "name": "crackle", "size": "340 KB", "desc": "Guesses a person's password from their life. Needed for jobs. A wordlist drive in the box helps."},
+		{"id": "siphon", "name": "siphon", "size": "160 KB", "desc": "Pulls files out through the box, quietly-ish. Needed for jobs."},
+		{"id": "sniff", "name": "sniffer", "size": "210 KB", "desc": "Listens to what passes by. Not ready yet (coming later)."},
 		{"id": "solitaire", "name": "Patience", "size": "80 KB", "desc": "State-approved solitaire. Every game is winnable through effort."}
 	],
 	"mail": [
@@ -133,6 +136,48 @@
 			"links": [["leave", "hearth.gov"]]
 		}
 	},
+	"targets": [
+		{
+			"id": "water_office", "name": "Sector 4 Water Office", "what": "the billing server", "hours": 2.0,
+			"nodes": 10, "trace_rate": 1.0, "auth_name": "auth-billing", "files_name": "fs-billing",
+			"machines": ["printer-2", "cam-lobby", "desk-07", "desk-11", "fax-1", "thermostat", "desk-03"],
+			"owner": "Ruta Kalnina, billing clerk",
+			"profile": ["Married to Tomas. Their dog is called Bruno; he's on her mug, her desk, her screensaver.", "Born 1984. Started at the office in 2003.", "Ends every memo with two exclamation marks!!"],
+			"password": [
+				{"label": "NAME", "options": ["TOMAS", "BRUNO", "RUTA", "HANA", "MILO"], "answer": "BRUNO"},
+				{"label": "YEAR", "options": ["1979", "1984", "1991", "2003", "2011"], "answer": "1984"},
+				{"label": "END", "options": ["!", "!!", "1", "123", "#"], "answer": "!!"}
+			],
+			"files": [
+				{"name": "billing_q3.xls", "size": 4, "tag": "dirt", "worth": "Sector 4 is overcharged. Someone pockets the difference."},
+				{"name": "shutoff_schedule.txt", "size": 2, "tag": "plan", "worth": "When the water gets cut, street by street."},
+				{"name": "payroll.csv", "size": 7, "tag": "names", "worth": "Every clerk's name and address."},
+				{"name": "council_mail.mbox", "size": 12, "tag": "dirt", "worth": "Councillor Varga's emails with the billing office."},
+				{"name": "beach_2040.zip", "size": 9, "tag": "junk", "worth": "Somebody's holiday photos."}
+			],
+			"clue": "Water office breach: in through the billing clerk's login, in the evening."
+		},
+		{
+			"id": "freight_depot", "name": "Dobrev Freight depot", "what": "the dispatch office", "hours": 3.0, "after": "water_office",
+			"nodes": 14, "trace_rate": 1.3, "auth_name": "auth-dispatch", "files_name": "fs-manifests",
+			"machines": ["cam-gate", "cam-yard", "printer-dock", "desk-01", "desk-02", "scale-3", "radio-relay", "desk-09", "cam-office", "badge-reader", "fax-2"],
+			"owner": "Emil Dobrev, the owner's nephew, night dispatcher",
+			"profile": ["Mad about the Valdenmark Eagles; their badge is tattooed on his arm.", "Drives a 2011 Kestrel he never stops talking about.", "Types with one finger and hates long passwords: short, and a #."],
+			"password": [
+				{"label": "NAME", "options": ["EMIL", "EAGLES", "DOBREV", "KESTREL", "BRUNO"], "answer": "EAGLES"},
+				{"label": "YEAR", "options": ["1990", "1999", "2008", "2011", "2020"], "answer": "2011"},
+				{"label": "END", "options": ["!", "#", "1", "007", "!!"], "answer": "#"}
+			],
+			"files": [
+				{"name": "manifests_week.csv", "size": 6, "tag": "plan", "worth": "Which trucks carry what, and when. Shipments to mark."},
+				{"name": "guard_rota.txt", "size": 2, "tag": "plan", "worth": "When the yard guards change shifts."},
+				{"name": "bureau_contract.pdf", "size": 10, "tag": "dirt", "worth": "The depot moves Bureau cargo off the books."},
+				{"name": "fuel_cards.xls", "size": 5, "tag": "money", "worth": "Company fuel cards and their limits."},
+				{"name": "emil_music.zip", "size": 14, "tag": "junk", "worth": "Eagles chants. Hours of them."}
+			],
+			"clue": "Freight depot breach: through the night dispatcher's login. Someone is reading manifests."
+		}
+	],
 	"man": {
 		"ls": "ls [folder]  - list what's in a folder.",
 		"cd": "cd FOLDER  - go into a folder. cd .. goes back out. cd alone goes home.",

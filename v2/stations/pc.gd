@@ -23,6 +23,7 @@ func build() -> void:
 	add_child(desktop)
 	desktop.on_leave = close
 	desktop.on_war = func() -> void: garage.open_screen("warroom")
+	desktop.spend_hours = func(h: float) -> bool: return garage.spend(h)
 	var booted: bool = game.get_meta("os_booted", false)
 	desktop.setup(game, booted)
 	game.set_meta("os_booted", true)

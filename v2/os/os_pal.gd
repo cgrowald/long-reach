@@ -291,6 +291,14 @@ static func icon(ci: CanvasItem, kind: String, p: Vector2, s := 16.0) -> void:
 			R.call(2, 6, 4, 4, FACE_D)
 			ci.draw_colored_polygon(PackedVector2Array([p + Vector2(5, 6) * k, p + Vector2(10, 2) * k, p + Vector2(10, 14) * k, p + Vector2(5, 10) * k]), FACE_D)
 			ci.draw_arc(p + Vector2(10, 8) * k, 4 * k, -0.9, 0.9, 6, INK_DIM, 1.0)
+		"target":
+			ci.draw_circle(p + Vector2(8, 8) * k, 7 * k, SHADOW)
+			ci.draw_arc(p + Vector2(8, 8) * k, 5.5 * k, 0, TAU, 14, Color(0.4, 1, 0.4), 1.0)
+			ci.draw_arc(p + Vector2(8, 8) * k, 2.5 * k, 0, TAU, 10, Color(0.4, 1, 0.4), 1.0)
+			R.call(7.5, 1, 1, 4, Color(0.4, 1, 0.4))
+			R.call(7.5, 11, 1, 4, Color(0.4, 1, 0.4))
+			R.call(1, 7.5, 4, 1, Color(0.4, 1, 0.4))
+			R.call(11, 7.5, 4, 1, Color(0.4, 1, 0.4))
 		"hearth":
 			ci.draw_circle(p + Vector2(8, 8) * k, 7 * k, BRAND)
 			ci.draw_colored_polygon(PackedVector2Array([p + Vector2(8, 3) * k, p + Vector2(11, 10) * k, p + Vector2(8, 13) * k, p + Vector2(5, 10) * k]), Color(1, 0.9, 0.5))

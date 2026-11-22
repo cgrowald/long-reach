@@ -62,3 +62,29 @@ Don't choose one presentation. **The fight is always the same simulation; what y
 - [Unheard (PC Gamer)](https://www.pcgamer.com/this-new-detective-game-is-all-about-listening-to-solve-mysteries/), [OpenCritic](https://opencritic.com/game/7589/Unheard)
 - [Highfleet intel guide (Cultured Vultures)](https://culturedvultures.com/?p=161087), [gameplay.tips](https://gameplay.tips/guides/12027-highfleet.html)
 - Iron Nest's "you never see the round, then a recon photo" detail is from the user's own play. The search didn't confirm it beyond "recon photos over the topography".
+
+## 6. Decided (user, 2026-11-22) and what the research adds
+**The user's answers:**
+1. **"The view is gear" is the best idea.** Attachment comes from your people:
+   - names, simple backstories (where they came from), levelling up;
+   - they **carry the gear you made and named**, so a great craft makes you think "I DON'T want him to die".
+   - The auto battler must not be little dots: the fighters and their gear are **visible and look good**, to pull in the gun and military-gear crowd, in our own world's version of everything.
+2. **You can fight yourself, but never want to go loud.** The lone figure with just a pistol: going in person means hacking things on site, taking data and papers, marking shipments. It must never be better than the army.
+3. **Roguelite or full roguelike (later).** Deaths hit hard. You don't go out fighting because you're the leader: real armed groups' leaders wear the gear but aren't the face of the fight.
+4. **More than watching.** Things you make reach into the fight without risking you:
+   - drones you take control of;
+   - planned explosives;
+   - mortars later;
+   - anything that touches the battlefield unless you're NEEDED in person.
+
+**What the research adds:**
+- **Attachment = what you'd lose.** Battle Brothers keeps permadeath as "integral" because a dead brother takes his experience and skills with him. Its own review warns that once helmets cover the faces and personalities stay thin, attachment drops. So:
+  - show faces, or a name on the gear;
+  - give each fighter a few lines (barks, one backstory sentence);
+  - keep the named item on the body in the fight view.
+  - Battle Brothers also has *named items*, which matches "gear you make and name".
+- **The gear crowd is real.** Gunsmith Simulator is an estimated ~240k copies from a third-party tracker (not official), built only on assembling guns from parts. Tarkov's weapon modding is the genre's famous hook. The bench work we already have is that, plus your gear then goes into a fight.
+- **Drones are a crowded indie trend** (several FPV kamikaze drone games on Steam, mostly piloting sims). For us, a drone is one call-in among others, not the game.
+- **Iron Nest fits as the mortar.** A late-game mortar is exactly the Iron Nest feel: a spotter or helmet cam gives a position, you set and fire, the round is tracked, you hear it, then a recon photo shows the hit. Indirect fire is "touching the battlefield without being there".
+
+**So the fight is:** a planning table (squad, gear, stack order, planned charges), then a 3D low-poly room view of named fighters in their gear (the view you have depends on your sensors). Your call-ins are the things you built: take a drone, set off a charge, call the mortar, pull them out. The art job this implies (animated, geared low-poly soldiers) is the biggest piece of work in the game; it comes after the hacking job.

@@ -12,7 +12,7 @@
 		"board": {"name": "Scrap circuit board"},
 		"chips": {"name": "Salvaged chips"}
 	},
-	"start_materials": {"shirt": 4, "alcohol": 3, "tape": 3, "bag": 2, "strap": 3, "buckle": 1, "alu": 2, "pins": 2, "board": 2, "chips": 3},
+	"start_materials": {"shirt": 4, "alcohol": 3, "tape": 3, "bag": 2, "strap": 3, "buckle": 1, "alu": 2, "pins": 2, "board": 3, "chips": 3},
 	"tools": {
 		"hands": {"name": "Your hands", "mult": 1.0},
 		"hand_drill": {"name": "Hand drill", "mult": 0.85},
@@ -89,8 +89,28 @@
 				{"verb": "fit", "parts": ["chip", "chip", "antenna"], "text": "Place the parts on the board"},
 				{"verb": "solder", "count": 5, "text": "Solder each joint"}
 			],
-			"makes": {"type": "gadget", "card": "Port scan"},
-			"perks": [{"min": 0.8, "text": "Clean signal: the card scores x2 on SCAN"}]
+			"makes": {"type": "gadget", "box_slot": "scan"},
+			"perks": [{"min": 0.8, "text": "Clean signal: wider pings"}]
+		},
+		{
+			"id": "wordlist_drive", "name": "Wordlist drive (gadget)", "bench": "electronics", "tier": 1, "hours": 1.0,
+			"needs": {"board": 1, "chips": 1}, "tool": "cheap_iron", "material_mult": 0.9, "piece": "board",
+			"steps": [
+				{"verb": "fit", "parts": ["memory chip", "connector"], "text": "Place the memory and the plug"},
+				{"verb": "solder", "count": 4, "text": "Solder each joint"}
+			],
+			"makes": {"type": "gadget", "box_slot": "crack"},
+			"perks": [{"min": 0.8, "text": "Big list: crosses out more wrong guesses"}]
+		},
+		{
+			"id": "signal_damper", "name": "Signal damper (gadget)", "bench": "electronics", "tier": 1, "hours": 1.0,
+			"needs": {"board": 1, "chips": 1}, "tool": "cheap_iron", "material_mult": 0.9, "piece": "board",
+			"steps": [
+				{"verb": "fit", "parts": ["coil", "chip", "shield"], "text": "Place the coil, chip and shield"},
+				{"verb": "solder", "count": 4, "text": "Solder each joint"}
+			],
+			"makes": {"type": "gadget", "box_slot": "net"},
+			"perks": [{"min": 0.8, "text": "Quiet: trace climbs even slower"}]
 		}
 	]
 }

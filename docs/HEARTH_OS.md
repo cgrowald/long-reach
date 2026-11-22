@@ -38,3 +38,16 @@
 - **The box is 3D on the desk:** lean over, drag a gadget from the stash into a slot, a lamp lights. The programs show what's plugged in, and gadgets are the multipliers (the port scanner from the hacking bench boosts pscan).
 - **Time:** a fixed number of hours per job, shown up front (e.g. 2 hours). The rest of the PC stays free.
 - **Trace bar full:** you're cut out with what you grabbed so far, and the inspector gets a clue (a placeholder until the hunt is built).
+
+## Build 4: the hacking job (design, 2026-11-22)
+**Where:** the **Jobs** app on the PC lists targets (data/v2/os.json "targets"). A job needs the three programs installed (Software) and costs its hours up front. The rest of the PC stays free.
+
+**One trace bar runs through the whole job.** Every risky action fills it. If it fills, you're cut out: you keep files already downloaded, and a clue goes on the corkboard.
+
+1. **pscan (sonar):** the target's network is dark. Click to ping: a ring spreads and lights up every machine inside it (+trace per ping). Find the **login server** and click it to knock. A scan gadget in the box widens the ring.
+2. **crackle (the person's password):** people build passwords from their life. Three dials (a name, a year, an ending), five options each. The target's profile gives hints (dirt you'd normally dig up). Set the dials and TRY: right dials light green (+trace per try). A crack gadget crosses out wrong options.
+3. **siphon (grab):** the server's files, each with a size and what it's worth. Click files to queue them; they download through the pipe while the trace climbs on its own. Greed versus getting caught. **Disconnect** any time to leave clean. A net gadget slows the trace.
+
+**The report:** time, trace, what you took. Files go to the stash as **intel** (dirt, money leads, plans). The box's gadgets show as multipliers in every stage.
+
+**The box (3D, the desk machine):** lean in, and your gadgets lie on the desk in front of it. Drag one onto a slot on top (SCAN / CRACK / NET) and its lamp lights; right-click a slot to unplug. Free to use. New hacking-bench gadgets for the other slots: wordlist drive (crack) and signal damper (net).
