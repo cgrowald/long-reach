@@ -1,0 +1,36 @@
+# Polish pass (LATER: do not work from this yet)
+
+*User, 2026-11-22: "This is notes for future passes from GPT, because the art direction obviously helps you. BUT REMEMBER DON'T WORK OFF THIS YET, IT'S FOR LATER WHEN WE NEED TO POLISH." The user will keep feeding ChatGPT screenshots of the game to make closer renderings. Reference sheets are in `docs/refs/polish/`.*
+
+## The reference sheets (2026-11-22)
+- **garage_touchup_study:** the desk (beige CRT turned slightly with tape on the casing, a taped photo beside it, a worn keyboard, a coffee ring, the box with one odd knob, a cable taped down), the benches (pegboard with tools at uneven heights, a solder scorch, a cloth on the gun bench, a hanging amber lamp), and the repairs (tape, the mug ring, a wooden shim under a bench leg).
+- **hearth_os_sheet:** the OS as it is now, plus: a "BACKUP FRIDAY" sticky note on the login screen, a "Wrong password. Please try again." box, a mail toast ("Mail (1 new) from: neighbor"), a mail count badge on the Mail icon, a desktop "parts list" note, and the palette swatches.
+- **workshop_materials:** the electronics bench (green board on an olive mat, a "FIT COMPONENT" callout with corner brackets, a parts tray, a solder spool and iron in its stand, the laptop) and the gun bench ("INSPECT" mode with corner brackets, the rifle on a cloth, an oil can, a parts tray, a note); material swatches: worn metal, matte polymer, cloth.
+- **market_rig_01:** the shopping-bag rig: the striped woven market bag on the gear bench with a dashed "CUT PANEL" outline, scissors, webbing, buckles, thread; the finished rig (three pouches, crossed straps, buckles, a red pull loop); front, back and worn on a man in a beanie; close-ups of the weave and salvaged straps.
+- **medical_bench:** cloth prep (both hands tearing cloth on a mat, a frayed edge with a "snap" spark) and treatment (a FIELD WASH bottle, a basin of grey water, folded cloth, a red-cross box); raw cloth > prepared strips > packed rolls > a pouch.
+
+## ChatGPT's environment notes for the garage (the user's paste)
+Give the existing garage a restrained environment-art pass. Preserve its layout, interaction positions, chunky geometry, pixel rendering and dithering.
+- **Wear where use causes it:** a chipped desk edge near the keyboard, a worn spacebar, a coffee ring beside the mug, a solder scorch at the electronics bench.
+- **A few deliberate repairs:** tape on the CRT casing, one replacement radio knob, a wooden shim under a bench leg.
+- **Break alignment subtly:** turn the monitor slightly, overlap two papers, hang tools at unequal heights. Keep placement fixed between visits.
+- **One personal detail:** a small taped photograph beside the monitor.
+- **Group clutter around tasks.** Keep the keyboard and crafting surfaces open, with clickable objects clearly separated.
+- **Distinct material colours:** yellowed beige plastic, dull olive metal, worn brown wood. Keep grime localized.
+- **Localized amber light** at the desk and workbench, with dim corners and a small green terminal accent. Preserve readable silhouettes.
+- **Order:** lighting first, then wear, then a handful of props. Match the reference's details while keeping the garage's current darkness.
+
+## How hard each would be (Claude's estimate, for when we get there)
+- **Easy (a Blender script pass plus Godot materials):** garage lighting and props, the tape, shim, mug ring and photo; the OS sticky note, toast and badge; the bench mats, trays and iron stand.
+- **Medium:** woven, worn-metal and polymer material looks (a texture or shader each); the cut-panel dashed outline and the "inspect" corner brackets as bench UI.
+- **Bigger:** the market-bag rig as a modelled object with straps, buckles and pouches worn on a fighter (it ties into the rig grid); two-handed tearing in the bench hands.
+
+## The gun bench, done properly (user, 2026-11-22: a design change for later, not just polish)
+*"This is more what I meant for this bench, not the three holes we make now, which makes no sense."* The reference is a ChatGPT sheet titled "ENGINE WORKSHOP" (it called the gun an engine to get past ChatGPT's rules):
+- a first-person view at a green **drill press / mill**: the part clamped in a vise on a cross-slide table;
+- your hand on the big handwheel, chips falling into a tray;
+- a "SHAPE HOUSING" progress bar and a callout on the part;
+- a **PARTS BIN** panel of bearings, pulleys, belts and casings with counts, some locked;
+- on the bench: an oily rag, a brush, a lamp, a pegboard of wrenches, small drawers.
+
+Read as: the bench is machining a part into shape by hand-feeding a tool, then assembling it from a parts bin of made and bought pieces. **Early game:** a slow hand drill (what we have, made meaningful). **The upgrade:** the press/mill view. Weapons stay stylised (CLAUDE.md): gamified "shape the housing" actions, never real machining steps for real guns. Image not saved as a file (it arrived inline only).

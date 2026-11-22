@@ -51,6 +51,7 @@ var bandaging := 0.0
 var busy := 0.0                  # doing something with the hands (patching, cuffing, picking up)
 var weapons_free := true
 var shots := 0
+var last_shot_t := -100.0       # when this person last fired (a muzzle flash gives you away)
 var hits := 0
 var rng := RandomNumberGenerator.new()
 var _say_cd := 0.0
@@ -142,11 +143,27 @@ func tick(delta: float) -> void:
 		var d := Vector3(to.x - global_position.x, 0, to.z - global_position.z)
 		var step := speed * delta * (0.55 if target != null else 1.0)
 		if d.length() <= step + 0.02:
-			global_position = Vector3(to.x, 0, to.z)
+			if level.walkable(Vector3(to.x, 0, to.z)):
+				global_position = Vector3(to.x, 0, to.z)
 			path.pop_front()
+			_blocked = 0.0
 		else:
-			v = d.normalized() * step / delta
-			global_position += d.normalized() * step
+			var before := global_position
+			var next := global_position + d.normalized() * step
+			if _crosses_fire(next) and not _crosses_fire(global_position):
+				move_speed = 0.0              # don't walk in front of a teammate's muzzle: wait for the gap
+				return
+			_step_to(next)
+			var moved := global_position - before
+			v = moved / delta
+			var gained := d.length() - Vector3(to.x - global_position.x, 0, to.z - global_position.z).length()
+			if gained < step * 0.25:
+				_blocked += delta
+				if _blocked > 0.8:          # can't get there: skip this waypoint
+					path.pop_front()
+					_blocked = 0.0
+			else:
+				_blocked = 0.0
 	move_speed = v.length()
 	# facing: toward the target, else where we look, else where we walk
 	var want := face_yaw
@@ -168,6 +185,29 @@ func tick(delta: float) -> void:
 	raised = move_toward(raised, 1.0 if (target != null or look_at_point != null) else 0.55, delta * 3.0)
 	_weapon(delta)
 	_self_aid(delta)
+
+
+var _blocked := 0.0
+
+
+## Move to p if the floor allows it; otherwise slide along whichever axis is free (walls stop you).
+func _step_to(p: Vector3) -> void:
+	p.y = 0.0
+	if level.walkable(p):
+		global_position = p
+		return
+	var px := Vector3(p.x, 0, global_position.z)
+	var pz := Vector3(global_position.x, 0, p.z)
+	if level.walkable(px):
+		global_position = px
+	elif level.walkable(pz):
+		global_position = pz
+
+
+## Shoved by someone standing too close.
+func nudge(by: Vector3) -> void:
+	if state == "ok" or state == "surrendered":
+		_step_to(global_position + by)
 
 
 func _weapon(delta: float) -> void:
@@ -196,6 +236,9 @@ func _weapon(delta: float) -> void:
 	if mag_rounds <= 0:
 		start_reload()
 		return
+	if _friend_in_line():
+		burst_left = 0           # muzzle discipline: never fire past a teammate
+		return
 	if burst_left <= 0 and shot_t <= 0.0:
 		burst_left = int(st["burst"])
 		shot_i = 0
@@ -204,6 +247,42 @@ func _weapon(delta: float) -> void:
 		burst_left -= 1
 		shot_i += 1
 		shot_t = float(st["rate"]) if burst_left > 0 else rng.randf_range(0.35, 0.8)
+
+
+## Would standing at p put me in front of a teammate who is shooting (or about to)?
+func _crosses_fire(p: Vector3) -> bool:
+	if get_parent() == null:
+		return false
+	var me := p + Vector3(0, 1.2, 0)
+	for n in get_parent().get_children():
+		if n == self or not n.has_method("can_fight") or n.team != team or n.state != "ok":
+			continue
+		if n.target == null or not is_instance_valid(n.target) or n.aim_time <= 0.0:
+			continue
+		var a: Vector3 = n.eye()
+		var ab: Vector3 = n.target.chest_pos() - a
+		var t := clampf((me - a).dot(ab) / maxf(ab.length_squared(), 0.001), 0.0, 1.0)
+		if t > 0.03 and t < 0.97 and (a + ab * t).distance_to(me) < 0.5:
+			return true
+	return false
+
+
+## Is one of our own standing in the line of fire between me and my target?
+func _friend_in_line() -> bool:
+	if target == null or get_parent() == null:
+		return false
+	var a := eye()
+	var b: Vector3 = target.chest_pos()
+	var ab := b - a
+	var len2 := ab.length_squared()
+	for n in get_parent().get_children():
+		if n == self or not n.has_method("can_fight") or n.team != team or n.state == "dead":
+			continue
+		var p: Vector3 = n.global_position + Vector3(0, 1.2, 0)
+		var t := clampf((p - a).dot(ab) / maxf(len2, 0.001), 0.0, 1.0)
+		if t > 0.02 and t < 0.98 and (a + ab * t).distance_to(p) < 0.45:
+			return true
+	return false
 
 
 func start_reload() -> void:
@@ -218,6 +297,7 @@ func start_reload() -> void:
 func _shoot() -> void:
 	mag_rounds -= 1
 	shots += 1
+	last_shot_t = Time.get_ticks_msec() / 1000.0
 	if rng.randf() < float(st["jam"]):
 		reloading = 1.5          # clearing a jam
 		mag_rounds += 1
@@ -371,3 +451,8 @@ func _tracer(a: Vector3, b: Vector3) -> void:
 ## A line in their own words (enemies use this; their lines aren't in the bark table).
 func bark_custom(text: String) -> void:
 	say(text, true)
+
+
+## Fired in the last two seconds: the muzzle flash shows where you are.
+func flashing() -> bool:
+	return Time.get_ticks_msec() / 1000.0 - last_shot_t < 2.0 / maxf(Engine.time_scale, 0.01)

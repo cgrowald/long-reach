@@ -412,3 +412,66 @@ func lit(p: Vector3) -> bool:
 		if ol.light_energy > 0.3 and Vector2(ol.global_position.x, ol.global_position.z).distance_to(Vector2(p.x, p.z)) < 3.2:
 			return true
 	return false
+
+
+## Where a person can stand: inside a room (off the walls), or in the gap of an open door.
+func walkable(p: Vector3, r := 0.28) -> bool:
+	var q := Vector2(p.x, p.z)
+	for rm in rooms:
+		if (rm["rect"] as Rect2).grow(-r).has_point(q):
+			return true
+	for d in doors:
+		if d["state"] == "closed":
+			continue
+		var dp: Vector2 = d["pos"]
+		var half_w := DOOR_W * 0.5 - r * 0.6
+		if d["axis"] == "x":
+			if absf(q.y - dp.y) < half_w and absf(q.x - dp.x) < r + 0.35:
+				return true
+		elif absf(q.x - dp.x) < half_w and absf(q.y - dp.y) < r + 0.35:
+			return true
+	return false
+
+
+## The room a point is in, or the nearest one if it's standing in a doorway or against a wall.
+func room_near(p: Vector3) -> String:
+	var id := room_at(p)
+	if id != "":
+		return id
+	var q := Vector2(p.x, p.z)
+	var best := ""
+	var bd := 1e9
+	for rm in rooms:
+		var rc: Rect2 = rm["rect"]
+		var c := Vector2(clampf(q.x, rc.position.x, rc.end.x), clampf(q.y, rc.position.y, rc.end.y))
+		var dd := c.distance_to(q)
+		if dd < bd:
+			bd = dd
+			best = rm["id"]
+	return best
+
+
+## Stack spots on one side of a door (side = +1 / -1 along the wall), on the `from` side.
+func stack_spots_side(d: Dictionary, from: String, side: float) -> Array:
+	var n := door_normal(d, from)
+	var t := Vector3(n.z, 0, -n.x) * side
+	var dp := door_world(d)
+	var out: Array = []
+	for i in 4:
+		out.append(dp + n * 0.38 + t * (0.85 + i * 0.72))
+	return out
+
+
+## Which side of a door (along the wall) a point is on: +1 or -1.
+func door_side(d: Dictionary, from: String, p: Vector3) -> float:
+	var n := door_normal(d, from)
+	var t := Vector3(n.z, 0, -n.x)
+	return 1.0 if (p - door_world(d)).dot(t) >= 0.0 else -1.0
+
+
+## Within reach of a doorway (people file through these single-file and shouldn't shove sideways).
+func near_door(p: Vector3, r := 0.9) -> bool:
+	for d in doors:
+		if Vector2(p.x, p.z).distance_to(d["pos"]) < r:
+			return true
+	return false

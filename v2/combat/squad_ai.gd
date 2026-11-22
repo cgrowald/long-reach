@@ -183,11 +183,19 @@ func _set_stack(d: Dictionary, how: String, then_breach: bool) -> void:
 	var lead = by_role("point")
 	var from: String = d["a"] if cleared.get(d["a"], false) or d["a"] == "hall" else d["b"]
 	var into: String = d["b"] if from == d["a"] else d["a"]
-	var spots: Array = level.stack_spots(d, from, lead.global_position if lead else start_pos)
+	# split stack: each fighter takes the side of the door they're already on, so nobody crosses the
+	# open doorway (the fatal funnel) to get to a spot
+	var side_spots := {1.0: level.stack_spots_side(d, from, 1.0), -1.0: level.stack_spots_side(d, from, -1.0)}
+	var used := {1.0: 0, -1.0: 0}
+	var spots: Array = []
 	var order_ := _stack_order()
 	for i in order_.size():
 		var f = order_[i]
-		f.go(_route(f, spots[mini(i, spots.size() - 1)]), WALK)
+		var s: float = level.door_side(d, from, f.global_position)
+		var spot: Vector3 = side_spots[s][mini(int(used[s]), 3)]
+		used[s] = int(used[s]) + 1
+		spots.append(spot)
+		f.go(_route(f, spot), WALK)
 		f.look_at_point = null
 	task = {"type": "stack", "door": d, "into": into, "from": from, "how": how, "then": then_breach, "t": 0.0, "spots": spots}
 
@@ -222,8 +230,8 @@ func _set_flow(d: Dictionary, into: String, _fast: bool) -> void:
 
 
 func _route(f, to: Vector3) -> Array:
-	var a: String = level.room_at(f.global_position)
-	var b: String = level.room_at(to)
+	var a: String = level.room_near(f.global_position)
+	var b: String = level.room_near(to)
 	var pts: Array = []
 	var rooms: Array = level.room_path(a, b)
 	for i in range(rooms.size() - 1):
@@ -301,7 +309,7 @@ func _perceive(delta: float) -> void:
 			# in the dark you see a few metres, unless a light is on them: yours, theirs, or the building's
 			var in_beam: bool = f.light != null and f.light.visible and to.dot(fwd) > 0.96 and d < 15.0
 			var their_light: bool = e.light != null and e.light.visible
-			if d > 9.0 and not in_beam and not their_light and not (level.lit(e.global_position) and d < 14.0):
+			if d > 9.0 and not in_beam and not their_light and not e.flashing() and not (level.lit(e.global_position) and d < 14.0):
 				continue
 			if not level.clear_line(f.eye(), e.chest_pos()):
 				continue

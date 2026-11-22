@@ -179,8 +179,8 @@ func _far_corner(e) -> Vector3:
 
 
 func _route(e, to: Vector3) -> Array:
-	var a: String = level.room_at(e.global_position)
-	var b: String = level.room_at(to)
+	var a: String = level.room_near(e.global_position)
+	var b: String = level.room_near(to)
 	var pts: Array = []
 	var rooms: Array = level.room_path(a, b)
 	for i in range(rooms.size() - 1):

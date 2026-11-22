@@ -125,7 +125,7 @@ func _spawn() -> void:
 		var def: Dictionary = (d as Dictionary).duplicate()
 		def["id"] = "f%d" % i
 		a.setup_actor(def, "us", level)
-		a.position = Vector3(float(sp[0]) + (i % 2) * 0.8 - 0.4, 0, float(sp[1]) + i * 0.9)
+		a.position = Vector3(float(sp[0]) + (i % 2) * 0.8 - 0.4, 0, float(sp[1]) + 0.3 - int(i / 2) * 0.9)
 		a.face_yaw = 0.0
 		_wire(a)
 		squad.append(a)
@@ -274,6 +274,7 @@ func _process(delta: float) -> void:
 		t_op += delta
 		en.tick(delta)
 		sq.tick(delta)
+		_separate()
 		if squad.all(func(a) -> bool: return a.state != "ok"):
 			_end("failed")
 	for b in barks:
@@ -283,6 +284,25 @@ func _process(delta: float) -> void:
 	if pending >= 0:
 		hover_target = _pick_target(SHOUTS[pending]["needs"])
 	hud.queue_redraw()
+
+
+## Nobody stands inside anybody: people closer than a shoulder-width push apart.
+func _separate() -> void:
+	var people: Array = (squad + enemies).filter(func(a) -> bool: return a.state == "ok" or a.state == "surrendered")
+	for i in people.size():
+		for j in range(i + 1, people.size()):
+			var a = people[i]
+			var b = people[j]
+			var d: Vector3 = b.global_position - a.global_position
+			d.y = 0.0
+			var dist := d.length()
+			# two of ours both on the move (filing through a door) don't shove each other sideways
+			if a.team == b.team and a.moving() and b.moving() and dist > 0.3 and level.near_door(a.global_position) and level.near_door(b.global_position):
+				continue
+			if dist < 0.55:
+				var push := (d.normalized() if dist > 0.001 else Vector3(1, 0, 0)) * (0.55 - dist) * 0.5
+				a.nudge(-push)
+				b.nudge(push)
 
 
 func _end(how: String) -> void:
