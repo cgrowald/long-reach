@@ -16,6 +16,12 @@ var hit := Vector3.ZERO            # cursor on the bench plane (local)
 var has_hit := false
 var _light: SpotLight3D
 var _mats := {}
+var _beacon: Node3D                # the "act here" ring + arrow, moved to verb.cue() every frame
+var _arrow: MeshInstance3D
+var _bt := 0.0
+
+## The one colour that always means "you act here", on every bench (reads on green boards, grey metal, blue cloth).
+const CUE := Color(1.0, 0.3, 0.85)
 
 
 ## anchor: bench top point (Godot coords). cam_pos: where the camera will sit (to orient the frame).
@@ -35,6 +41,56 @@ func setup(p_camera: Camera3D, anchor: Vector3, cam_pos: Vector3, kind: String) 
 	_light.position = Vector3(0.1, 0.75, 0.15)
 	_light.look_at(global_position, Vector3.FORWARD)
 	make_piece(kind)
+	_make_beacon()
+
+
+func _make_beacon() -> void:
+	_beacon = Node3D.new()
+	add_child(_beacon)
+	var ring := MeshInstance3D.new()
+	var tor := TorusMesh.new()
+	tor.inner_radius = 0.016
+	tor.outer_radius = 0.021
+	tor.rings = 16
+	tor.ring_segments = 6
+	ring.mesh = tor
+	ring.material_override = mat(CUE, true)
+	ring.name = "Ring"
+	_beacon.add_child(ring)
+	_arrow = MeshInstance3D.new()
+	var cone := CylinderMesh.new()
+	cone.top_radius = 0.012
+	cone.bottom_radius = 0.0
+	cone.height = 0.024
+	cone.radial_segments = 4
+	cone.rings = 1
+	_arrow.mesh = cone
+	_arrow.material_override = mat(CUE, true)
+	_beacon.add_child(_arrow)
+	_beacon.visible = false
+
+
+## What the step HUD needs to draw the label: {} when there's nothing to point at.
+func cue() -> Dictionary:
+	if verb == null or verb._finished:
+		return {}
+	return verb.cue()
+
+
+func _process(delta: float) -> void:
+	if _beacon == null:
+		return
+	_bt += delta
+	var c := cue()
+	_beacon.visible = not c.is_empty()
+	if c.is_empty():
+		return
+	var target: Vector3 = c["pos"]
+	_beacon.position = _beacon.position.lerp(target, minf(1.0, delta * 18.0)) if _beacon.position.distance_to(target) < 0.15 else target
+	var pulse := 1.0 + 0.25 * sin(_bt * 7.0)
+	(_beacon.get_node("Ring") as Node3D).scale = Vector3(pulse, 1.0, pulse) * float(c.get("size", 1.0))
+	(_beacon.get_node("Ring") as Node3D).position.y = 0.002
+	_arrow.position.y = 0.05 + 0.012 * sin(_bt * 5.0)
 
 
 func make_piece(kind: String) -> void:
@@ -53,7 +109,9 @@ func make_piece(kind: String) -> void:
 		"metal":
 			box(Vector3(0.2, 0.04, 0.08), Color(0.5, 0.52, 0.55), Vector3(0, 0.02, 0), piece)
 		"board":
-			box(Vector3(0.16, 0.006, 0.1), Color(0.12, 0.4, 0.2), Vector3(0, 0.003, 0), piece)
+			box(Vector3(0.16, 0.006, 0.1), Color(0.07, 0.2, 0.12), Vector3(0, 0.003, 0), piece)
+			for i in 5:   # faint traces so the board reads as a board
+				box(Vector3(0.12, 0.0062, 0.002), Color(0.14, 0.3, 0.18), Vector3(0, 0.003, -0.035 + i * 0.016), piece)
 		_:
 			box(Vector3(0.2, 0.02, 0.12), Color(0.5, 0.5, 0.5), Vector3(0, 0.01, 0), piece)
 

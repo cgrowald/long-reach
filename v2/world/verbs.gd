@@ -51,6 +51,11 @@ class Verb extends Node3D:
 	func gauge() -> Dictionary:
 		return {}
 
+	## Where the player acts next: {"pos": Vector3 (local), "text": String, "drag": Vector3 (optional arrow),
+	## "both": bool (two-way arrow), "size": float}. {} hides the marker.
+	func cue() -> Dictionary:
+		return {}
+
 	## 1 inside the band, falling off outside it.
 	static func band_score(v: float, band: Vector2, falloff := 0.25) -> float:
 		if v >= band.x and v <= band.y:
@@ -143,6 +148,12 @@ class Drill extends Verb:
 	func gauge() -> Dictionary:
 		return {"value": depth, "band": BAND, "label": "DEPTH"}
 
+	func cue() -> Dictionary:
+		var i := scores.size()
+		if i >= marks.size():
+			return {}
+		return {"pos": marks[i], "text": "LET GO IN THE GREEN" if drilling else "HOLD TO DRILL HERE"}
+
 
 # ---------------------------------------------------------------- file: scrub back and forth, stop in the band
 
@@ -187,6 +198,15 @@ class FileDown extends Verb:
 
 	func gauge() -> Dictionary:
 		return {"value": 1.0 - excess, "band": BAND, "label": "FILED"}
+
+	func cue() -> Dictionary:
+		var d := 1.0 - excess
+		var t := "HOLD + SCRUB LEFT-RIGHT"
+		if d >= BAND.x:
+			t = "GREEN: LET GO NOW"
+		elif holding:
+			t = "KEEP SCRUBBING"
+		return {"pos": Vector3(0.1 + 0.04 * excess, work.top(), 0), "text": t, "drag": Vector3(0.06, 0, 0), "both": true, "size": 1.4}
 
 
 # ---------------------------------------------------------------- cut: hold and follow the line
@@ -255,6 +275,12 @@ class Cut extends Verb:
 	func gauge() -> Dictionary:
 		return {"value": progress_t, "band": Vector2(0.98, 1.0), "label": "CUT"}
 
+	func cue() -> Dictionary:
+		var to_end := (b - _cur())
+		if cutting:
+			return {"pos": _cur(), "text": "FOLLOW THE LINE", "drag": to_end.normalized() * minf(0.08, to_end.length())}
+		return {"pos": _cur(), "text": "HOLD HERE, DRAG ALONG", "drag": to_end.normalized() * 0.08}
+
 
 # ---------------------------------------------------------------- sew: the needle travels, click on each mark
 
@@ -320,6 +346,13 @@ class Sew extends Verb:
 	func gauge() -> Dictionary:
 		return {}
 
+	func cue() -> Dictionary:
+		for i in marks.size():
+			if not resolved[i]:
+				var near := absf(x - float(marks[i])) < 0.02
+				return {"pos": Vector3(marks[i], work.top(), 0), "text": "CLICK NOW!" if near else "CLICK WHEN THE NEEDLE HITS", "size": 0.8}
+		return {}
+
 
 # ---------------------------------------------------------------- tear: grab the cloth and yank fast
 
@@ -364,6 +397,13 @@ class Tear extends Verb:
 	func release() -> void:
 		grabbing = false
 
+	func cue() -> Dictionary:
+		var i := scores.size()
+		if i >= strips.size():
+			return {}
+		var p: Vector3 = (strips[i] as Node3D).position
+		return {"pos": p, "text": "PULL FAST!" if grabbing else "GRAB HERE, YANK TOWARD YOU", "drag": Vector3(0, 0, 0.12)}
+
 
 # ---------------------------------------------------------------- pour: hold to pour, stop at the line
 
@@ -406,6 +446,11 @@ class Pour extends Verb:
 	func gauge() -> Dictionary:
 		return {"value": level, "band": BAND, "label": "LEVEL"}
 
+	func cue() -> Dictionary:
+		if holding:
+			return {"pos": Vector3(0, H * 0.75, 0), "text": "LET GO AT THE LINE", "size": 3.2}
+		return {"pos": Vector3(0.08, H + 0.02, 0), "text": "HOLD TO POUR"}
+
 
 # ---------------------------------------------------------------- fit: pick a part, put it in the lit slot
 
@@ -426,11 +471,22 @@ class Fit extends Verb:
 				Vector3(-0.2, 0.006, -0.07 + i * 0.045), self)
 			parts.append(p)
 			slots.append(Vector3(-0.07 + i * (0.14 / maxf(1, count - 1)) if count > 1 else 0.0, h + 0.006, 0.0))
-		marker = work.box(Vector3(0.036, 0.002, 0.026), Color(0.3, 1.0, 0.4), slots[0] - Vector3(0, 0.005, 0), self, true)
+		marker = work.box(Vector3(0.036, 0.002, 0.026), Color(1.0, 0.3, 0.85), slots[0] - Vector3(0, 0.005, 0), self, true)
+		marker.visible = false
+
+	func cue() -> Dictionary:
+		var i := scores.size()
+		if i >= count:
+			return {}
+		var names: Array = step.get("parts", ["part"])
+		var nm := str(names[i]).to_upper()
+		if held < 0:
+			return {"pos": (parts[i] as Node3D).position, "text": "PICK UP: %s" % nm}
+		return {"pos": slots[i], "text": "PUT THE %s HERE" % nm}
 
 	func _process(_delta: float) -> void:
 		if marker and not _finished:
-			marker.visible = fmod(Time.get_ticks_msec() / 1000.0, 0.6) < 0.4
+			marker.visible = held >= 0 and fmod(Time.get_ticks_msec() / 1000.0, 0.6) < 0.4
 		if held >= 0:
 			(parts[held] as MeshInstance3D).position = work.hit + Vector3(0, 0.03, 0)
 
@@ -463,47 +519,91 @@ class Fit extends Verb:
 			work.say("Doesn't fit there", work.hit, false)
 
 
-# ---------------------------------------------------------------- solder: touch the pad while the iron is hot
+# ---------------------------------------------------------------- solder: hold the iron on the lit pad, let go when it flows
 
 class Solder extends Verb:
-	var pads: Array = []
+	var pads: Array = []        # Vector3
+	var pad_meshes: Array = []  # MeshInstance3D
 	var iron: MeshInstance3D
+	var blob: MeshInstance3D
 	var heat := 0.0
-	var t := 0.0
-	var fails := 0
-	const BAND := Vector2(0.62, 0.82)
+	var rate := 0.6
+	var heating := false
+	const BAND := Vector2(0.62, 0.84)
+	const COPPER := Color(0.95, 0.62, 0.28)
+	const DONE := Color(0.88, 0.9, 0.92)
 
 	func _build() -> void:
-		hint = "Touch the lit pad with the iron when the heat is in the green."
+		hint = "Hold the iron on the lit pad. The solder melts in the green: let go then."
 		var h: float = work.top() + 0.001
 		for i in count:
-			var p := Vector3(-0.06 + i * (0.12 / maxf(1, count - 1)), h, 0.02)
+			var p := Vector3(-0.06 + i * (0.12 / maxf(1, count - 1)), h, 0.03)
 			pads.append(p)
-			work.cyl(0.006, 0.002, Color(0.75, 0.6, 0.3), p, self)
+			pad_meshes.append(work.cyl(0.008, 0.003, COPPER, p, self, true))
 		iron = work.cyl(0.004, 0.12, Color(0.5, 0.5, 0.55), Vector3(0, h + 0.07, 0), self)
 		iron.rotation.x = 0.5
+		_next_rate()
+
+	func _next_rate() -> void:
+		rate = randf_range(0.5, 0.75)
+		heat = 0.0
 
 	func _process(delta: float) -> void:
-		t += delta
-		heat = 0.5 + 0.5 * sin(t * (2.4 + scores.size() * 0.3))
+		if not heating or _finished:
+			return
+		var i := scores.size()
+		heat = minf(1.2, heat + delta * rate)
+		iron.position = pads[i] + Vector3(0, 0.058, 0.03)
+		if heat >= BAND.x:
+			if blob == null:
+				blob = work.cyl(0.005, 0.004, DONE, pads[i] + Vector3(0, 0.003, 0), self)
+			var k := clampf((heat - BAND.x) / (BAND.y - BAND.x), 0.0, 1.3)
+			blob.scale = Vector3(0.6 + k * 0.6, 1.0, 0.6 + k * 0.6)
+		if heat >= 1.15:
+			work.say("Burnt it", pads[i], false)
+			release()
 
 	func moved() -> void:
-		iron.position = work.hit + Vector3(0, 0.06, 0.03)
+		if not heating:
+			iron.position = work.hit + Vector3(0, 0.06, 0.03)
 
 	func press() -> void:
 		var i := scores.size()
 		if i >= count:
 			return
-		if (work.hit - pads[i]).length() > 0.025:
-			work.say("That's not the pad", work.hit, false)
+		if (work.hit - pads[i]).length() > 0.035:
+			work.say("Put the iron on the lit pad", work.hit, false)
 			return
-		if heat >= BAND.x and heat <= BAND.y:
-			work.cyl(0.007, 0.004, Color(0.85, 0.85, 0.85), pads[i] + Vector3(0, 0.002, 0), self)
-			record(clampf(1.0 - 0.25 * fails, 0.3, 1.0), pads[i])
-			fails = 0
-		else:
-			fails += 1
+		heating = true
+
+	func release() -> void:
+		if not heating:
+			return
+		heating = false
+		var i := scores.size()
+		var s := band_score(heat, BAND, 0.3)
+		var col := DONE
+		if heat < BAND.x:
 			work.say("Cold joint", pads[i], false)
+			col = Color(0.45, 0.45, 0.45)
+		elif heat > BAND.y:
+			col = Color(0.35, 0.22, 0.12)
+		if blob == null:
+			blob = work.cyl(0.005, 0.004, col, pads[i] + Vector3(0, 0.003, 0), self)
+		blob.material_override = work.mat(col)
+		(pad_meshes[i] as MeshInstance3D).material_override = work.mat(Color(0.5, 0.36, 0.2))
+		blob = null
+		record(maxf(0.15, s), pads[i])
+		_next_rate()
 
 	func gauge() -> Dictionary:
 		return {"value": heat, "band": BAND, "label": "HEAT"}
+
+	func cue() -> Dictionary:
+		var i := scores.size()
+		if i >= count:
+			return {}
+		var t := "HOLD THE IRON HERE"
+		if heating:
+			t = "GREEN: LET GO!" if heat >= BAND.x else "HEATING..."
+		return {"pos": pads[i], "text": t}

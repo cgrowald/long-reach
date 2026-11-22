@@ -288,6 +288,47 @@ func _process(delta: float) -> void:
 	queue_redraw()
 
 
+## The label and drag arrow for the "act here" marker (the ring itself is 3D, in bench_work).
+func _draw_cue() -> void:
+	var c: Dictionary = _work.cue()
+	if c.is_empty():
+		return
+	var cam: Camera3D = garage.world.camera
+	var p0: Vector3 = c["pos"]
+	var wp: Vector3 = _work.to_global(p0)
+	if cam.is_position_behind(wp):
+		return
+	var sp := cam.unproject_position(wp)
+	var col := Color(1.0, 0.3, 0.85)
+	if c.has("drag"):
+		var ep := cam.unproject_position(_work.to_global(p0 + (c["drag"] as Vector3)))
+		_arrow(sp, ep, col)
+		if c.get("both", false):
+			_arrow(sp, sp - (ep - sp), col)
+	var text: String = c.get("text", "")
+	if text == "":
+		return
+	var w := float(text.length()) * 5.0 + 8.0
+	var pos := sp + Vector2(14, -26)
+	pos.x = clampf(pos.x, 4.0, size.x - w - 4.0)
+	draw_line(sp + Vector2(4, -6), pos + Vector2(0, 11), col, 1.0)
+	draw_rect(Rect2(pos, Vector2(w, 13)), Color(0.05, 0.02, 0.05, 0.85))
+	draw_rect(Rect2(pos, Vector2(w, 13)), col, false, 1.0)
+	Pal.text(self, pos + Vector2(4, 1), text, 8, col)
+
+
+func _arrow(a: Vector2, b: Vector2, col: Color) -> void:
+	var d := b - a
+	if d.length() < 6.0:
+		return
+	var n := d.normalized()
+	var phase := fmod(_t * 1.5, 1.0)            # a dash that runs along it, so it reads as motion
+	draw_line(a + n * 6.0, b, Color(col, 0.5), 1.0)
+	draw_circle(a + n * 6.0 + d * phase * 0.85, 1.5, col)
+	var side := Vector2(-n.y, n.x)
+	draw_colored_polygon(PackedVector2Array([b, b - n * 6.0 + side * 3.5, b - n * 6.0 - side * 3.5]), col)
+
+
 # ------------------------------------------------------------------ step HUD
 
 func _draw() -> void:
@@ -301,7 +342,8 @@ func _draw() -> void:
 	draw_rect(bar, Pal.METAL_L, false, 1.0)
 	Pal.text(self, bar.position + Vector2(6, 3), "STEP %d/%d  %s" % [_step + 1, steps.size(), str(s.get("verb", "")).to_upper()], 10, Pal.AMBER)
 	Pal.text(self, bar.position + Vector2(110, 3), str(s.get("text", "")), 10, Pal.TEXT)
-	Pal.text(self, bar.position + Vector2(6, 18), verb.hint, 8, Pal.DIM)
+	Pal.text(self, bar.position + Vector2(6, 18), verb.hint, 8, Pal.TEXT)
+	_draw_cue()
 	var prog: String = verb.progress()
 	if prog != "":
 		Pal.text(self, Vector2(bar.end.x - 60, bar.position.y + 18), prog, 8, Pal.TEXT, HORIZONTAL_ALIGNMENT_RIGHT, 54)
