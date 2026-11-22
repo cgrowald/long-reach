@@ -13,6 +13,7 @@ uniform float levels = 16.0;
 uniform float dither_amount = 1.0;
 uniform float time_s = 0.0;
 uniform float hit_flash = 0.0;
+uniform float lost = 0.0;                 // 1 = NO SIGNAL (the wearer is dead or the feed was cut)
 
 const float BAYER[16] = float[](0.0, 8.0, 2.0, 10.0, 12.0, 4.0, 14.0, 6.0, 3.0, 11.0, 1.0, 9.0, 15.0, 7.0, 13.0, 5.0);
 
@@ -44,5 +45,6 @@ void fragment() {
 	c *= 1.0 - rv * round_vignette;
 	c *= 1.0 - r2 * 0.35;
 	c = mix(c, vec3(0.9, 0.1, 0.05), hit_flash * 0.4);
+	c = mix(c, vec3(rnd(floor(FRAGCOORD.xy / 2.0) + time_s * 13.0) * 0.5), lost);
 	ALBEDO = pow(clamp(c, 0.0, 1.0), vec3(2.2));
 }

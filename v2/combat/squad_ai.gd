@@ -1,0 +1,639 @@
+extends RefCounted
+## Your people (docs/COMBAT_SLICE.md section 8): they are their own people. Left alone they clear by
+## doctrine, slowly: stack on the next door, take a breath, open it, flow in one at a time to the corners,
+## call it clear, regroup, move on. Your shouts (order()) set the focus and the risk. They answer back,
+## take cover before obeying under fire, patch each other, cuff anyone who gives up.
+
+signal log_line(text: String)
+signal objective_done
+signal exfil_done
+
+const Audio := preload("res://v2/combat/combat_audio.gd")
+const WALK := 0.85
+const RUN := 1.9
+const ENTRY_GAP := 0.9
+const BREATH := 1.6
+
+var fighters: Array = []
+var enemies: Array = []
+var level: Node3D
+var enemy_ai: RefCounted
+var rng := RandomNumberGenerator.new()
+var task: Dictionary = {"type": "idle"}
+var auto := true                   # doctrine picks the next step when a task ends
+var cleared := {}
+var focus_target = null
+var cover := {}                    # fighter -> Vector3 they watch
+var pending: Dictionary = {}       # an order waiting for the shooting to stop
+var have_objective := false
+var start_pos := Vector3.ZERO
+var in_contact := false
+var _contact_t := 0.0
+var _t := 0.0
+
+
+func setup(p_fighters: Array, p_enemies: Array, p_level: Node3D, p_enemy_ai: RefCounted, p_start: Vector3) -> void:
+	fighters = p_fighters
+	enemies = p_enemies
+	level = p_level
+	enemy_ai = p_enemy_ai
+	start_pos = p_start
+	rng.seed = 5
+	cleared["hall"] = true        # they start in it
+	_next_doctrine()
+
+
+func by_role(r: String):
+	for f in fighters:
+		if f.role == r and f.alive():
+			return f
+	for f in fighters:
+		if f.alive():
+			return f
+	return null
+
+
+func alive_fighters() -> Array:
+	return fighters.filter(func(f) -> bool: return f.alive())
+
+
+# ------------------------------------------------------------------ your shouts
+
+## kind: stack, breach, bang, charge, push, hold, fallback, cover, focus, medic, go.
+## target: a door dict, a room id, an actor, or a Vector3. who: [] = everyone.
+func order(kind: String, target = null, who: Array = []) -> void:
+	var risky := kind in ["push", "breach", "bang", "charge"]
+	if risky and in_contact:
+		var f = by_role("point")
+		if f and f.trait_name in ["careful", "steady"] and rng.randf() < 0.5:
+			f.bark("refuse", {}, true)
+			pending = {"kind": kind, "target": target, "who": who}
+			return
+	match kind:
+		"stack":
+			auto = false
+			_set_stack(target, "", false)
+			_ack("stack", {"door": _door_name(target)})
+		"breach", "bang", "charge":
+			auto = false
+			var how := {"breach": "kick", "bang": "bang", "charge": "charge"}[kind] as String
+			if task.get("type") == "stacked" and task.get("door") == target:
+				_set_breach(target, how)
+			else:
+				_set_stack(target, how, true)
+			_ack(kind)
+		"push":
+			auto = false
+			var d := _door_toward(str(target))
+			if d.is_empty():
+				return
+			if d["state"] != "closed":
+				_set_flow(d, str(target), true)
+			else:
+				_set_stack(d, "kick", true)
+			_ack("push", {"room": _room_name(str(target))})
+		"hold":
+			for f in _who(who):
+				f.stop()
+			if who.is_empty():
+				task = {"type": "hold"}
+			_ack("hold")
+		"fallback":
+			auto = false
+			task = {"type": "fallback"}
+			for f in alive_fighters():
+				f.go(_route(f, start_pos + Vector3(rng.randf_range(-0.6, 0.6), 0, rng.randf_range(0.0, 1.0))), RUN)
+			_ack("fallback")
+		"cover":
+			for f in _who(who):
+				cover[f] = target
+			_ack("cover")
+		"focus":
+			focus_target = target
+			_ack("focus")
+		"medic":
+			task["medic_for"] = target
+			var m = by_role("medic")
+			if m:
+				m.bark("medic", {"name": _first(target)}, true)
+		"go":
+			auto = true
+			pending.clear()
+			_next_doctrine()
+			_ack("go")
+
+
+func _ack(key: String, fill := {}) -> void:
+	var f = by_role("point")
+	if key in ["breach", "bang", "charge"]:
+		f = by_role("breacher")
+	if f:
+		f.bark(key, fill, true)
+
+
+func _who(who: Array) -> Array:
+	if who.is_empty():
+		return alive_fighters()
+	return who.filter(func(f) -> bool: return f.alive())
+
+
+# ------------------------------------------------------------------ the doctrine
+
+## Next room to clear: the nearest uncleared one on the way, the objective room last.
+func _next_doctrine() -> void:
+	if have_objective:
+		task = {"type": "exfil"}
+		for f in alive_fighters():
+			f.go(_route(f, start_pos + Vector3(rng.randf_range(-0.5, 0.5), 0, rng.randf_range(0.0, 1.0))), WALK)
+		return
+	var lead = by_role("point")
+	if lead == null:
+		task = {"type": "idle"}
+		return
+	var here: String = level.room_at(lead.global_position)
+	var best := {}
+	var bd := 1e9
+	var obj_room: String = level.data.get("objective", {}).get("room", "")
+	for d in level.doors:
+		for side in [["a", "b"], ["b", "a"]]:
+			var into: String = d[side[1]]
+			if cleared.get(into, false) or into == here:
+				continue
+			if d[side[0]] != here and not cleared.get(d[side[0]], false) and d[side[0]] != "hall":
+				continue
+			var dist: float = level.door_world(d).distance_to(lead.global_position)
+			if into == obj_room:
+				dist += 100.0          # the objective last
+			if dist < bd:
+				bd = dist
+				best = {"door": d, "into": into}
+	if best.is_empty():
+		task = {"type": "idle"}
+		return
+	var door: Dictionary = best["door"]
+	if door["state"] != "closed":
+		_set_stack(door, "open", true)
+	else:
+		_set_stack(door, "kick" if door["locked"] else "open", true)
+
+
+func _set_stack(d: Dictionary, how: String, then_breach: bool) -> void:
+	if d.is_empty():
+		return
+	var lead = by_role("point")
+	var from: String = d["a"] if cleared.get(d["a"], false) or d["a"] == "hall" else d["b"]
+	var into: String = d["b"] if from == d["a"] else d["a"]
+	var spots: Array = level.stack_spots(d, from, lead.global_position if lead else start_pos)
+	var order_ := _stack_order()
+	for i in order_.size():
+		var f = order_[i]
+		f.go(_route(f, spots[mini(i, spots.size() - 1)]), WALK)
+		f.look_at_point = null
+	task = {"type": "stack", "door": d, "into": into, "from": from, "how": how, "then": then_breach, "t": 0.0, "spots": spots}
+
+
+func _stack_order() -> Array:
+	var out: Array = []
+	for r in ["point", "breacher", "medic", "rear"]:
+		for f in fighters:
+			if f.role == r and f.alive():
+				out.append(f)
+	return out
+
+
+func _set_breach(d: Dictionary, how: String) -> void:
+	task = {"type": "breach", "door": d, "into": task.get("into", d["b"]), "how": how, "t": 0.0, "step": 0}
+
+
+func _set_flow(d: Dictionary, into: String, _fast: bool) -> void:
+	var spots: Array = level.entry_spots(d, into)
+	var order_ := _stack_order()
+	var n := mini(order_.size(), 3)               # the rear man holds the hall
+	for i in order_.size():
+		var f = order_[i]
+		if i < n:
+			var inside: Vector3 = level.door_world(d) + level.door_normal(d, into) * 0.35
+			f.set_meta("flow_at", _t + ENTRY_GAP * i)
+			f.set_meta("flow_path", [level.door_world(d) - level.door_normal(d, into) * 0.4, inside, spots[i]])
+		else:
+			f.look_at_point = level.door_world(d) - level.door_normal(d, into) * 6.0 + Vector3(0, 1.3, 0)
+			f.remove_meta("flow_at")
+	task = {"type": "flow", "door": d, "into": into, "t": 0.0, "n": n}
+
+
+func _route(f, to: Vector3) -> Array:
+	var a: String = level.room_at(f.global_position)
+	var b: String = level.room_at(to)
+	var pts: Array = []
+	var rooms: Array = level.room_path(a, b)
+	for i in range(rooms.size() - 1):
+		var d: Dictionary = level.door_between(rooms[i], rooms[i + 1])
+		if not d.is_empty():
+			var n: Vector3 = level.door_normal(d, rooms[i + 1])
+			pts.append(level.door_world(d) - n * 0.4)
+			pts.append(level.door_world(d) + n * 0.5)
+	pts.append(to)
+	return pts
+
+
+func _door_toward(room_id: String) -> Dictionary:
+	var lead = by_role("point")
+	if lead == null:
+		return {}
+	var rooms: Array = level.room_path(level.room_at(lead.global_position), room_id)
+	if rooms.size() < 2:
+		return {}
+	return level.door_between(rooms[0], rooms[1])
+
+
+# ------------------------------------------------------------------ the tick
+
+func tick(delta: float) -> void:
+	_t += delta
+	_perceive(delta)
+	if not pending.is_empty() and not in_contact:
+		var p := pending.duplicate()
+		pending.clear()
+		order(p["kind"], p["target"], p["who"])
+	_medic(delta)
+	_cuff()
+	match task.get("type", "idle"):
+		"stack":
+			_tick_stack(delta)
+		"stacked":
+			_face_door()
+		"breach":
+			_tick_breach(delta)
+		"flow":
+			_tick_flow(delta)
+		"clear":
+			_tick_clear(delta)
+		"grab":
+			_tick_grab(delta)
+		"exfil":
+			if alive_fighters().all(func(f) -> bool: return not f.moving()):
+				task = {"type": "done"}
+				exfil_done.emit()
+		"fallback":
+			if alive_fighters().all(func(f) -> bool: return not f.moving()):
+				task = {"type": "hold"}
+	for f in fighters:
+		f.tick(delta)
+
+
+func _perceive(delta: float) -> void:
+	var any := false
+	for f in fighters:
+		if not f.alive():
+			continue
+		var best = null
+		var bd := 1e9
+		var fwd := Vector3(-sin(f.face_yaw), 0, -cos(f.face_yaw))
+		for e in enemies:
+			if e.state != "ok":
+				continue
+			var d: float = f.global_position.distance_to(e.global_position)
+			if d > 24.0:
+				continue
+			var to: Vector3 = (e.global_position - f.global_position).normalized()
+			if to.dot(fwd) < -0.2 and d > 3.0:
+				continue                 # behind them: they don't have eyes back there
+			# in the dark you see a few metres, unless a light is on them: yours, theirs, or the building's
+			var in_beam: bool = f.light != null and f.light.visible and to.dot(fwd) > 0.96 and d < 15.0
+			var their_light: bool = e.light != null and e.light.visible
+			if d > 9.0 and not in_beam and not their_light and not (level.lit(e.global_position) and d < 14.0):
+				continue
+			if not level.clear_line(f.eye(), e.chest_pos()):
+				continue
+			var score := d
+			if e == focus_target:
+				score -= 100.0
+			if cover.has(f) and cover[f] is Vector3 and e.global_position.distance_to(cover[f]) < 3.0:
+				score -= 50.0
+			if score < bd:
+				bd = score
+				best = e
+		if best != null and f.target == null:
+			if not in_contact:
+				f.bark("contact", {"room": _room_name(level.room_at(best.global_position))}, true)
+			f.crouch = 0.45
+		f.target = best
+		if best != null:
+			any = true
+		elif cover.has(f) and cover[f] is Vector3:
+			f.look_at_point = (cover[f] as Vector3) + Vector3(0, 1.2, 0)
+	if any:
+		in_contact = true
+		_contact_t = 0.0
+	else:
+		_contact_t += delta
+		if _contact_t > 2.5:
+			in_contact = false
+	if focus_target != null and (not is_instance_valid(focus_target) or focus_target.state != "ok"):
+		focus_target = null
+
+
+func _tick_stack(delta: float) -> void:
+	task["t"] = float(task["t"]) + delta
+	var ready := true
+	for f in alive_fighters():
+		if f.moving():
+			ready = false
+	_face_door()
+	if not ready and float(task["t"]) < 14.0:
+		return
+	if in_contact:
+		return
+	if not task.get("then", false):
+		task["type"] = "stacked"
+		return
+	if float(task["t"]) < BREATH + _arrive_t():
+		return
+	_set_breach(task["door"], task.get("how", "open"))
+
+
+func _arrive_t() -> float:
+	return 0.0
+
+
+func _face_door() -> void:
+	var d: Dictionary = task.get("door", {})
+	if d.is_empty():
+		return
+	for f in alive_fighters():
+		if f.target == null and not f.moving():
+			f.look_at_point = level.door_world(d, 1.3)
+			f.crouch = 0.35
+
+
+func _tick_breach(delta: float) -> void:
+	task["t"] = float(task["t"]) + delta
+	var d: Dictionary = task["door"]
+	var b = by_role("breacher")
+	if b == null:
+		return
+	var how: String = task["how"]
+	var step := int(task["step"])
+	if step == 0:
+		if d["state"] != "closed":
+			task["step"] = 2 if how != "bang" else 1
+			return
+		if how == "open" and d["locked"]:
+			b.bark("locked", {}, true)
+			how = "kick"
+			task["how"] = "kick"
+		if how == "charge" and b.charges <= 0:
+			how = "kick"
+			task["how"] = "kick"
+		var work := 0.7 if how == "kick" else (2.2 if how == "charge" else 0.9)
+		if float(task["t"]) < work:
+			b.busy = 0.1
+			return
+		if how == "kick":
+			if d["locked"] and rng.randf() < 0.35:
+				b.say("Solid door! Again!", true)
+				task["t"] = 0.0
+				enemy_ai.noise(level.door_world(d), 14.0)
+				return
+			level.open_door(d, "kick")
+			Audio.play_at(level, "kick", level.door_world(d, 1.0), 2.0)
+			enemy_ai.noise(level.door_world(d), 14.0)
+		elif how == "charge":
+			b.charges -= 1
+			level.open_door(d, "charge")
+			Audio.play_at(level, "bang", level.door_world(d, 1.0), 6.0, 0.7)
+			enemy_ai.noise(level.door_world(d), 30.0)
+			_stun_room(task["into"], 3.0)
+		else:
+			level.open_door(d, "open")
+		b.bark("breach", {}, true)
+		task["step"] = 1 if how == "bang" else 2
+		task["t"] = 0.0
+	elif step == 1:
+		# a flash through the open door
+		if b.flashes <= 0:
+			task["step"] = 2
+			return
+		if float(task["t"]) < 0.8:
+			return
+		b.flashes -= 1
+		b.bark("bang", {}, true)
+		var c: Vector2 = (level.room(task["into"])["rect"] as Rect2).get_center()
+		var at := Vector3(c.x, 1.0, c.y)
+		level.flash(at)
+		Audio.play_at(level, "bang", at, 4.0)
+		enemy_ai.noise(at, 25.0)
+		_stun_room(task["into"], 3.5)
+		task["step"] = 2
+		task["t"] = 0.0
+	else:
+		if float(task["t"]) < 0.5:
+			return
+		_set_flow(d, task["into"], false)
+
+
+func _stun_room(room_id: String, t: float) -> void:
+	for e in enemies:
+		if e.state == "ok" and level.room_at(e.global_position) == room_id:
+			e.stun(t)
+			enemy_ai.shaken(e, 0.5)
+
+
+func _tick_flow(delta: float) -> void:
+	task["t"] = float(task["t"]) + delta
+	var all_in := true
+	for f in alive_fighters():
+		if f.has_meta("flow_at"):
+			if _t >= float(f.get_meta("flow_at")):
+				f.go(f.get_meta("flow_path"), WALK * 1.25)
+				f.look_at_point = null
+				f.remove_meta("flow_at")
+				f.crouch = 0.3
+			else:
+				all_in = false
+		if f.moving() and level.room_at(f.global_position) != task["into"]:
+			all_in = false
+	if all_in and float(task["t"]) > 1.0:
+		task = {"type": "clear", "into": task["into"], "door": task["door"], "t": 0.0}
+
+
+func _tick_clear(delta: float) -> void:
+	var room_id: String = task["into"]
+	for e in enemies:
+		if e.state == "ok" and level.room_at(e.global_position) == room_id:
+			task["t"] = 0.0
+			# nobody of ours left inside and it's gone quiet: regroup and go again (or wait for you)
+			var inside := alive_fighters().filter(func(f) -> bool: return level.room_at(f.global_position) == room_id)
+			if inside.is_empty() and not in_contact:
+				task["stall"] = float(task.get("stall", 0.0)) + delta
+				if float(task["stall"]) > 4.0:
+					var p = by_role("point")
+					if p:
+						p.say("They're still in there. Regrouping.", true)
+					if auto:
+						var b = by_role("breacher")
+						_set_stack(task["door"], "bang" if b and b.flashes > 0 else "open", true)
+					else:
+						task = {"type": "hold"}
+			return
+	if in_contact:
+		task["t"] = 0.0
+		return
+	task["t"] = float(task["t"]) + delta
+	# sweep the room with the lights while it settles
+	for f in alive_fighters():
+		if f.target == null and not f.moving() and level.room_at(f.global_position) == room_id:
+			var r: Rect2 = level.room(room_id)["rect"]
+			f.look_at_point = Vector3(r.get_center().x + sin(_t * 0.6 + f.get_instance_id()) * r.size.x * 0.4, 1.2, r.get_center().y)
+	if float(task["t"]) < 1.6:
+		return
+	cleared[room_id] = true
+	var f0 = by_role("point")
+	if f0:
+		f0.bark("clear", {"room": _room_name(room_id)}, true)
+	log_line.emit("%s cleared" % _room_name(room_id))
+	# the objective: pick it up
+	var obj: Dictionary = level.data.get("objective", {})
+	if obj.get("room", "") == room_id and not have_objective:
+		task = {"type": "grab", "t": 0.0}
+		var g = by_role("rear") if by_role("rear") and level.room_at(by_role("rear").global_position) == room_id else f0
+		g.go(_route(g, level.objective_pos + Vector3(0.6, 0, 0.5)), WALK)
+		g.set_meta("grabbing", true)
+		task["who"] = g
+		return
+	if auto:
+		_next_doctrine()
+	else:
+		task = {"type": "hold"}
+
+
+## Someone walks to the objective and takes it (2 seconds of hands busy).
+func _tick_grab(delta: float) -> void:
+	var g = task.get("who")
+	if g == null or not is_instance_valid(g) or not g.alive():
+		task = {"type": "hold"}
+		return
+	if g.moving() or in_contact:
+		return
+	if float(task["t"]) == 0.0:
+		g.busy = 2.0
+		g.crouch = 0.6
+	task["t"] = float(task["t"]) + delta
+	if float(task["t"]) < 2.0:
+		return
+	have_objective = true
+	g.remove_meta("grabbing")
+	g.say("Got the manifests. We're done here.", true)
+	log_line.emit("Objective: manifests secured")
+	objective_done.emit()
+	if auto:
+		_next_doctrine()
+	else:
+		task = {"type": "hold"}
+
+
+# ------------------------------------------------------------------ care
+
+func _medic(_delta: float) -> void:
+	var m = by_role("medic")
+	var patients: Array = []
+	for f in fighters:
+		if (f.state == "down" and not f.stable) or (f.state == "ok" and f.wounds > 0 and f.meds <= 0):
+			patients.append(f)
+	if task.has("medic_for") and task["medic_for"] != null and task["medic_for"] in patients:
+		patients.erase(task["medic_for"])
+		patients.push_front(task["medic_for"])
+	if patients.is_empty():
+		return
+	var p = patients[0]
+	var who = m if m != null and m.role == "medic" and m.meds > 0 else null
+	if who == null:
+		# no medic: whoever is closest with a bandage, only when it's quiet
+		if in_contact:
+			return
+		var bd := 1e9
+		for f in alive_fighters():
+			if f != p and f.meds > 0:
+				var d: float = f.global_position.distance_to(p.global_position)
+				if d < bd:
+					bd = d
+					who = f
+	if who == null or who.busy > 0.0:
+		return
+	var dist: float = who.global_position.distance_to(p.global_position)
+	if dist > 0.9:
+		if in_contact and p.state == "down" and task.get("medic_for") != p and dist > 3.0:
+			return                # wait for the shooting to stop, unless you ordered it
+		if not who.moving() or not who.has_meta("patient") or who.get_meta("patient") != p:
+			who.set_meta("patient", p)
+			who.go(_route(who, p.global_position + (who.global_position - p.global_position).normalized() * 0.6), RUN if p.state == "down" else WALK)
+		return
+	who.stop()
+	who.busy = 4.0 if who.role == "medic" else 6.0
+	who.meds -= 1
+	who.crouch = 0.9
+	who.say("Got you, got you. Stay with me.", true)
+	p.get_patched()
+	if who.has_meta("patient"):
+		who.remove_meta("patient")
+	log_line.emit("%s patched %s" % [_first(who), _first(p)])
+
+
+## Anyone who gave up gets zip-tied by the nearest fighter when it's quiet.
+func _cuff() -> void:
+	if in_contact:
+		return
+	for e in enemies:
+		if e.state != "surrendered":
+			continue
+		if not e.has_meta("shouted"):
+			var near = null
+			var bd := 1e9
+			for f in alive_fighters():
+				var d: float = f.global_position.distance_to(e.global_position)
+				if d < bd:
+					bd = d
+					near = f
+			if near:
+				near.bark("surrender", {}, true)
+			e.set_meta("shouted", true)
+		if e.has_meta("cuffer"):
+			var c = e.get_meta("cuffer")
+			if not is_instance_valid(c) or not c.alive():
+				e.remove_meta("cuffer")
+			elif not c.moving() and c.busy <= 0.0:
+				if c.global_position.distance_to(e.global_position) < 1.0:
+					c.busy = 2.5
+					c.crouch = 0.8
+					e.state = "cuffed"
+					e.pose_mode = "down"
+					log_line.emit("%s zip-tied" % e.fighter_name)
+					e.remove_meta("cuffer")
+			continue
+		var best = null
+		var bd2 := 1e9
+		for f in alive_fighters():
+			if f.role == "medic" or f.has_meta("grabbing"):
+				continue
+			var d: float = f.global_position.distance_to(e.global_position)
+			if d < bd2 and level.clear_line(f.eye(), e.chest_pos()):
+				bd2 = d
+				best = f
+		if best and bd2 < 9.0:
+			e.set_meta("cuffer", best)
+			best.go(_route(best, e.global_position + (best.global_position - e.global_position).normalized() * 0.7), WALK)
+
+
+func _first(a) -> String:
+	if a == null or not is_instance_valid(a):
+		return "them"
+	return str(a.fighter_name).split(" ")[0].capitalize()
+
+
+func _door_name(d) -> String:
+	return str(d.get("name", "the door")).to_lower() if d is Dictionary else "the door"
+
+
+func _room_name(id: String) -> String:
+	var r: Dictionary = level.room(id)
+	return str(r.get("name", id)).to_lower() if not r.is_empty() else id

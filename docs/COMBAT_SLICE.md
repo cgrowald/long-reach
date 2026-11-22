@@ -118,3 +118,55 @@ An "UPRISING / FIELD NOTES // RESISTANCE DOSSIER" sheet in our exact pixel style
 - **CAMERA SIGNAL UPGRADE 1 > 2 > 3:** the same feed going from blocky noise to clear. That's "cam stars = feed quality", drawn.
 
 The user plans to make more of these, from screenshots of the game.
+
+## 8. Yelled commands: they're their own people (user, 2026-11-22)
+*User, after seeing the look test: "OMG YES, this is exactly what I meant. Keep the pace down. They are their own people, but you yell commands", like a Punisher scene of two old battle buddies clearing a place. "You can get in on the action, but far enough away that if they die it's like: omg, that was MY fault, not Jeff's!"*
+
+- **Slow and deliberate.** Walking pace, a breath at every door, short bursts, the dying tube light flickering. Never twitchy.
+- **You're on the radio, close by** (the van outside, the next building). You see what your sensors give you and shout. You can go in yourself, but you're the leader: if you die, the run ends.
+- **Shouts are short and real-sounding,** sent over the radio:
+  - **Move and focus:** stack on that door; breach it (open quietly, kick, bang a flash, blow a charge); push into a room or down a hall; hold; fall back; regroup on a spot.
+  - **Fire:** cover left or right or that door; suppress that spot; focus that target; weapons tight or free.
+  - **Care:** medic on someone; pull them out; reload now.
+  - **Call-ins:** drone up; the FPV you fly; later the mortar.
+- **They answer back and decide how:** "Copy, stacking on two." They react on their own and call things to you: contact left, I'm hit, mag, room clear, door's locked.
+  - Under fire, they take cover before obeying.
+  - Rookies hesitate and sometimes funnel into the doorway; veterans anticipate.
+  - A fighter with a trait may push back: "Negative, he's still moving in there!"
+- **Fault is visible.** The op report logs every shout with its time ("23:44 you: PUSH the warehouse"), so a death traces back to an order, or to them ignoring one.
+- **No shouts = doctrine.** Left alone, they still clear the next room by doctrine. Your shouts set the focus and the risk.
+
+### Decided (user, 2026-11-22)
+- **Shouting:** the shout wheel (hold right mouse) plus a click on the door, room or enemy in the feed; number keys pick who it's for.
+- **Pace:** real time with a full pause allowed, undecided between the two long-term ("a fan of harder games"). **No slow-motion** ("slowing down is for normies"). Build both: real time, plus a pause that can be switched off (hard mode).
+- **Guards fight, flee or surrender** (you choose to zip-tie them, or not). Bureau escorts never surrender.
+- **You:** in the van outside for now. Later, "long-distance connection" upgrades (antennas and so on) let you command from the war room, and advisors can choose for you, so it can truly run itself. Base level first.
+
+## Build: the first fight (2026-11-22)
+Title screen > **Combat: depot raid** (`v2/combat/fight.tscn`, content in `data/v2/combat/depot.json`).
+- **The building:** made from the room and door list (`level.gd`): a corridor, a break room, a store room (locked), a security room, and the dispatch office with the manifests. Doors open, get kicked in, or get blown. Lights flicker; the dark limits sight.
+- **Four named fighters** (`actor.gd` = soldier + combat state):
+  - stats come from their gear (`rules.gd`, Tarkov-lite): round types against plate classes, attachments;
+  - every mag, med, flash and charge is counted;
+  - they reload on their own and bandage themselves;
+  - downed fighters bleed out unless patched.
+- **Doctrine** (`squad_ai.gd`): stack, a breath, breach (open / kick a locked door / bang / charge), flow in one at a time to the corners (the rear man holds the hall), call it clear, move to the next room, take the objective, walk out. The medic waits out the shooting unless you shout MEDIC. Anyone who gives up gets zip-tied.
+- **Guards** (`enemy_ai.gd`): sit, patrol, see your weapon lights, hear shots and kicks (muffled through walls), fight back. They run or surrender when their nerve breaks. The Bureau escort never gives up.
+- **You** (`fight.gd`):
+  - **the shout wheel** on right mouse: stack, breach, bang & clear, push, hold, fall back, cover, focus, medic, carry on;
+  - click the target on the main feed;
+  - **1-4** pick who you're talking to; **Tab** or a tile click switches the feed;
+  - **Space** pauses; **G** carries on.
+  - Once you take control, they wait for your next call.
+- **Feeds:** helmet cams for all four plus two hacked CCTV, live tiles along the bottom. A dead fighter's cam goes to NO SIGNAL.
+- **Radio:** barks as subtitles with a squelch. Gunshots, kicks and flashes are made in code (placeholders).
+- **The op report:** every fighter (status, shots, hits, meds left), what happened to every guard, and **every shout you gave and when**.
+- **Tested** with bots: doctrine alone succeeds sometimes and fails sometimes (the Bureau escort in the security room); a "bang & clear" shout on that door turned the same fight into a clean win.
+- **Not yet:**
+  - the FPV and recon drones;
+  - the mortar;
+  - walking yourself in from the van;
+  - better animations (no reload or bandage motions yet, just poses);
+  - real sounds;
+  - the loadout screen and the link to the stash, the depot hack and the garage;
+  - balance (it's random and swingy).

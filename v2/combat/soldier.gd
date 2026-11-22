@@ -244,8 +244,17 @@ func _process(delta: float) -> void:
 	_pose(delta)
 
 
+var pose_mode := "normal"        # normal, down, dead, hands_up
+
+
 func _pose(_delta: float) -> void:
 	if hips == null:
+		return
+	if pose_mode == "down" or pose_mode == "dead":
+		_pose_down()
+		return
+	if pose_mode == "hands_up":
+		_pose_hands_up()
 		return
 	var moving := clampf(move_speed / 1.2, 0.0, 1.0)
 	var s := sin(_phase)
@@ -274,6 +283,47 @@ func _pose(_delta: float) -> void:
 	var down := -chest.global_basis.y
 	_ik("R", grip, (down + chest.global_basis.x * 0.6).normalized())
 	_ik("L", fore, (down - chest.global_basis.x * 0.9).normalized())
+
+
+## On the floor: lying on the back, a knee up, arms loose. Alive and down, the chest still heaves.
+func _pose_down() -> void:
+	hips.position.y = 0.16
+	hips.rotation = Vector3(-1.45, 0, 0.1)
+	var breathe := 0.0 if pose_mode == "dead" else sin(_t * 3.0) * 0.03
+	chest.rotation = Vector3(0.05 + breathe, 0, 0)
+	neck.rotation = Vector3(0.3, 0.6 if pose_mode == "dead" else sin(_t * 0.7) * 0.4, 0)
+	(hip["L"] as Node3D).rotation = Vector3(0.6, 0, 0.1)
+	(knee["L"] as Node3D).rotation = Vector3(-1.1, 0, 0)
+	(hip["R"] as Node3D).rotation = Vector3(0.05, 0, -0.1)
+	(knee["R"] as Node3D).rotation = Vector3(-0.1, 0, 0)
+	for s in ["L", "R"]:
+		var sx := -1.0 if s == "L" else 1.0
+		(shoulder[s] as Node3D).rotation = Vector3(0.3, 0, sx * 1.1)
+		(elbow[s] as Node3D).rotation = Vector3(0.5, 0, 0)
+	rifle.position = Vector3(0.35, 0.1, -0.2)
+	rifle.rotation = Vector3(0, 1.2, 1.4)
+	if light:
+		light.visible = false
+
+
+## Hands up, rifle hanging on its sling.
+func _pose_hands_up() -> void:
+	hips.position.y = 1.0
+	hips.rotation = Vector3.ZERO
+	for side in ["L", "R"]:
+		(hip[side] as Node3D).rotation = Vector3.ZERO
+		(knee[side] as Node3D).rotation = Vector3.ZERO
+		(ankle[side] as Node3D).rotation = Vector3.ZERO
+	chest.rotation = Vector3(0.05, 0, 0)
+	neck.rotation = Vector3(0.1, sin(_t * 0.9) * 0.2, 0)
+	rifle.position = Vector3(0.1, 0.05, 0.1)
+	rifle.rotation = Vector3(-1.5, 0, 0)
+	if light:
+		light.visible = false
+	var up := chest.global_basis.y
+	var side_v := chest.global_basis.x
+	_ik("R", chest.to_global(Vector3(0.28, 0.95, -0.05)) + Vector3(0, sin(_t * 2.0) * 0.01, 0), (-up + side_v).normalized())
+	_ik("L", chest.to_global(Vector3(-0.28, 0.95, -0.05)), (-up - side_v).normalized())
 
 
 ## Two-bone IK: point the upper arm and forearm so the wrist lands on target, the elbow toward pole.

@@ -64,6 +64,7 @@ func _build() -> void:
 	load_b.disabled = not has_save
 	v.add_child(load_b)
 	v.add_child(Kit.button("Settings", func() -> void: Menus.settings(ui, game), game))
+	v.add_child(Kit.button("Combat: depot raid", func() -> void: game.goto("res://v2/combat/fight.tscn"), game))
 	v.add_child(Kit.button("Combat look test", func() -> void: game.goto("res://v2/combat/look_test.tscn"), game))
 	v.add_child(Kit.button("Quit", func() -> void: game.quit_game(), game))
 	for b in v.get_children():

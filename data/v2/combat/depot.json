@@ -1,0 +1,103 @@
+{
+	"_note": "The first fight (docs/COMBAT_SLICE.md): Dobrev Freight depot, B2 corridor and offices, at night. Floor plan in metres, Godot x (right) and z (forward is -z). rect = [x0, z0, x1, z1]. Placeholder names and numbers; tune freely.",
+	"name": "Dobrev Freight depot - B2 offices",
+	"objective": {"text": "Get the shipping manifests from the dispatch office", "room": "office", "pos": [-1.4, -24.8]},
+	"rooms": [
+		{"id": "hall", "name": "B2 CORRIDOR", "rect": [-1.25, -21.5, 1.25, 2.5]},
+		{"id": "r1", "name": "BREAK ROOM", "rect": [1.25, -7.0, 5.25, -1.0]},
+		{"id": "r2", "name": "STORE ROOM", "rect": [1.25, -13.0, 5.25, -7.0]},
+		{"id": "r3", "name": "SECURITY", "rect": [1.25, -19.0, 5.25, -13.0]},
+		{"id": "office", "name": "DISPATCH OFFICE", "rect": [-2.5, -26.5, 2.5, -21.5]}
+	],
+	"doors": [
+		{"id": "d1", "name": "BREAK ROOM DOOR", "pos": [1.25, -4.0], "axis": "x", "a": "hall", "b": "r1", "locked": false},
+		{"id": "d2", "name": "STORE ROOM DOOR", "pos": [1.25, -10.0], "axis": "x", "a": "hall", "b": "r2", "locked": true},
+		{"id": "d3", "name": "SECURITY DOOR", "pos": [1.25, -16.0], "axis": "x", "a": "hall", "b": "r3", "locked": false},
+		{"id": "d4", "name": "OFFICE DOOR", "pos": [0.0, -21.5], "axis": "z", "a": "hall", "b": "office", "locked": false}
+	],
+	"lights": [
+		{"pos": [0.0, -7.5], "energy": 0.55, "flicker": true},
+		{"pos": [0.0, -19.5], "energy": 0.9, "flicker": false},
+		{"pos": [3.3, -16.0], "energy": 0.7, "flicker": false, "color": [0.9, 0.85, 0.7]},
+		{"pos": [0.0, -24.0], "energy": 0.6, "flicker": false, "color": [1.0, 0.8, 0.55]}
+	],
+	"cctv": [
+		{"id": "CCTV-07", "label": "B2 CORRIDOR", "pos": [0.95, 2.5, -20.9], "look": [-0.1, 1.0, -6.0]},
+		{"id": "CCTV-09", "label": "SECURITY", "pos": [5.0, 2.5, -18.7], "look": [2.0, 0.8, -14.0]}
+	],
+	"squad": [
+		{"name": "JONAS BRENN", "role": "point", "trait": "steady", "camo": "multicam", "head": "helmet", "back": "",
+			"line": "Ex-army. Came home to a country that sold his street.",
+			"gear": {"weapon": "bench_rifle", "round": "fmj", "attach": ["optic", "light", "grip"], "plate": 2, "mags": 4, "meds": 1, "flash": 1}},
+		{"name": "ADA LIND", "role": "breacher", "trait": "cocky", "camo": "multicam", "head": "helmet", "mask": true, "back": "hydration",
+			"line": "Locksmith's daughter. Opens doors for a living, now for a cause.",
+			"gear": {"weapon": "bench_rifle", "round": "hp", "attach": ["light"], "plate": 2, "mags": 3, "meds": 1, "flash": 2, "charges": 1}},
+		{"name": "MIRA KOVAC", "role": "medic", "trait": "careful", "camo": "multicam", "head": "helmet", "back": "medbag",
+			"line": "Night nurse at the district hospital. Saw what the Bureau sent in.",
+			"gear": {"weapon": "bench_rifle", "round": "fmj", "attach": ["light"], "plate": 1, "mags": 3, "meds": 5, "flash": 0}},
+		{"name": "IVO PETRAK", "role": "rear", "trait": "jumpy", "camo": "multicam", "head": "helmet", "back": "pack",
+			"line": "Nineteen. Talks too much. Never misses a meeting.",
+			"gear": {"weapon": "bench_rifle", "round": "fmj", "attach": ["light", "optic"], "plate": 1, "mags": 4, "meds": 1, "flash": 1}}
+	],
+	"start": {"pos": [0.0, 1.6], "facing": 0.0},
+	"enemies": [
+		{"id": "g1", "name": "guard (break room)", "kind": "guard", "pos": [3.7, -3.2], "yaw": 1.2, "state": "idle", "camo": "black", "head": "cap",
+			"gear": {"weapon": "pistol", "round": "fmj", "attach": [], "plate": 0, "mags": 2, "meds": 0}},
+		{"id": "g2", "name": "guard (patrol)", "kind": "guard", "pos": [-0.3, -19.0], "yaw": 3.14, "state": "patrol", "patrol": [[-0.3, -19.5], [-0.3, -12.5]], "camo": "black", "head": "cap",
+			"gear": {"weapon": "smg", "round": "fmj", "attach": [], "plate": 1, "mags": 2, "meds": 0}},
+		{"id": "g3", "name": "guard (security)", "kind": "guard", "pos": [2.6, -14.4], "yaw": 1.6, "state": "idle", "camo": "black", "head": "cap",
+			"gear": {"weapon": "smg", "round": "fmj", "attach": [], "plate": 0, "mags": 2, "meds": 0}},
+		{"id": "b1", "name": "Bureau escort", "kind": "bureau", "pos": [4.3, -17.6], "yaw": 2.4, "state": "idle", "camo": "black", "head": "helmet",
+			"gear": {"weapon": "carbine", "round": "fmj", "attach": ["optic", "light"], "plate": 2, "mags": 3, "meds": 1}},
+		{"id": "g4", "name": "night dispatcher", "kind": "guard", "pos": [1.4, -24.6], "yaw": 0.6, "state": "idle", "camo": "woodland", "head": "cap", "timid": true,
+			"gear": {"weapon": "pistol", "round": "hp", "attach": [], "plate": 0, "mags": 1, "meds": 0}}
+	],
+	"gear": {
+		"weapons": {
+			"bench_rifle": {"name": "Bench rifle (yours)", "acc": 0.6, "dmg": 34, "burst": 3, "rate": 0.11, "recoil": 0.22, "mag": 30, "reload": 2.8, "ads": 0.5, "jam": 0.012},
+			"pistol": {"name": "Service pistol", "acc": 0.42, "dmg": 24, "burst": 2, "rate": 0.25, "recoil": 0.3, "mag": 15, "reload": 2.0, "ads": 0.35, "jam": 0.01},
+			"smg": {"name": "Guard SMG", "acc": 0.45, "dmg": 22, "burst": 4, "rate": 0.08, "recoil": 0.28, "mag": 30, "reload": 2.4, "ads": 0.4, "jam": 0.015},
+			"carbine": {"name": "Bureau carbine", "acc": 0.6, "dmg": 36, "burst": 3, "rate": 0.1, "recoil": 0.16, "mag": 30, "reload": 2.3, "ads": 0.38, "jam": 0.003}
+		},
+		"rounds": {
+			"hp": {"name": "Hollow (soft)", "dmg": 1.25, "pen": 0.6, "armor": 0.5, "note": "wounds badly, does nothing to plates"},
+			"fmj": {"name": "Ball (standard)", "dmg": 1.0, "pen": 2.1, "armor": 1.0, "note": "the all-rounder"},
+			"ap": {"name": "Penetrator", "dmg": 0.85, "pen": 3.2, "armor": 1.8, "note": "chews plates, wounds less"}
+		},
+		"plates": {
+			"0": {"name": "none", "durability": 0},
+			"1": {"name": "Soft panel", "durability": 40},
+			"2": {"name": "Steel plate", "durability": 80},
+			"3": {"name": "Ceramic plate", "durability": 70}
+		},
+		"attachments": {
+			"optic": {"name": "Red dot", "acc": 0.1, "ads": 0.06},
+			"grip": {"name": "Vertical grip", "recoil": -0.08, "ads": -0.04},
+			"light": {"name": "Weapon light", "spot": true},
+			"stock": {"name": "Padded stock", "recoil": -0.05}
+		}
+	},
+	"barks": {
+		"stack": ["Copy, stacking on {door}.", "Moving to {door}.", "On it. Stacking."],
+		"breach": ["Breaching!", "Door, door, door!", "Going in."],
+		"bang": ["Flash out!", "Bang it, going in!"],
+		"push": ["Pushing {room}.", "Moving up.", "Copy, pushing."],
+		"hold": ["Holding.", "Holding here.", "Copy, holding."],
+		"fallback": ["Falling back!", "Moving back, moving back!"],
+		"cover": ["Covering.", "Got it covered."],
+		"focus": ["On him.", "Target, got it."],
+		"medic": ["Moving to {name}!", "Coming, hold on!"],
+		"go": ["Copy, carrying on.", "Back on it."],
+		"contact": ["Contact!", "Contact front!", "Contact, {room}!"],
+		"hit": ["I'm hit!", "Hit, I'm hit!", "Ah! Took one!"],
+		"down": ["{name} is down!", "Man down!"],
+		"reload": ["Reloading!", "Mag!", "Changing mags!"],
+		"clear": ["Clear!", "{room} clear.", "Room clear."],
+		"enemy_down": ["Tango down.", "He's down.", "Got him."],
+		"surrender": ["Hands! Show me your hands!", "Get down! On the floor!"],
+		"locked": ["Door's locked.", "Locked. Need to breach it."],
+		"nomeds": ["I'm out of meds!", "No more bandages!"],
+		"heal": ["Patching up.", "Bandaging."],
+		"refuse": ["Negative, he's still moving in there!", "Not yet! I'm pinned!", "Can't, I'm reloading!"]
+	}
+}
