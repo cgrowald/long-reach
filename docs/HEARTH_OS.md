@@ -26,3 +26,15 @@
   - **Preferences:** a control panel like reference 1. Appearance changes the wallpaper (saved); the rest are in-world jokes.
 - **Saves:** wallpaper, installed programs and your edited files.
 - **Code:** `v2/os/` (desktop, window, taskbar, start menu, icons, filesystem, apps/*), content in `data/v2/os.json`, hosted by `v2/stations/pc.gd`.
+
+## Font (user, 2026-11-22)
+- "Hard to read, a little too boxy": the OS now uses Tahoma 9 (the Windows 2000 UI font), crisp with no smoothing; the terminal and process list keep a monospace (Lucida Console). The garage HUD and benches still use the old Consolas font.
+
+## Next build: the hacking job (decided, user 2026-11-22)
+- **A short job, 3 programs,** about 3 to 5 minutes, one target (placeholder: the water office's billing server):
+  1. **pscan** sweeps the target's network map for open doors.
+  2. **crackle** picks a login like a lock.
+  3. **grab** the files before the trace bar fills.
+- **The box is 3D on the desk:** lean over, drag a gadget from the stash into a slot, a lamp lights. The programs show what's plugged in, and gadgets are the multipliers (the port scanner from the hacking bench boosts pscan).
+- **Time:** a fixed number of hours per job, shown up front (e.g. 2 hours). The rest of the PC stays free.
+- **Trace bar full:** you're cut out with what you grabbed so far, and the inspector gets a clue (a placeholder until the hunt is built).
