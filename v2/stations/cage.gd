@@ -137,6 +137,18 @@ func _person() -> Dictionary:
 	return people[sel]
 
 
+## A procedural face (v2/ui/face.gd) for one of your people, wearing what is on their head.
+func _face_ctl(p: Dictionary, sz: Vector2) -> Control:
+	var c := Control.new()
+	c.custom_minimum_size = sz
+	var head: String = str(load("res://v2/sim/loadout.gd").to_fighter(game.state, p).get("head", ""))
+	var dead: bool = not p.get("alive", true)
+	c.draw.connect(func() -> void:
+		load("res://v2/ui/face.gd").draw(c, Rect2(Vector2.ZERO, sz), str(p["name"]), head, dead)
+		c.draw_rect(Rect2(Vector2.ZERO, sz), Pal.DIM, false, 1.0))
+	return c
+
+
 # ------------------------------------------------------------------ refresh
 
 func _refresh() -> void:
@@ -152,9 +164,14 @@ func _refresh() -> void:
 			_refresh(), game)
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		b.disabled = not p.get("alive", true)
-		_people_box.add_child(b)
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var row := HBoxContainer.new()
+		row.add_child(_face_ctl(p, Vector2(16, 18)))
+		row.add_child(b)
+		_people_box.add_child(row)
 	var p := _person()
 	if not p.is_empty():
+		_people_box.add_child(_face_ctl(p, Vector2(44, 50)))
 		_people_box.add_child(Kit.label(str(p.get("role", "")).to_upper() + "  " + str(p.get("trait", "")), Pal.AMBER, 8))
 		_people_box.add_child(Kit.label(str(p.get("line", "")), Pal.DIM, 8, 100))
 		_people_box.add_child(Kit.label("Ops: %d" % int(p.get("ops", 0)), Pal.DIM, 8))

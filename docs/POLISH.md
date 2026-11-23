@@ -56,3 +56,10 @@ Give the existing garage a restrained environment-art pass. Preserve its layout,
 - on the bench: an oily rag, a brush, a lamp, a pegboard of wrenches, small drawers.
 
 Read as: the bench is machining a part into shape by hand-feeding a tool, then assembling it from a parts bin of made and bought pieces. **Early game:** a slow hand drill (what we have, made meaningful). **The upgrade:** the press/mill view. Weapons stay stylised (CLAUDE.md): gamified "shape the housing" actions, never real machining steps for real guns. Image not saved as a file (it arrived inline only).
+
+## Built: the mission face-lift (2026-11-22)
+- **FIELD LINK layout** (`v2/combat/fight.gd`): a top bar (UPRISING / FIELD LINK, the objective with a diamond, what the team is doing, pause, ELAPSED); the big feed in a framed panel (it renders into its own viewport now; clicks and markers are mapped into it) with the wearer's face, "02 / ADA LIND", role, signal bars and REC; the ops board as OPS MAP / RECON; a SQUAD panel (number, face, name, signal, STEADY / ENGAGING / RELOADING / BLEEDING with a warning sign / DOWN / KIA; click a row to put their cam big); TALKING TO; a strip of feeds with faces, signal and the room they're in; key hints along the bottom.
+- **Faces** (`v2/ui/face.gd`): option a, layered pixel portraits seeded from the name (skin, face width, jaw, hair style and colour, brows, eyes, nose, mouth, beard, scar, age), with the helmet / cap / beanie from their kit on top. Same face in the fight, the radio subtitles, the op report and the gear cage.
+- **When a cam dies the face stays:** the dead fighter's tile goes to static, then dark, with their greyed face and SIGNAL LOST; the squad row keeps the face with KIA; put their cam big and you get the static with their face in the middle.
+- **Op report** as cards with faces (HOME / KIA, shots, hits, meds).
+- **Not done (later passes):** GPT part sheets for nicer faces; the paper-map look for the ops board ("Rev. B", last report "?" rooms); the gear cage layout spills since the font change (bench-by-bench pass).
