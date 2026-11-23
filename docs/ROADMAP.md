@@ -4,7 +4,8 @@
 > - **M0** (play the backlog): round-1 fixes are done; not signed off yet.
 > - **M1** (the depot raid): built and playable, not played yet. The user wants polish before playing.
 > - **Next, in order:**
->   1. The combat screen clean-up: drop the bottom camera tiles, keep the operator list, show one chosen camera, zoom on the ops map.
+>   1. ~~The combat screen clean-up~~ **done 2026-11-23**: bottom tiles gone, one chosen feed (taller), ammo + health on the squad rows, CAMERAS list under the squad, ops map wheel zoom / drag pan / double-click fit.
+> - **Process change (user 2026-11-23):** small fixes get screenshots in chat, not playtests. Full playtests only after big slice updates.
 >   2. The rest of M1's "still to do".
 >   3. Hand over PLAYTEST_M1.md and open the game.
 > - **Then M1b**, the bench face-lift.
@@ -56,7 +57,7 @@ Nothing new is built. The user plays the unplayed builds, then Claude fixes bugs
   - The combat (ops) map needs zoom in and out.
   - Drop the bottom camera tiles and keep the operator list. You only see the one camera angle you've chosen (click an operator, or a CCTV entry, to switch).
 - **Still to do in M1:**
-  - **The combat screen clean-up above (do this first).**
+  - ~~The combat screen clean-up above~~ (done 2026-11-23).
   - the gun swap mid-fight (take a guard's SMG when dry);
   - choosing the stick carrier by tech level (now it's whoever reaches the PC);
   - the vault room's three door models and cables (the vault is a screen for now);

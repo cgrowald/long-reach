@@ -2,7 +2,8 @@ extends Control
 ## The first fight (docs/COMBAT_SLICE.md sections 1, 5, 8): the Dobrev Freight depot at night.
 ## Your four run it themselves by doctrine; you watch the feeds from the van and shout.
 ##   Right mouse (hold): the shout wheel. Pick a shout, then click the door / room / enemy on the main feed.
-##   1-4: who you're talking to (again to go back to everyone). Tab or a click on a tile: change the main feed.
+##   1-4: who you're talking to (again to go back to everyone). Tab, or a click on a squad / camera row: change the feed.
+##   Ops map: wheel zooms, drag pans, double-click fits the whole plan again.
 ##   Space: pause (allowed for now). G: carry on (doctrine). Esc: cancel a shout; twice to abort the op.
 
 const Pal := preload("res://v2/ui/pal.gd")
@@ -30,7 +31,6 @@ const SHOUTS := [
 	{"id": "go", "label": "CARRY ON", "needs": "", "say": "Carry on. Your call."},
 ]
 const NAME_COL := [Color(0.95, 0.8, 0.45), Color(0.6, 0.85, 1.0), Color(1.0, 0.55, 0.55), Color(0.7, 1.0, 0.6)]
-const TILE := Vector2(88, 40)
 
 var game: Node
 var data: Dictionary
@@ -41,7 +41,7 @@ var squad: Array = []
 var enemies: Array = []
 var sq: RefCounted
 var en: RefCounted
-var feeds: Array = []            # {kind, actor, label, vp, cam, post, tex}
+var feeds: Array = []            # {kind, actor, label, cam (a Node3D marker), dead_t}; only the chosen one renders
 var main_cam: Camera3D
 var main_vp: SubViewport          # the big feed renders here (FIELD LINK panel), not full screen
 var main_post: ShaderMaterial
@@ -228,7 +228,6 @@ func _cameras() -> void:
 	main_cam.keep_aspect = Camera3D.KEEP_WIDTH
 	main_cam.current = true
 	main_post = _post_for(main_cam, 2)
-	var layer := 3
 	for a in squad:
 		feeds.append({"kind": "helmet", "actor": a, "label": "CAM %02d  %s" % [feeds.size() + 1, a.fighter_name]})
 	for c in data.get("cctv", []):
@@ -236,22 +235,12 @@ func _cameras() -> void:
 			continue            # no EYES on this depot: no cameras
 		feeds.append({"kind": "cctv", "def": c, "label": "%s  %s" % [c["id"], c["label"]]})
 	for f in feeds:
-		var vp := SubViewport.new()
-		vp.size = Vector2i(TILE)
-		vp.world_3d = view.vp.find_world_3d()
-		vp.audio_listener_enable_3d = false
-		vp.canvas_item_default_texture_filter = Viewport.DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NEAREST
-		vp.msaa_3d = Viewport.MSAA_DISABLED
-		add_child(vp)
-		var cam := Camera3D.new()
-		cam.near = 0.05
-		vp.add_child(cam)
-		cam.current = true
-		f["vp"] = vp
+		# no picture of its own any more (one chosen feed only): a marker that keeps the
+		# camera's place, so CCTV spotting still works off screen
+		var cam := Node3D.new()
+		main_vp.add_child(cam)
 		f["cam"] = cam
-		f["post"] = _post_for(cam, layer)
 		f["dead_t"] = 0.0
-		layer += 1
 
 
 func _feed_xform(f: Dictionary) -> Transform3D:
@@ -279,10 +268,7 @@ func _update_cameras(delta: float) -> void:
 	for f in feeds:
 		if f["kind"] == "helmet" and f["actor"].state == "dead":
 			f["dead_t"] = float(f["dead_t"]) + delta
-		var xf := _feed_xform(f)
-		(f["cam"] as Camera3D).global_transform = xf
-		(f["cam"] as Camera3D).fov = 64.0 if f["kind"] == "cctv" else 86.0
-		_apply_feed_look(f["post"], f)
+		(f["cam"] as Node3D).global_transform = _feed_xform(f)
 	var mf: Dictionary = feeds[main_i]
 	main_cam.global_transform = _feed_xform(mf)
 	main_cam.fov = 80.0 if mf["kind"] == "cctv" else 100.0
@@ -507,12 +493,13 @@ func _input(e: InputEvent) -> void:
 						game.sfx.play("switch_002", 1.0 + i * 0.05, -10.0)
 					get_viewport().set_input_as_handled()
 					return
-			# a tile?
-			for i in feeds.size():
-				if _tile_rect(i).has_point(mp):
-					main_i = i
+			# a camera row?
+			var cams := _cctv_feeds()
+			for j in cams.size():
+				if _cam_row(j).has_point(mp):
+					main_i = cams[j]
 					if game:
-						game.sfx.play("switch_002", 1.0 + i * 0.05, -10.0)
+						game.sfx.play("switch_002", 1.1 + j * 0.05, -10.0)
 					get_viewport().set_input_as_handled()
 					return
 			if pending >= 0:
@@ -634,7 +621,7 @@ const UI_DIM := Color(0.6, 0.58, 0.52)
 const UI_AMBER := Color(0.95, 0.72, 0.3)
 const UI_TEAL := Color(0.45, 0.72, 0.7)
 const UI_RED := Color(0.9, 0.3, 0.22)
-const STRIP_H := 76.0
+const CAM_ROW := 15.0
 const Face := preload("res://v2/ui/face.gd")
 
 
@@ -644,7 +631,7 @@ func _top_rect() -> Rect2:
 
 func _main_rect() -> Rect2:
 	var w := floorf((hud.size.x - 12) * 0.68)
-	return Rect2(4, 31, w, hud.size.y - 31 - STRIP_H - 24)
+	return Rect2(4, 31, w, hud.size.y - 31 - 21)
 
 
 func _main_img() -> Rect2:
@@ -668,19 +655,30 @@ func _squad_rect() -> Rect2:
 
 func _squad_row(i: int) -> Rect2:
 	var r := _squad_rect()
-	var h := minf(26.0, (r.size.y - 40) / maxf(1, squad.size()))
+	var n := _cctv_feeds().size()
+	var cam_block := 0.0 if n == 0 else 16.0 + n * CAM_ROW
+	var h := minf(26.0, (r.size.y - 40 - cam_block) / maxf(1, squad.size()) - 2)
 	return Rect2(r.position.x + 3, r.position.y + 15 + i * (h + 2), r.size.x - 6, h)
 
 
-func _tile_rect(i: int) -> Rect2:
-	var n := maxi(1, feeds.size())
-	var w := floorf((hud.size.x - 8 - (n - 1) * 4) / n)
-	return Rect2(4 + i * (w + 4), hud.size.y - STRIP_H - 20, w, STRIP_H)
+## Feed indexes of the CCTV cameras (EYES), listed under the squad.
+func _cctv_feeds() -> Array:
+	var out: Array = []
+	for k in feeds.size():
+		if feeds[k]["kind"] == "cctv":
+			out.append(k)
+	return out
 
 
-func _tile_img(i: int) -> Rect2:
-	var r := _tile_rect(i)
-	return Rect2(r.position + Vector2(1, 19), Vector2(r.size.x - 2, r.size.y - 32))
+func _cam_header_y() -> float:
+	if squad.is_empty():
+		return _squad_rect().position.y + 15
+	return _squad_row(squad.size() - 1).end.y + 4
+
+
+func _cam_row(j: int) -> Rect2:
+	var r := _squad_rect()
+	return Rect2(r.position.x + 3, _cam_header_y() + 13 + j * CAM_ROW, r.size.x - 6, CAM_ROW - 2)
 
 
 ## Mouse (UI units) -> the main feed's viewport pixels, or (-1,-1) if off the feed.
@@ -848,6 +846,12 @@ func _draw_hud() -> void:
 			_warn(Vector2(nx + 3, r.get_center().y))
 			nx += 10
 		Pal.text(hud, Vector2(nx, r.get_center().y - 5), _first(a).to_upper(), 9, UI_TEXT)
+		if a.state != "dead":
+			# ammo and health (they used to sit on the camera tiles)
+			Pal.text(hud, Vector2(r.end.x - 112, r.get_center().y - 5), "%d+%d" % [a.mag_rounds, a.mags], 8, UI_DIM, HORIZONTAL_ALIGNMENT_RIGHT, 34)
+			var hp_x := nb.end.x + r.size.y
+			var hp_w := r.end.x - hp_x - 4
+			hud.draw_rect(Rect2(Vector2(hp_x, r.end.y - 3), Vector2(hp_w * clampf(a.hp / 100.0, 0, 1), 2)), UI_TEAL if a.wounds == 0 else UI_RED)
 		_bars(Vector2(r.end.x - 74, r.get_center().y - 5), _signal(a), UI_TEXT)
 		if a.state == "down" and fmod(t_op, 0.6) < 0.3:
 			pass
@@ -857,43 +861,26 @@ func _draw_hud() -> void:
 	var tr := Rect2(sr.position.x + 3, sr.end.y - 17, sr.size.x * 0.55, 14)
 	hud.draw_rect(tr, UI_LINE, false, 1.0)
 	Pal.text(hud, tr.position + Vector2(4, 2), to, 8, UI_AMBER)
-	# ---- the feed strip
-	for i in feeds.size():
-		var f: Dictionary = feeds[i]
-		var r := _tile_rect(i)
-		var ti := _tile_img(i)
-		var on := i == main_i
-		hud.draw_rect(r, UI_PANEL)
-		hud.draw_texture_rect((f["vp"] as SubViewport).get_texture(), ti, false)
-		var cap := ""
-		if f["kind"] == "helmet":
-			var a = f["actor"]
-			_face(a, Rect2(r.position + Vector2(2, 1), Vector2(16, 17)))
-			Pal.text(hud, r.position + Vector2(21, 3), "%d %s" % [i + 1, _first(a).to_upper()], 9, UI_TEXT)
-			if _state_word(a)[1] == UI_RED:
-				_warn(Vector2(r.end.x - 26, r.position.y + 8))
-			_bars(Vector2(r.end.x - 17, r.position.y + 3), _signal(a), UI_TEXT)
-			cap = _title(str(level.room(level.room_at(a.global_position)).get("name", "")))
-			if a.state == "dead":
-				hud.draw_rect(ti, Color(0.03, 0.03, 0.03, clampf(float(f["dead_t"]) / 2.5, 0.0, 0.85)))
-				var fs := minf(ti.size.y - 6, 40.0)
-				Face.draw(hud, Rect2(ti.get_center() - Vector2(fs * 0.45, fs * 0.5), Vector2(fs * 0.9, fs)), str(a.fighter_name), str(a.get_meta("head", "helmet")), true)
-				Pal.text(hud, Vector2(ti.position.x, ti.end.y - 11), "SIGNAL LOST", 8, UI_RED, HORIZONTAL_ALIGNMENT_CENTER, ti.size.x)
-			else:
-				Pal.text(hud, Vector2(r.end.x - 52, r.end.y - 12), "%d+%d" % [a.mag_rounds, a.mags], 8, UI_DIM, HORIZONTAL_ALIGNMENT_RIGHT, 48)
-				hud.draw_rect(Rect2(ti.position + Vector2(0, ti.size.y - 2), Vector2(ti.size.x * clampf(a.hp / 100.0, 0, 1), 2)), UI_TEAL if a.wounds == 0 else UI_RED)
-		else:
-			_cam_icon(r.position + Vector2(4, 4))
-			Pal.text(hud, r.position + Vector2(20, 2), str(f["def"]["id"]).to_upper(), 9, UI_TEXT)
-			_bars(Vector2(r.end.x - 17, r.position.y + 3), 3, UI_TEXT)
-			cap = _title(str(f["def"]["label"]))
-		Pal.text(hud, Vector2(r.position.x + 3, r.end.y - 12), cap, 8, UI_TEXT, HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 44)
-		hud.draw_rect(r, UI_AMBER if on else UI_LINE, false, 2.0 if on else 1.0)
+	# ---- the cameras (EYES), under the squad: click one to watch it
+	var cams := _cctv_feeds()
+	if not cams.is_empty():
+		var cy := _cam_header_y()
+		Pal.text(hud, Vector2(sr.position.x + 5, cy), "CAMERAS", 8, UI_DIM)
+		hud.draw_line(Vector2(sr.position.x + 48, cy + 5), Vector2(sr.end.x - 5, cy + 5), Color(UI_LINE, 0.3), 1.0)
+		for j in cams.size():
+			var f: Dictionary = feeds[cams[j]]
+			var r := _cam_row(j)
+			var on: bool = cams[j] == main_i
+			hud.draw_rect(r, Color(UI_AMBER, 0.08) if on else Color(0, 0, 0, 0))
+			hud.draw_rect(r, UI_AMBER if on else Color(UI_LINE, 0.35), false, 2.0 if on else 1.0)
+			_cam_icon(r.position + Vector2(4, (r.size.y - 9) * 0.5))
+			Pal.text(hud, r.position + Vector2(20, (r.size.y - 10) * 0.5), str(f["def"]["id"]).to_upper(), 8, Color(0.6, 1.0, 0.6))
+			Pal.text(hud, r.position + Vector2(58, (r.size.y - 10) * 0.5), _title(str(f["def"]["label"])), 8, UI_TEXT, HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 62)
 	# ---- key hints
 	var hb := Rect2(4, h - 17, w - 8, 15)
 	_panel(hb)
 	var hx2 := hb.position.x + 6
-	for kv in [["1-4", "Talk to one"], ["Tab", "Next feed"], ["R-mouse", "Shout"], ["Space", "Pause"], ["G", "Carry on"], ["Esc", "Back"]]:
+	for kv in [["1-4", "Talk to one"], ["Tab", "Next feed"], ["Wheel", "Zoom map (dbl-click: fit)"], ["R-mouse", "Shout"], ["Space", "Pause"], ["G", "Carry on"], ["Esc", "Back"]]:
 		Pal.text(hud, Vector2(hx2, hb.position.y + 3), kv[0], 8, UI_TEXT)
 		hx2 += kv[0].length() * 5.0 + 6
 		Pal.text(hud, Vector2(hx2, hb.position.y + 3), kv[1], 8, UI_TEAL)
@@ -1079,7 +1066,7 @@ func _cctv_spot() -> void:
 	for f in feeds:
 		if f["kind"] != "cctv":
 			continue
-		var cam: Camera3D = f["cam"]
+		var cam: Node3D = f["cam"]
 		var fwd := -cam.global_basis.z
 		for e in enemies:
 			if e.state != "ok":

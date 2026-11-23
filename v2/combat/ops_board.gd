@@ -19,12 +19,18 @@ var menu_hover := -1
 var _scale := 1.0
 var _origin := Vector2.ZERO
 var _bounds := Rect2()
+var zoom := 1.0                # 1 = the whole plan fits; wheel zooms around the cursor
+var pan := Vector2.ZERO        # board pixels, added to the fitted origin
+var _dragging := false
+var _drag_moved := 0.0
+const ZOOM_MAX := 6.0
 
 
 func setup(p_fight: Control, p_blueprint: bool) -> void:
 	fight = p_fight
 	blueprint = p_blueprint
 	mouse_filter = Control.MOUSE_FILTER_STOP
+	clip_contents = true
 	var lv = fight.level
 	_bounds = lv.rooms[0]["rect"]
 	for r in lv.rooms:
@@ -34,9 +40,50 @@ func setup(p_fight: Control, p_blueprint: bool) -> void:
 
 
 func _fit() -> void:
-	var inner := Rect2(Vector2(6, 14), size - Vector2(12, 20))
-	_scale = minf(inner.size.x / _bounds.size.x, inner.size.y / _bounds.size.y)
-	_origin = inner.position + (inner.size - _bounds.size * _scale) * 0.5
+	var o0 := _fit_origin()
+	_scale = _fit_scale() * zoom
+	# keep the middle of the board over the plan, so you can't lose it off the edge
+	var c := size * 0.5
+	var span := _bounds.size * _scale
+	var o := o0 + pan
+	if zoom <= 1.0:
+		o = o0
+	else:
+		o.x = clampf(o.x, c.x - span.x, c.x)
+		o.y = clampf(o.y, c.y - span.y, c.y)
+	pan = o - o0
+	_origin = o
+
+
+func _inner() -> Rect2:
+	return Rect2(Vector2(6, 14), size - Vector2(12, 20))
+
+
+func _fit_scale() -> float:
+	var inner := _inner()
+	return minf(inner.size.x / _bounds.size.x, inner.size.y / _bounds.size.y)
+
+
+## Where the plan's corner sits at zoom 1 (and the anchor `pan` is measured from at every zoom).
+func _fit_origin() -> Vector2:
+	var inner := _inner()
+	var s := _fit_scale() * zoom
+	return inner.position + (inner.size - _bounds.size * s) * 0.5
+
+
+## Zoom by `f` keeping the plan point under `at` (board pixels) where it is.
+func zoom_at(at: Vector2, f: float) -> void:
+	_fit()
+	var w := (at - _origin) / _scale              # plan units from the corner
+	zoom = clampf(zoom * f, 1.0, ZOOM_MAX)
+	var s := _fit_scale() * zoom
+	pan = (at - w * s) - _fit_origin()
+	_fit()
+
+
+func reset_view() -> void:
+	zoom = 1.0
+	pan = Vector2.ZERO
 
 
 func to_board(p: Vector3) -> Vector2:
@@ -64,8 +111,6 @@ func _draw() -> void:
 	_fit()
 	var lv = fight.level
 	draw_rect(Rect2(Vector2.ZERO, size), Color(PAPER, 0.93))
-	draw_rect(Rect2(Vector2.ZERO, size), INK, false, 1.0)
-	Pal.text(self, Vector2(4, 2), "OPS BOARD  " + ("BLUEPRINT" if blueprint else "SKETCH"), 8, INK)
 	for r in lv.rooms:
 		var rc: Rect2 = r["rect"]
 		var br := Rect2(to_board(Vector3(rc.position.x, 0, rc.position.y)), rc.size * _scale)
@@ -121,6 +166,12 @@ func _draw() -> void:
 		Pal.text(self, p + Vector2(4, -6), str(i + 1), 8, INK)
 		if fight.recipients.has(a):
 			draw_arc(p, 6.0, 0, TAU, 12, Color(0.9, 0.5, 0.1), 1.0)
+	# the title strip and frame on top, so a zoomed plan slides under them
+	draw_rect(Rect2(0, 0, size.x, 12), Color(PAPER, 0.97))
+	Pal.text(self, Vector2(4, 2), "OPS BOARD  " + ("BLUEPRINT" if blueprint else "SKETCH"), 8, INK)
+	var zt := "x%.1f" % zoom if zoom > 1.0 else "wheel: zoom"
+	Pal.text(self, Vector2(size.x - 64, 2), zt, 8, Color(INK, 0.55), HORIZONTAL_ALIGNMENT_RIGHT, 60)
+	draw_rect(Rect2(Vector2.ZERO, size), INK, false, 1.0)
 	if not menu.is_empty():
 		_draw_menu()
 
@@ -171,10 +222,32 @@ func _gui_input(e: InputEvent) -> void:
 	if e is InputEventMouseMotion and not menu.is_empty():
 		var r := _menu_rect()
 		menu_hover = int((e.position.y - r.position.y - 2) / 10) if r.has_point(e.position) else -1
+	# pan: drag with the left (on empty paper) or middle button
+	if e is InputEventMouseMotion and _dragging:
+		pan += e.relative
+		_drag_moved += e.relative.length()
+		accept_event()
+		return
+	if e is InputEventMouseButton and not e.pressed and (e.button_index == MOUSE_BUTTON_LEFT or e.button_index == MOUSE_BUTTON_MIDDLE):
+		_dragging = false
+		return
 	if not (e is InputEventMouseButton and e.pressed):
 		return
 	accept_event()
 	var p: Vector2 = e.position
+	if menu.is_empty():
+		if e.button_index == MOUSE_BUTTON_WHEEL_UP:
+			zoom_at(p, 1.25)
+			return
+		if e.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+			zoom_at(p, 0.8)
+			return
+		if e.button_index == MOUSE_BUTTON_MIDDLE:
+			_dragging = true
+			return
+		if e.button_index == MOUSE_BUTTON_LEFT and e.double_click:
+			reset_view()
+			return
 	if not menu.is_empty():
 		var r := _menu_rect()
 		if e.button_index == MOUSE_BUTTON_LEFT and r.has_point(p):
@@ -192,6 +265,9 @@ func _gui_input(e: InputEvent) -> void:
 			var a = hit["fighter"]
 			fight.main_i = fight.squad.find(a)
 			fight.recipients = [a]
+		else:
+			_dragging = true          # empty paper: drag to pan
+			_drag_moved = 0.0
 		return
 	if e.button_index != MOUSE_BUTTON_RIGHT:
 		return
