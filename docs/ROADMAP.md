@@ -15,6 +15,7 @@ The user asked for this to stop us creating more and more new work before finish
 ---
 
 ## M0. Play what's already built (the backlog)
+**Status: in playtest since 2026-11-23** (work list: docs/PLAYTEST_M0.md).
 Nothing new is built. The user plays the unplayed builds, then Claude fixes bugs until sign-off:
 - markets (ShopNet, Lantern, the Tram Yard curfew dash, barter, stings);
 - lockpicking (the yard gate and the title toy);
@@ -86,4 +87,7 @@ The face-lift goes piece by piece inside each milestone, using docs/LOOK_BIBLE.m
 - Files as readable documents about people you recognise (RESEARCH_IDEAS B).
 - Propaganda clips from helmet cams (RESEARCH_IDEAS I).
 - The fixer as a character with commissions.
+- The man who made the vault doors teaches you to pick them, for a price (its own hit) (V1).
+- Explosives to open all three vault doors (late game, V1).
+- Designing your own garments, with the stripe (L1).
 - Vehicles from somewhere other than depots.

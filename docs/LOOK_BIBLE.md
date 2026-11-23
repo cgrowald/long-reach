@@ -97,3 +97,34 @@ Still to save: the two Pacific Drive shots (a repair overlay on the car, and the
 - c) The cage first (Battle Brothers layout).
 - d) Bench repairs first (Pacific Drive).
 - e) Each piece alongside whatever system it belongs to.
+
+## 4. Answers (user, 2026-11-23)
+
+**L1. All of the above.**
+- Colourful repairs for sure: a sweet charm.
+- Later you design your own garments and add the stripe, and still patch them in colourful patches.
+- All clothing gets damaged when the soldier gets hurt.
+- Armbands are an optional cosmetic.
+- District armies get their own colours.
+- The regime is always dark, so lots of other colours are fine.
+
+**L2. A, exactly.** Regime 2040s, people 1980s. Some 2040s things reach the people, but never as available as in real life: held back from them.
+
+**L3. A.** A regime plastic card.
+
+**L4. C.**
+- What the regime cares about is all nice and fancy.
+- A deli-counter ticket at the grocery is just old paper.
+- You can SEE the gap, and it fuels the hate for the regime.
+
+**L5. C and A, as tiers.**
+- **Higher tiers:** hearth-flame and orange accents. Serving there is a luxury, locked to the high class and an honour.
+- **Lowest tier:** low-class people can join the regime. They wear slate grey and dark blue: the lowly guards you fight first. It takes them about 20 years to get ahead.
+
+**L6. A.** The 3D fighter in the middle, slots around them, the stash grid on the right, the roster along the bottom.
+
+**L7. A.** Pacific Drive repairs (Parking lot).
+
+**L8. A.** The curfew map stays top-down, restyled with lamplight pools, stairs and narrow doors.
+
+**L9. E.** Each piece of the look goes in with its own system.

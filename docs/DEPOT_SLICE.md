@@ -238,3 +238,22 @@ The other ideas (a work audit, a checkpoint) all go in too. At first the consequ
 **G11. Both (c).**
 - Most buildings have holding cells: the regime jails people for the smallest rule.
 - Or an ex-worker who heard from a friend ("hey, we're hitting the old warehouse").
+
+## 6. Answers, round 3: the vault (user, 2026-11-23)
+
+**V1. The vault doors open by a hack.**
+- Cables visibly connect all three doors to something on the network.
+- The USB carrier plugs into the computer that controls them. The system allows ONE door before it locks out, so you can't hoard.
+- Later in the game: explosives blueprints, or found explosives, to open all three.
+- One day you might find the man who made the doors, who teaches you to pick them for a price (could be its own hit). → Parking lot.
+
+**V2. The backup timer starts once you go loud.** Two levels, like Payday, or Ghost of Tsushima where a guard runs for the radio or the alarm:
+1. A guard goes for the alarm, and you can stop them. Stopping them kills that alarm.
+2. From the first gunshot, neighbours eventually call it in no matter what. So you can never loot the whole place.
+
+**V3. The quick van hack is a small PATCHBAY (just the code chain), with the backup timer as its trace.**
+
+**V4. All of the above.**
+- The vault doors push you forward, like Dungeon Crawler Carl's system AI.
+- They are NOT generated to give you what you need: there's a real chance it isn't great, but you still try because it can be amazing.
+- The vault isn't the main reason for the hit. It sits in the room with the main supplies you came for (meds, guns, materials).
