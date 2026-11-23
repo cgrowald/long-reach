@@ -124,6 +124,38 @@
 			],
 			"makes": {"type": "device", "device": "drop_stick"},
 			"perks": [{"min": 0.8, "text": "Fast write: the upload starts sooner"}]
+		},
+		{
+			"id": "pipe_suppressor", "name": "Pipe suppressor (blueprint)", "bench": "weapons", "tier": 2, "hours": 2.0, "blueprint": true, "model": "Item_Upper",
+			"needs": {"alu": 1, "pins": 2}, "tool": "hand_drill", "material_mult": 1.0, "piece": "metal",
+			"steps": [
+				{"verb": "drill", "count": 5, "text": "Drill the baffle holes in a line"},
+				{"verb": "file", "text": "File the bore clean"},
+				{"verb": "fit", "parts": ["baffle", "baffle", "cap"], "text": "Stack the baffles and cap it"}
+			],
+			"makes": {"type": "part", "slot": "muzzle"},
+			"perks": [{"min": 0.75, "text": "Quiet: guards hear less"}, {"min": 0.92, "text": "Tight: no accuracy loss"}]
+		},
+		{
+			"id": "med_pouch", "name": "Medic pouch (blueprint)", "bench": "meds", "tier": 2, "hours": 1.5, "blueprint": true, "model": "Item_MedPouch_Upgraded",
+			"needs": {"bag": 1, "strap": 1, "alcohol": 1}, "tool": "kitchen_scissors", "material_mult": 1.0, "piece": "cloth",
+			"steps": [
+				{"verb": "cut", "text": "Cut the pouch panel"},
+				{"verb": "sew", "count": 6, "text": "Stitch the sides"},
+				{"verb": "fit", "parts": ["bandage", "bandage", "tab"], "text": "Pack it and fit the pull tab"}
+			],
+			"makes": {"type": "gear", "gear": "medbag"},
+			"perks": [{"min": 0.8, "text": "Quick pull: heals faster mid-fight"}]
+		},
+		{
+			"id": "signal_booster", "name": "Signal booster (blueprint)", "bench": "electronics", "tier": 2, "hours": 1.5, "blueprint": true, "model": "Item_Gadget_Upgraded",
+			"needs": {"board": 1, "chips": 2}, "tool": "cheap_iron", "material_mult": 1.0, "piece": "board",
+			"steps": [
+				{"verb": "fit", "parts": ["coil", "chip", "chip", "antenna"], "text": "Place the coil, chips and antenna"},
+				{"verb": "solder", "count": 6, "text": "Solder each joint"}
+			],
+			"makes": {"type": "gadget", "box_slot": "scan"},
+			"perks": [{"min": 0.8, "text": "Long reach: more ghost tiles"}]
 		}
 	]
 }

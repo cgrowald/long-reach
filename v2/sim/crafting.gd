@@ -5,7 +5,7 @@ extends RefCounted
 const Content := preload("res://v2/sim/content.gd")
 const Materials := preload("res://v2/sim/materials.gd")
 const GOOD_STARS := 3          # a craft this good counts toward mastery
-const BATCH_AFTER := 3         # good crafts needed before batching
+const BATCH_AFTER := 5         # good crafts needed before making lots (user 2026-11-23: start at 5, see if too easy)
 
 
 static func data() -> Dictionary:
@@ -37,6 +37,8 @@ static func tool_def(id: String) -> Dictionary:
 
 ## Unlocked = no "after", or the earlier recipe has been made well at least once.
 static func unlocked(state, r: Dictionary) -> bool:
+	if r.get("blueprint", false) and not state.unlocked_recipes.has(r["id"]):
+		return false             # found in a depot vault, never otherwise
 	var after: String = r.get("after", "")
 	return after == "" or int(mastery(state, after).get("good", 0)) >= 1 or state.unlocked_recipes.has(r["id"])
 
@@ -91,7 +93,7 @@ static func best_grade(state, r: Dictionary) -> float:
 
 static func tool_mult(state, r: Dictionary) -> float:
 	var t: String = r.get("tool", "hands")
-	return float(tool_def(t).get("mult", 1.0)) if state.tools.has(t) else 0.7
+	return (float(tool_def(t).get("mult", 1.0)) if state.tools.has(t) else 0.7) + upgrade_bonus(state, str(r.get("bench", "")))
 
 
 ## The formula, for the result screen: {steps, tool, material, quality}.
@@ -102,7 +104,8 @@ static func formula(state, r: Dictionary, step_scores: Array, grade := -1.0) -> 
 	avg = avg / maxf(1.0, step_scores.size())
 	var tm := tool_mult(state, r)
 	var mm := float(r.get("material_mult", 1.0)) if grade < 0.0 else Materials.grade_mult(grade)
-	return {"steps": avg, "tool": tm, "material": mm, "quality": clampf(avg * tm * mm, 0.0, 1.0)}
+	var swing := quirk_swing(state, str(r.get("bench", "")), randf())
+	return {"steps": avg, "tool": tm, "material": mm, "quality": clampf(avg * tm * mm + swing, 0.0, 1.0)}
 
 
 static func stars_for(q: float) -> int:
@@ -157,3 +160,58 @@ static func batch(state, r: Dictionary, grade := -1.0) -> Dictionary:
 	var m := mastery(state, r["id"])
 	var q := minf(float(m["sum"]) / maxf(1.0, float(m["made"])), 0.91)
 	return finish(state, r, q, false, grade)
+
+
+# ------------------------------------------------------------------ bench upgrades (from depot vaults, data/v2/depot.json "upgrades")
+
+static func upgrades_def() -> Dictionary:
+	return Content.get_file("depot_runs").get("upgrades", {})
+
+
+static func installed(state) -> Array:
+	return state.flags.get("bench_upgrades", [])
+
+
+## The tool multiplier bonus a bench gets from its installed upgrades, plus any combos they make together.
+static func upgrade_bonus(state, bench: String) -> float:
+	var defs := upgrades_def()
+	var have := installed(state)
+	var b := 0.0
+	for id in have:
+		var u: Dictionary = defs.get(id, {})
+		if u.get("bench", "") == bench:
+			b += float(u.get("mult", 0.0))
+	for c in Content.get_file("depot_runs").get("combos", []):
+		if c.get("bench", "") != bench:
+			continue
+		var ok := true
+		for need in c.get("needs", []):
+			if not have.has(need):
+				ok = false
+		if ok:
+			b += float(c.get("mult", 0.0))
+	return b
+
+
+## Quirks: an upgrade that swings your results until you learn it (its variance shrinks as you master that bench's recipes).
+static func quirk_swing(state, bench: String, rng_val: float) -> float:
+	var defs := upgrades_def()
+	var swing := 0.0
+	var learned := 0
+	for rid in state.mastery:
+		var rr := recipe(rid)
+		if rr.get("bench", "") == bench:
+			learned += int(state.mastery[rid].get("good", 0))
+	var tame := clampf(1.0 - learned * 0.1, 0.0, 1.0)
+	for id in installed(state):
+		var u: Dictionary = defs.get(id, {})
+		if u.get("bench", "") == bench and u.has("quirk"):
+			swing += float(u["quirk"].get("variance", 0.0)) * tame
+	return (rng_val * 2.0 - 1.0) * swing
+
+
+static func install_upgrade(state, id: String) -> void:
+	var have: Array = installed(state)
+	if not have.has(id):
+		have.append(id)
+	state.flags["bench_upgrades"] = have

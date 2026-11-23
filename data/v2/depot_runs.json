@@ -1,0 +1,65 @@
+{
+	"_note": "Depot raids (roadmap M1, docs/DEPOT_SLICE.md). One depot per city. Each raid rolls the depot kind (one per bench), the guards (person generator, poor weapons, infinite ammo with reloads) and what's behind the three vault doors. Vault tiers follow the user's Dungeon Crawler Carl rule: never generated to give you what you need; mostly junk, sometimes amazing. After a raid the depot locks for reset_days and remembers how you won. Numbers are first guesses; text is placeholder.",
+	"reset_days": 6,
+	"guards": {"base": [3, 4], "per_attention": 30, "max": 6, "weapons": {"service_pistol": "pistol", "guard_smg": "smg"}},
+	"posts": [
+		{"pos": [3.7, -3.2], "yaw": 1.2, "state": "idle", "room": "r1"},
+		{"pos": [2.0, -5.5], "yaw": 2.6, "state": "idle", "room": "r1"},
+		{"pos": [-0.3, -19.0], "yaw": 3.14, "state": "patrol", "patrol": [[-0.3, -19.5], [-0.3, -12.5]], "room": "hall"},
+		{"pos": [2.6, -14.4], "yaw": 1.6, "state": "idle", "room": "r3"},
+		{"pos": [4.3, -17.6], "yaw": 2.4, "state": "idle", "room": "r3"},
+		{"pos": [1.4, -24.6], "yaw": 0.6, "state": "idle", "room": "office", "timid": true},
+		{"pos": [3.2, -10.5], "yaw": 1.9, "state": "idle", "room": "r2"},
+		{"pos": [0.4, -8.0], "yaw": 0.0, "state": "patrol", "patrol": [[0.4, -2.0], [0.4, -11.0]], "room": "hall"}
+	],
+	"kinds": {
+		"parcel": {"name": "Parcel depot", "bench": "electronics", "stores_title": "Parcel cage", "stores": {"board": [3, 6], "chips": [3, 6], "picks": [2, 4]}},
+		"bulk": {"name": "Bulk depot", "bench": "weapons", "stores_title": "Bulk bay", "stores": {"alu": [2, 4], "pins": [3, 6], "mag_pistol": [1, 3]}},
+		"cold": {"name": "Cold store", "bench": "meds", "stores_title": "Cold room", "stores": {"alcohol": [3, 6], "shirt": [3, 6], "tape": [2, 4]}},
+		"linen": {"name": "Linen warehouse", "bench": "armor", "stores_title": "Linen racks", "stores": {"bag": [2, 4], "strap": [3, 6], "buckle": [2, 4]}}
+	},
+	"vault": {
+		"tiers": [
+			{"id": "junk", "weight": 55, "label": "Junk"},
+			{"id": "decent", "weight": 30, "label": "Decent"},
+			{"id": "good", "weight": 12, "label": "Good"},
+			{"id": "jackpot", "weight": 3, "label": "JACKPOT"}
+		],
+		"junk": [
+			{"type": "material", "count": [6, 10], "grade": [1, 1], "line": "A pile of offcuts. Grade one, all of it."},
+			{"type": "intel_junk", "line": "Filing. Years of it. One folder might be worth something."},
+			{"type": "empty", "lines": ["Empty. Someone got here first, or it was always empty.", "A single mop and a portrait of the Marshal.", "Mouse droppings and a broken chair."]}
+		],
+		"decent": [
+			{"type": "material", "count": [3, 5], "grade": [3, 4], "line": "Good stock, still in the wrapping."},
+			{"type": "supply", "pool": ["mag_pistol", "clip_5", "shells", "picks"], "count": [2, 4], "line": "Supplies, signed out to nobody."},
+			{"type": "supply", "pool": ["flash"], "count": [1, 2], "line": "Flashbangs in a riot-gear crate."}
+		],
+		"good": [
+			{"type": "gear", "pool": ["plate_soft", "rig_chest", "gasmask", "helmet"], "line": "Proper kit. Someone will miss this."},
+			{"type": "upgrade", "line": "A tool for the bench, still boxed."}
+		],
+		"jackpot": [
+			{"type": "blueprint", "line": "Blueprints. Real ones, stamped by the ministry."},
+			{"type": "upgrade_clean", "line": "Factory-new bench kit, no quirks."}
+		]
+	},
+	"upgrades": {
+		"magnifier_lamp": {"name": "Magnifier lamp", "bench": "electronics", "mult": 0.08, "text": "+0.08 on electronics."},
+		"temp_iron": {"name": "Temperature-controlled iron", "bench": "electronics", "mult": 0.12, "text": "+0.12 on electronics.", "quirk": {"text": "Runs hot until you learn it: results swing.", "variance": 0.12}},
+		"fume_fan": {"name": "Fume fan", "bench": "electronics", "mult": 0.05, "text": "+0.05 on electronics."},
+		"bench_vise": {"name": "Bench vise", "bench": "weapons", "mult": 0.1, "text": "+0.10 on the gun bench."},
+		"drill_guide": {"name": "Drill guide", "bench": "weapons", "mult": 0.12, "text": "+0.12 on the gun bench.", "quirk": {"text": "Slips until you learn it: results swing.", "variance": 0.14}},
+		"walking_foot": {"name": "Walking foot", "bench": "armor", "mult": 0.1, "text": "+0.10 on the sewing table."},
+		"strap_rack": {"name": "Strap rack", "bench": "armor", "mult": 0.06, "text": "+0.06 on the sewing table."},
+		"steriliser": {"name": "Steam steriliser", "bench": "meds", "mult": 0.12, "text": "+0.12 on the med table.", "quirk": {"text": "Temperamental: results swing until you learn it.", "variance": 0.1}},
+		"kit_shelf": {"name": "Kit shelf", "bench": "meds", "mult": 0.06, "text": "+0.06 on the med table."}
+	},
+	"combos": [
+		{"needs": ["magnifier_lamp", "temp_iron"], "bench": "electronics", "mult": 0.1, "name": "Steady hand"},
+		{"needs": ["bench_vise", "drill_guide"], "bench": "weapons", "mult": 0.1, "name": "True bore"},
+		{"needs": ["walking_foot", "strap_rack"], "bench": "armor", "mult": 0.08, "name": "Production line"},
+		{"needs": ["steriliser", "kit_shelf"], "bench": "meds", "mult": 0.08, "name": "Clean room"}
+	],
+	"blueprints": ["pipe_suppressor", "med_pouch", "signal_booster"]
+}

@@ -1,7 +1,7 @@
 extends "res://v2/stations/station.gd"
 ## A bench (docs/DRIVE.md section 3). Pick a recipe, then do it by hand in 3D on the bench top, step by step.
 ## The steps' scores x your tool x the material = quality -> stars, perks, (rig grid). Into the stash.
-## After 3 good crafts a recipe can be batched at your average quality.
+## After 5 good crafts a recipe can be batched (lots) at your average quality.
 
 const Crafting := preload("res://v2/sim/crafting.gd")
 const Materials := preload("res://v2/sim/materials.gd")
