@@ -3,6 +3,8 @@ extends RefCounted
 ## In the debug shell most of these values only feed the screens; the real rules come later.
 
 const Content := preload("res://v2/sim/content.gd")
+const Economy := preload("res://v2/sim/economy.gd")
+const Materials := preload("res://v2/sim/materials.gd")
 const VERSION := 1
 
 var world_seed: int = 0
@@ -26,6 +28,15 @@ var next_item_id: int = 1
 var os: Dictionary = {}               # HEARTH OS: wallpaper, installed programs, edited files (path -> text)
 var people: Array = []                # your people and their kit (v2/sim/loadout.gd)
 var supplies: Dictionary = {}          # bulk carried things: clips, shells, mags, flashes, charges
+var mat_grades: Dictionary = {}        # material id -> [count at 1..5 stars] (v2/sim/materials.gd)
+var job := ""                          # your day job (v2/sim/economy.gd); "" = none (not hired yet, or fired)
+var job_grades: Array = [2, 3]         # this run's grade range at your workplace
+var job_offers: Array = []             # the three offers at a new game
+var suspicion := 0.0                   # how hard work is looking at you (0..100+)
+var actions := 2                       # night actions left (only big things cost one)
+var actions_max := 2
+var steal_done := false                # this morning's steal choice made
+var unlocked_recipes: Array = []       # recipes a perk unlocked outright
 
 
 static func new_game(p_seed: int) -> RefCounted:
@@ -41,6 +52,10 @@ static func new_game(p_seed: int) -> RefCounted:
 	s.materials = (rec.get("start_materials", {}) as Dictionary).duplicate()
 	s.tools = (rec.get("start_tools", []) as Array).duplicate()
 	load("res://v2/sim/loadout.gd").start(s)
+	s.money = int(Economy.data().get("start_money", s.money))
+	Materials.reconcile(s)
+	Economy.roll_offers(s)
+	Economy.night_start(s)
 	return s
 
 
@@ -59,10 +74,11 @@ func clock_text() -> String:
 
 
 func can_spend(hours: float) -> bool:
-	return hours <= hours_left() + 0.001
+	return Economy.action_cost(hours) <= actions
 
 
 func spend(hours: float) -> void:
+	actions = maxi(0, actions - Economy.action_cost(hours))
 	minute = mini(end_minute, minute + int(round(hours * 60.0)))
 
 
@@ -87,6 +103,7 @@ func end_day() -> Array:
 	var drop := rng.randi_range(0, 60)
 	pool = maxi(1, pool - drop)
 	lines.append("Suspect pool: %d (-%d)." % [pool, drop])
+	lines.append_array(Economy.end_of_day(self))
 	ledger.append({"day": day, "lines": lines})
 	if ledger.size() > 30:
 		ledger.pop_front()
@@ -94,6 +111,7 @@ func end_day() -> Array:
 	minute = int(Content.world().get("day_start_hour", 18)) * 60
 	rule_index = _rule_for(world_seed, day)
 	morning_seen = false
+	Economy.night_start(self)
 	return lines
 
 
@@ -103,7 +121,9 @@ func to_dict() -> Dictionary:
 		"money": money, "attention": attention, "pool": pool, "unlocked": unlocked, "flags": flags,
 		"rule_index": rule_index, "morning_seen": morning_seen, "playtime": playtime, "log": ledger,
 		"materials": materials, "tools": tools, "items": items, "mastery": mastery, "next_item_id": next_item_id,
-		"os": os, "people": people, "supplies": supplies,
+		"os": os, "people": people, "supplies": supplies, "mat_grades": mat_grades, "job": job, "job_grades": job_grades,
+		"job_offers": job_offers, "suspicion": suspicion, "actions": actions, "actions_max": actions_max, "steal_done": steal_done,
+		"unlocked_recipes": unlocked_recipes,
 	}
 
 
@@ -133,6 +153,8 @@ static func from_dict(d: Dictionary) -> RefCounted:
 				it[k] = int(it[k])
 	s.mastery = d.get("mastery", {})
 	s.next_item_id = int(d.get("next_item_id", 1))
+	if not d.has("job_offers"):
+		Economy.roll_offers(s)          # an older save: offer the jobs now
 	s.os = d.get("os", {})
 	s.people = d.get("people", [])
 	if not d.has("people"):
@@ -147,9 +169,24 @@ static func from_dict(d: Dictionary) -> RefCounted:
 				e["item"] = int(e["item"])
 		p["level"] = int(p.get("level", 1))
 		p["ops"] = int(p.get("ops", 0))
+	var mg: Dictionary = d.get("mat_grades", {})
+	for k in mg:
+		s.mat_grades[k] = (mg[k] as Array).map(func(v) -> int: return int(v))
+	s.job = str(d.get("job", ""))
+	s.job_grades = (d.get("job_grades", [2, 3]) as Array).map(func(v) -> int: return int(v))
+	s.job_offers = d.get("job_offers", [])
+	for o in s.job_offers:
+		o["lo"] = int(o["lo"])
+		o["hi"] = int(o["hi"])
+	s.suspicion = float(d.get("suspicion", 0.0))
+	s.actions = int(d.get("actions", 2))
+	s.actions_max = int(d.get("actions_max", 2))
+	s.steal_done = bool(d.get("steal_done", false))
+	s.unlocked_recipes = d.get("unlocked_recipes", [])
 	var sup: Dictionary = d.get("supplies", {})
 	for k in sup:
 		s.supplies[k] = int(sup[k])
 	if s.os.has("wallpaper"):
 		s.os["wallpaper"] = int(s.os["wallpaper"])
+	Materials.reconcile(s)
 	return s

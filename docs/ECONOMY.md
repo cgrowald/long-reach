@@ -102,3 +102,16 @@ echo ok
 3. **Lockpicking** (the first going-out scene) and **exploiting a person** (the neighbour bringing parts).
 4. **The fixer and the black market.**
 5. **The garage face-lift** (POLISH.md, when the user says go) and the combat face-lift.
+
+## 10. Built: the economy core (2026-11-22)
+- **Graded materials** (`v2/sim/materials.gd`): state.materials keeps the totals; state.mat_grades keeps counts per star. Crafts use the best first; the grade sets the material multiplier (1 star ×0.8, 3 stars ×1.0, 5 stars ×1.2) and, for rigs, the grid (`grid_by_grade` in recipes.json: a 1-star bag makes a cramped 2×2, 4 stars make 3×3). Recipes can need a minimum grade (the chest rig needs 2-star straps). The bench shows each material's best grade, the multiplier and the resulting grid; the shelves show grades per material.
+- **The day job** (`v2/sim/economy.gd`, `data/v2/economy.json`): a new game offers hospital / steel mill / textile mill, each with this run's grade range, wage, plus and minus.
+  - **Hospital:** meds; field dressings unlocked; night shifts sometimes leave one action.
+  - **Steel mill:** metal; the drill press comes home; the floor is watched (suspicion ×1.4).
+  - **Textile mill:** cloth; a sewing machine; low pay.
+- **The morning card:** pick the job on day one; every later morning choose took nothing / a little / a lot. It shows what you came home with, then the foreman's warning (40), an audit (70: you lose today's take), or being fired (100: job gone, Bureau attention up). Suspicion decays a little each night.
+- **Night actions replace the hour budget:** two per night (the HUD shows NIGHT lamps). Anything of 1.5 hours or more (long crafts, hacking jobs) costs one; small things are free; an op takes the whole night.
+- **Overnight:** your wage comes in, upkeep goes out (8 cr per person). Paid people gain loyalty; unpaid ones lose 15 a night, and at 0 they walk out (Bureau attention up). Start money is 60 cr.
+- **Tested** (bot): offers, perks, steal yields in the grade range, warning, audit, firing, grade effects, minimum grades, actions, wage and upkeep maths, walking out, saves.
+- **Combat fix the same day** (user: "if their eyes can see it, their guns can"): fighters now see about 15 m in the dark (22 m with a light on the target), so the hall guard is the first contact every time.
+- **Next in the economy:** selling intel (the fixer, the black market), lockpicking, exploiting people, the easy first mission.

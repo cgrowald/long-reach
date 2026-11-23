@@ -15,13 +15,27 @@ func build() -> void:
 	body.add_child(h)
 	var st = game.state
 	var left := VBoxContainer.new()
-	left.custom_minimum_size.x = 150
+	left.custom_minimum_size.x = 190
 	h.add_child(left)
 	left.add_child(Kit.label("MATERIALS", Pal.AMBER, 10))
 	var mats: Dictionary = Crafting.data().get("materials", {})
 	for k in mats:
 		var n := int(st.materials.get(k, 0))
-		left.add_child(Kit.label("%-20s %d" % [Crafting.material_name(k), n], Pal.TEXT if n > 0 else Pal.DIM, 8))
+		var gtxt := ""
+		if n > 0:
+			var gs: Array = st.mat_grades.get(k, [0, 0, 0, 0, 0])
+			var parts: Array = []
+			for gi in range(4, -1, -1):
+				if int(gs[gi]) > 0:
+					parts.append("%d@%d*" % [int(gs[gi]), gi + 1])
+			gtxt = "  " + " ".join(PackedStringArray(parts))
+		left.add_child(Kit.label("%-16s %d%s" % [Crafting.material_name(k), n, gtxt], Pal.TEXT if n > 0 else Pal.DIM, 8))
+	var econ := load("res://v2/sim/economy.gd")
+	var jd: Dictionary = econ.job_def(st.job)
+	left.add_child(HSeparator.new())
+	left.add_child(Kit.label("DAY JOB", Pal.AMBER, 10))
+	left.add_child(Kit.label(("%s, %s (%d-%d stars)" % [jd.get("name", ""), jd.get("place", ""), int(st.job_grades[0]), int(st.job_grades[1])]) if not jd.is_empty() else "None.", Pal.TEXT, 8, 185))
+	left.add_child(Kit.label("Work suspicion: %d" % int(st.suspicion), Pal.MULT if st.suspicion >= 40.0 else Pal.DIM, 8))
 	left.add_child(HSeparator.new())
 	left.add_child(Kit.label("TOOLS", Pal.AMBER, 10))
 	for t in st.tools:

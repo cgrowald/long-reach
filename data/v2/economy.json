@@ -1,0 +1,43 @@
+{
+	"_note": "The economy (docs/ECONOMY.md). Day jobs: three offered at a new game, each with a grade range rolled per game (grade_roll picks one). yields = material id: [min, max] units per day when you take 'a little'. Numbers are first guesses: tune here.",
+	"start_money": 60,
+	"actions_per_night": 2,
+	"action_hours": 1.5,
+	"upkeep_per_person": 8,
+	"loyalty_start": 70,
+	"grade_roll": [[1, 2], [2, 3], [2, 3], [3, 4], [3, 5]],
+	"jobs": {
+		"hospital": {
+			"name": "Hospital orderly", "place": "District Hospital No. 2", "wage": 36, "family": "medical",
+			"yields": {"alcohol": [1, 2], "shirt": [1, 2], "tape": [0, 1]},
+			"plus": "Medical supplies, and field dressings are unlocked from day one.",
+			"minus": "Night shifts: some nights you only get one action.",
+			"perk": {"unlock": "field_dressing"}, "night_shift_chance": 0.33
+		},
+		"steel": {
+			"name": "Steel mill hand", "place": "Varga Steelworks", "wage": 44, "family": "metal",
+			"yields": {"alu": [1, 2], "pins": [1, 2]},
+			"plus": "Metal stock, and the mill's old drill press goes home with you (the gun bench works better).",
+			"minus": "The floor is watched: suspicion builds faster.",
+			"perk": {"tool": "drill_press"}, "suspicion_mult": 1.4
+		},
+		"textile": {
+			"name": "Textile mill weaver", "place": "Lindqvist Textiles", "wage": 28, "family": "cloth",
+			"yields": {"bag": [1, 1], "strap": [1, 2], "buckle": [0, 1], "shirt": [0, 1]},
+			"plus": "Cloth and webbing, and a cast-off sewing machine (rigs come out better).",
+			"minus": "Low pay.",
+			"perk": {"tool": "sewing_machine"}
+		}
+	},
+	"steal": {
+		"nothing": {"label": "Took nothing", "mult": 0.0, "suspicion": -5, "grade_bonus": 0},
+		"little": {"label": "Took a little", "mult": 1.0, "suspicion": 7, "grade_bonus": 0},
+		"lot": {"label": "Took a lot", "mult": 2.2, "suspicion": 18, "grade_bonus": 1}
+	},
+	"suspicion": {"warn": 40, "audit": 70, "fired": 100, "decay": 2},
+	"lines": {
+		"warn": "The foreman counted the stock twice today. He looked at you while he did it.",
+		"audit": "AUDIT. They searched the lockers. You lost what you took today, and your name is on a list.",
+		"fired": "FIRED. Security walked you out. Your access is gone, and someone made a call."
+	}
+}

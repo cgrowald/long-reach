@@ -49,11 +49,12 @@ func _draw() -> void:
 	Pal.plate(self, r, Pal.METAL_D)
 	Pal.text(self, r.position + Vector2(5, 3), "DAY %d" % st.day, 10, Pal.AMBER)
 	Pal.text(self, r.position + Vector2(60, 3), st.clock_text(), 10, Pal.PHOS)
-	var left: float = st.hours_left()
-	var total := int(game.day_hours())
-	for i in total:
-		var on := float(i) < left - 0.01
-		Pal.lamp(self, Vector2(r.position.x + 9 + i * 13, r.position.y + 21), 3.0, on, Pal.AMBER if left > 2.0 else Pal.MULT)
+	# night actions: only big things cost one (docs/ECONOMY.md section 7)
+	Pal.text(self, r.position + Vector2(5, 17), "NIGHT", 8, Pal.DIM)
+	for i in int(st.actions_max):
+		Pal.lamp(self, Vector2(r.position.x + 40 + i * 13, r.position.y + 21), 3.5, i < int(st.actions), Pal.AMBER if int(st.actions) > 1 else Pal.MULT)
+	if st.flags.get("night_shift", false):
+		Pal.text(self, r.position + Vector2(70, 17), "shift", 8, Pal.DIM)
 	# Money, suspects, attention.
 	var r2 := Rect2(w - 120, 4, 116, 30)
 	Pal.plate(self, r2, Pal.METAL_D)

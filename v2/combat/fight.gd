@@ -859,6 +859,7 @@ func _return_home() -> void:
 			"worth": "Which trucks carry what, and when.", "source": data.get("name", ""), "day": st.day, "stars": 0, "quality": 0.0, "hand": true, "perks": []})
 		st.next_item_id += 1
 	st.minute = st.end_minute          # an op takes the night
+	st.actions = 0
 	game.remove_meta("op_team")
 	game.set_meta("op_notes", notes)
 	game.autosave()

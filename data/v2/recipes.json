@@ -56,6 +56,7 @@
 				{"verb": "fit", "parts": ["pouch", "pouch", "buckle"], "text": "Tape on the pouches and the buckle"}
 			],
 			"makes": {"type": "rig", "grid": [3, 2], "plates": "none", "gear": "rig_market"},
+			"grid_by_grade": {"1": [2, 2], "2": [3, 2], "3": [3, 2], "4": [3, 3], "5": [4, 3]},
 			"grid_bonus": [{"min": 0.85, "add": [1, 0]}],
 			"perks": [{"min": 0.7, "text": "Doesn't rattle: quieter"}, {"min": 0.9, "text": "Quick-release: drop it and run"}]
 		},
@@ -68,6 +69,7 @@
 				{"verb": "fit", "parts": ["pouch", "pouch", "pouch", "buckle"], "text": "Mount the pouches"}
 			],
 			"makes": {"type": "rig", "grid": [4, 2], "plates": "soft insert", "gear": "rig_chest"},
+			"min_grade": {"strap": 2}, "grid_by_grade": {"2": [3, 2], "3": [4, 2], "4": [4, 2], "5": [4, 3]},
 			"grid_bonus": [{"min": 0.88, "add": [0, 1]}],
 			"perks": [{"min": 0.8, "text": "Balanced: no speed penalty"}]
 		},

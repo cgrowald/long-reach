@@ -3,6 +3,7 @@ extends PanelContainer
 ## F3 toggles a live state readout.
 
 const Kit := preload("res://v2/ui/kit.gd")
+const Materials := preload("res://v2/sim/materials.gd")
 const Pal := preload("res://v2/ui/pal.gd")
 
 var garage: Node
@@ -41,7 +42,7 @@ func setup(p_garage: Node) -> void:
 		garage.toast("Everything unlocked."))
 	add.call("+5 materials", func() -> void:
 		for k in game.state.materials.keys():
-			game.state.materials[k] = int(game.state.materials[k]) + 5
+			Materials.add(game.state, k, 5, 3)
 		garage.toast("+5 of every material."))
 	add.call("Master recipes", func() -> void:
 		for r in load("res://v2/sim/crafting.gd").data().get("recipes", []):

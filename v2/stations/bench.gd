@@ -4,10 +4,13 @@ extends "res://v2/stations/station.gd"
 ## After 3 good crafts a recipe can be batched at your average quality.
 
 const Crafting := preload("res://v2/sim/crafting.gd")
+const Materials := preload("res://v2/sim/materials.gd")
+const Economy := preload("res://v2/sim/economy.gd")
 const BenchWork := preload("res://v2/world/bench_work.gd")
 const GarageWorld := preload("res://v2/world/garage_world.gd")
 const Fx := preload("res://v2/ui/fx.gd")
 
+var _grade := -1.0                # average material grade used for the craft in progress
 var _list: Control
 var _work                       # BenchWork while crafting
 var _recipe: Dictionary = {}
@@ -53,7 +56,7 @@ func _show_list() -> void:
 		var name_l := Kit.label("%s  T%d" % [rec["name"], int(rec.get("tier", 1))], Pal.AMBER, 10)
 		name_l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		head.add_child(name_l)
-		head.add_child(Kit.label("%sh" % _h(float(rec.get("hours", 1.0))), Pal.DIM, 8))
+		head.add_child(Kit.label("1 night action" if Economy.action_cost(float(rec.get("hours", 1.0))) > 0 else "free", Pal.DIM, 8))
 		if not Crafting.unlocked(st, rec):
 			var after := Crafting.recipe(rec.get("after", ""))
 			v.add_child(Kit.label("Locked: make a good %s first (3 stars+)." % after.get("name", "?"), Pal.DIM, 8, 220))
@@ -61,9 +64,17 @@ func _show_list() -> void:
 			continue
 		var needs: Array = []
 		for k in rec.get("needs", {}):
-			needs.append("%s %d/%d" % [Crafting.material_name(k), int(st.materials.get(k, 0)), int(rec["needs"][k])])
+			needs.append("%s %d/%d %s" % [Crafting.material_name(k), int(st.materials.get(k, 0)), int(rec["needs"][k]), Materials.stars(Materials.best(st, k))])
 		var miss := Crafting.missing(st, rec)
 		v.add_child(Kit.label(", ".join(PackedStringArray(needs)), Pal.MULT if not miss.is_empty() else Pal.TEXT, 8, 220))
+		if miss.is_empty():
+			var bg := Crafting.best_grade(st, rec)
+			var gtxt := "Material %.1f stars: x%.2f" % [bg, Materials.grade_mult(bg)]
+			var gbg: Dictionary = rec.get("grid_by_grade", {})
+			if not gbg.is_empty() and gbg.has(str(clampi(int(round(bg)), 1, 5))):
+				var gg: Array = gbg[str(clampi(int(round(bg)), 1, 5))]
+				gtxt += "   rig grid %dx%d" % [int(gg[0]), int(gg[1])]
+			v.add_child(Kit.label(gtxt, Pal.GREEN.darkened(0.2), 8, 220))
 		var tool := Crafting.tool_def(rec.get("tool", "hands"))
 		var avg := float(m["sum"]) / maxf(1.0, float(m["made"]))
 		var mastery_text := "made %d, good %d/%d" % [int(m["made"]), int(m["good"]), Crafting.BATCH_AFTER]
@@ -87,7 +98,7 @@ func _show_list() -> void:
 func _make(r: Dictionary) -> void:
 	if not garage.spend(float(r.get("hours", 1.0))):
 		return
-	Crafting.consume(game.state, r)
+	_grade = Crafting.consume(game.state, r)
 	_recipe = r
 	_step = 0
 	_scores.clear()
@@ -125,16 +136,16 @@ func _on_popup(text: String, world_pos: Vector3, good: bool) -> void:
 
 
 func _finish() -> void:
-	var f := Crafting.formula(game.state, _recipe, _scores)
-	var item := Crafting.finish(game.state, _recipe, f["quality"], true)
+	var f := Crafting.formula(game.state, _recipe, _scores, _grade)
+	var item := Crafting.finish(game.state, _recipe, f["quality"], true, _grade)
 	_show_result(item, f)
 
 
 func _batch(r: Dictionary) -> void:
 	if not garage.spend(float(r.get("hours", 1.0)) * 0.5):
 		return
-	Crafting.consume(game.state, r)
-	var item := Crafting.batch(game.state, r)
+	var bg := Crafting.consume(game.state, r)
+	var item := Crafting.batch(game.state, r, bg)
 	game.sfx.play("confirmation_002", 0.9, -6.0)
 	garage.toast("Batched: %s %s" % [item["name"], "*".repeat(int(item["stars"]))])
 	_show_list()

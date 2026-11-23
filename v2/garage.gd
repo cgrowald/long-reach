@@ -127,7 +127,7 @@ func spend(hours: float) -> bool:
 		return true
 	if not game.state.can_spend(hours):
 		game.deny()
-		toast("Not enough night left. Go to bed.")
+		toast("No night actions left. Small things are still free; go to bed when you're done.")
 		return false
 	game.state.spend(hours)
 	refresh()

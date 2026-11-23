@@ -478,9 +478,10 @@ func _perceive(delta: float) -> void:
 			if to.dot(fwd) < -0.2 and d > 3.0:
 				continue                 # behind them: they don't have eyes back there
 			# in the dark you see a few metres, unless a light is on them: yours, theirs, or the building's
-			var in_beam: bool = f.light != null and f.light.visible and to.dot(fwd) > 0.96 and d < 15.0
+			var in_beam: bool = f.light != null and f.light.visible and to.dot(fwd) > 0.96 and d < 22.0
 			var their_light: bool = e.light != null and e.light.visible
-			if d > 9.0 and not in_beam and not their_light and not e.flashing() and not (level.lit(e.global_position) and d < 14.0):
+			# what the cams can see, they can see: ~15 m in the dark, further when a light is on him
+			if d > 15.0 and not in_beam and not their_light and not e.flashing() and not (level.lit(e.global_position) and d < 22.0):
 				continue
 			if not level.clear_line(f.eye(), e.chest_pos()):
 				continue

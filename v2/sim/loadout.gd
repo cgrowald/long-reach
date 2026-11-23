@@ -42,6 +42,7 @@ static func start(state: RefCounted) -> void:
 		pd["alive"] = true
 		pd["level"] = 1
 		pd["ops"] = 0
+		pd["loyalty"] = int(Content.get_file("economy").get("loyalty_start", 70))
 		pd["kit"] = {}
 		pd["grid"] = []
 		state.people.append(pd)
