@@ -158,7 +158,7 @@ func _refresh() -> void:
 	_people_box.add_child(Kit.heading("Your people"))
 	for i in st.people.size():
 		var p: Dictionary = st.people[i]
-		var b := Kit.button(("> " if i == sel else "  ") + str(p["name"]).split(" ")[0] + ("" if p.get("alive", true) else "  (KIA)"), func() -> void:
+		var b := Kit.button(("> " if i == sel else "  ") + str(p["name"]).split(" ")[0] + ("" if p.get("alive", true) else "  (KIA)") + ("  (hurt %dd)" % int(p.get("injury_days", 0)) if p.get("alive", true) and int(p.get("injury_days", 0)) > 0 else ""), func() -> void:
 			sel = i
 			_holding = {}
 			_refresh(), game)
@@ -173,6 +173,17 @@ func _refresh() -> void:
 	if not p.is_empty():
 		_people_box.add_child(_face_ctl(p, Vector2(44, 50)))
 		_people_box.add_child(Kit.label(str(p.get("role", "")).to_upper() + "  " + str(p.get("trait", "")), Pal.AMBER, 8))
+		var mot = p.get("motive", {})
+		if mot is Dictionary and not mot.is_empty():
+			_people_box.add_child(Kit.label("In it for: " + str(mot.get("name", "")), Pal.DIM, 8, 120))
+		if int(p.get("injury_days", 0)) > 0:
+			_people_box.add_child(Kit.label("HURT: %d days, %d health" % [int(p["injury_days"]), int(p.get("hp", 100))], Color(1.0, 0.5, 0.35), 8, 120))
+			var med := _best_med()
+			if not med.is_empty():
+				_people_box.add_child(Kit.button("Treat (%s %s)" % [str(med.get("name", "")).split(" ")[0], "*".repeat(int(med.get("stars", 0)))], func() -> void:
+					var off := Loadout.treat(game.state, p, med)
+					_say("%d day%s off their recovery." % [off, "" if off == 1 else "s"])
+					_refresh(), game))
 		_people_box.add_child(Kit.label(str(p.get("line", "")), Pal.DIM, 8, 100))
 		_people_box.add_child(Kit.label("Ops: %d" % int(p.get("ops", 0)), Pal.DIM, 8))
 	# slots
@@ -438,12 +449,32 @@ func _abbr(gid: String) -> String:
 func _send() -> void:
 	var st = game.state
 	var team: Array = []
+	var lock: int = load("res://v2/sim/depot_run.gd").locked_for(st)
+	if lock > 0:
+		_say("The depot is locked down after the last raid. %d more night%s." % [lock, "" if lock == 1 else "s"])
+		game.deny()
+		return
 	for p in st.people:
-		if p.get("alive", true):
+		if Loadout.fit_for_duty(p) and team.size() < 4:
 			team.append(p["id"])
 	if team.is_empty():
-		_say("Nobody left to send.")
+		_say("Nobody fit to send. The hurt need time, or treatment.")
 		game.deny()
 		return
 	game.set_meta("op_team", team)
 	game.goto("res://v2/combat/fight.tscn")
+
+
+## The best med item in the stash (for treating the hurt between ops).
+func _best_med() -> Dictionary:
+	var best := {}
+	var packed := {}
+	for q in game.state.people:
+		for e in q.get("grid", []):
+			if e.has("item"):
+				packed[int(e["item"])] = true
+	for it in game.state.items:
+		if it.get("type", "") == "med" and not it.has("on") and not packed.has(int(it.get("id", -1))):
+			if best.is_empty() or int(it.get("stars", 0)) > int(best.get("stars", 0)):
+				best = it
+	return best

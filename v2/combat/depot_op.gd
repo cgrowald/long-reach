@@ -195,6 +195,21 @@ func input(e: InputEvent, mp: Vector2) -> bool:
 		if (b[0] as Rect2).has_point(mp):
 			_press(str(b[1]))
 			return true
+	# EYES ping: on a camera feed, click an enemy to alert the squad (the shout wheel's FOCUS makes them target)
+	if phase in ["quiet", "loud", "out", "opened"] and not f.wheel_open and f.pending < 0:
+		var mf: Dictionary = f.feeds[f.main_i] if f.main_i < f.feeds.size() else {}
+		if mf.get("kind", "") == "cctv":
+			var hit: Dictionary = f._pick_target("enemy")
+			if hit.has("actor"):
+				var en = hit["actor"]
+				en.set_meta("seen_t", f.sq._t)
+				en.set_meta("seen_pos", en.global_position)
+				en.set_meta("pinged", true)
+				var pt = f.sq.by_role("point")
+				if pt:
+					pt.say("Copy. Contact, %s." % f.sq._room_name(f.level.room_at(en.global_position)), true)
+				f._event("PING: %s" % en.fighter_name)
+				return true
 	if phase == "hacking" and session != null:
 		for y in session.chain_n:
 			for x in session.chain_n:

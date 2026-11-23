@@ -52,6 +52,19 @@ func _gui_input(e: InputEvent) -> void:
 		elif e.button_index == MOUSE_BUTTON_WHEEL_UP:
 			scroll = maxi(0, scroll - 1)
 		elif e.button_index == MOUSE_BUTTON_LEFT:
+			if int(Market.summary(state())["leads"]) > 0 and _lead_rect().has_point(e.position):
+				var lp := Market.lead_person(state())
+				os.alert("Dead Drop", "%s, %d. %s
+
+\"%s\"
+
+In it for: %s.
+
+They're with you now (the gear cage)." % [lp["name"], int(lp["age"]), lp["background"]["name"], lp["hook"], lp["motive"]["name"]], "info")
+				Market.meet_lead(state())
+				os.game.sfx.play("confirmation_002", 1.0, -6.0)
+				queue_redraw()
+				return
 			var items := _items()
 			for i in range(scroll, mini(n, scroll + _visible_rows())):
 				if _sell_rect(i).has_point(e.position):
@@ -123,6 +136,10 @@ func _draw() -> void:
 	# the files
 	var items := _items()
 	P.text(self, Vector2(6, HEAD_H + 2), "FILES  (%d)" % items.size(), P.INK)
+	if int(m["leads"]) > 0:
+		var lr := _lead_rect()
+		draw_rect(lr, P.COPPER.lightened(0.15) if lr.has_point(hover) else P.COPPER)
+		P.text(self, lr.position + Vector2(0, 2), "A LEAD WROTE BACK: MEET", P.FACE_L, HORIZONTAL_ALIGNMENT_CENTER, lr.size.x)
 	if items.is_empty():
 		P.text(self, Vector2(6, HEAD_H + 20), "Nothing to move. Hack something first (Jobs).", P.INK_DIM)
 	for i in range(scroll, mini(items.size(), scroll + _visible_rows())):
@@ -144,3 +161,7 @@ func _draw() -> void:
 		var mr := Rect2(4, size.y - 20, size.x - 8, 16)
 		draw_rect(mr, Color(P.PETROL_D, 0.9 * a))
 		P.text(self, mr.position + Vector2(6, 2), P.fit(_msg, mr.size.x - 12), Color(P.FACE_L, a))
+
+
+func _lead_rect() -> Rect2:
+	return Rect2(size.x - 170, HEAD_H, 164, 13)

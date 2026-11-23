@@ -104,3 +104,38 @@ static func market_open(state: RefCounted) -> bool:
 
 static func summary(state: RefCounted) -> Dictionary:
 	return _m(state)
+
+
+# ------------------------------------------------------------------ recruit leads (roadmap M1 piece 14)
+
+## The person behind your next lead (same every load until you meet them).
+static func lead_person(state: RefCounted) -> Dictionary:
+	var m := _m(state)
+	var p: Dictionary = load("res://v2/sim/people_gen.gd").make(hash(str(state.world_seed) + "lead" + str(int(m.get("met", 0)))), "recruit")
+	if int(m.get("met", 0)) == 0:
+		p["hook"] = "Worked at the Dobrev depot for six years before they let them go. Heard from a friend you're hitting the old warehouse."
+		p["background"] = {"id": "dockhand", "name": "Ex-depot worker", "skill": "carry"}
+	return p
+
+
+## Meet the lead: they join your people. The first one knows the depot (a plan file: the vault hints).
+static func meet_lead(state: RefCounted) -> Dictionary:
+	var m := _m(state)
+	if int(m["leads"]) <= 0:
+		return {}
+	var p := lead_person(state)
+	p["id"] = "r%d" % (int(m.get("met", 0)) + 1)
+	p["alive"] = true
+	p["level"] = 1
+	p["ops"] = 0
+	p["kit"] = {}
+	p["grid"] = []
+	p["loyalty"] = 60
+	state.people.append(p)
+	if int(m.get("met", 0)) == 0:
+		state.items.append({"id": state.next_item_id, "name": "depot_layout_sketch.txt", "type": "intel", "tag": "plan",
+			"worth": "The depot, drawn from memory: the vault room, which door they use most.", "source": "Dobrev Freight depot", "day": state.day, "stars": 0, "quality": 0.0, "hand": true, "perks": []})
+		state.next_item_id += 1
+	m["leads"] = int(m["leads"]) - 1
+	m["met"] = int(m.get("met", 0)) + 1
+	return p

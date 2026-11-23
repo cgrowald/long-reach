@@ -48,6 +48,35 @@ func setup(p_garage: Node) -> void:
 		for r in load("res://v2/sim/crafting.gd").data().get("recipes", []):
 			game.state.mastery[r["id"]] = {"made": 3, "good": 3, "sum": 2.4}
 		garage.toast("Every recipe mastered (batching on)."))
+	add.call("M1: kit out the crew", func() -> void:
+		var L = load("res://v2/sim/loadout.gd")
+		for p in game.state.people:
+			if not p.get("alive", true):
+				continue
+			for gid in ["bureau_carbine", "rig_chest", "helmet", "plate_steel"]:
+				L.equip(game.state, p, L.add_item(game.state, gid))
+			for k in 3:
+				var sp: Vector2i = L.free_spot(game.state, p, "mag_30")
+				if sp.x >= 0:
+					game.state.supplies["mag_30"] = int(game.state.supplies.get("mag_30", 0)) + 1
+					L.pack(game.state, p, "mag_30", sp.x, sp.y)
+		garage.toast("Everyone has a carbine, a chest rig, a helmet, a plate and 3 mags."))
+	add.call("M1: EYES on the depot", func() -> void:
+		var cams: Array = game.state.os.get("cameras", [])
+		cams.append("depot_debug")
+		game.state.os["cameras"] = cams
+		garage.toast("The depot cameras are linked (CCTV in the raid)."))
+	add.call("M1: +1 recruit lead", func() -> void:
+		var m: Dictionary = game.state.os.get("market", {})
+		m["leads"] = int(m.get("leads", 0)) + 1
+		game.state.os["market"] = m
+		garage.toast("A lead is waiting in the Dead Drop app."))
+	add.call("M1: Krall next step", func() -> void:
+		load("res://v2/sim/krall.gd").k(game.state)["clock"] = 0.5
+		garage.toast("Krall moves tonight. Go to bed."))
+	add.call("M1: unlock the depot", func() -> void:
+		load("res://v2/sim/depot_run.gd")._d(game.state)["locked_until"] = 0
+		garage.toast("The depot can be hit again."))
 	add.call("Open all markets", func() -> void:
 		game.state.flags["markets_open"] = true
 		game.state.supplies["picks"] = int(game.state.supplies.get("picks", 0)) + 5

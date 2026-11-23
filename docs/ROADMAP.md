@@ -38,7 +38,14 @@ Nothing new is built. The user plays the unplayed builds, then Claude fixes bugs
 - the hacking build.
 
 ## M1. The depot raid, the whole loop (the proof the game is playable). One big build.
-**Status: started 2026-11-23, in parallel with M0 fixes (user's request).** Done so far: piece 1, the person generator (v2/sim/people_gen.gd, data/v2/people.json).
+**Status: started 2026-11-23, in parallel with M0 fixes (user's request).** **In playtest** (work list: docs/PLAYTEST_M1.md).
+- **Built:** pieces 1-8, 10-16. Piece 9: the stores are limited by rig space. Piece 17: guard uniforms and patched clothes with the red stripes.
+- **Still to do in M1:**
+  - the gun swap mid-fight (take a guard's SMG when dry);
+  - choosing the stick carrier by tech level (now it's whoever reaches the PC);
+  - the vault room's three door models and cables (the vault is a screen for now);
+  - the plan file and ID drawn as documents;
+  - the art bible cage layout.
 Design is in docs/DEPOT_SLICE.md (sections 1, 4, 5).
 
 | # | Piece | Done when |

@@ -32,6 +32,13 @@ func build() -> void:
 	_model.crouch = 0.85
 	if _model.light:
 		_model.light.visible = false
+	var lamp := OmniLight3D.new()
+	lamp.light_color = Color(1.0, 0.78, 0.5)
+	lamp.light_energy = 3.5
+	lamp.omni_range = 3.0
+	lamp.shadow_enabled = true
+	_model.add_child(lamp)
+	lamp.position = Vector3(0.0, 2.3, 0.5)            # the bulb over the chair
 	_last = "\"%s\"" % ["What do you want from me?", "You're making a mistake.", "...", "I just work there."][(hash(p["name"]) & 0x7fffffff) % 4]
 	game.sfx.play("drop_002", 0.6, -8.0)
 
