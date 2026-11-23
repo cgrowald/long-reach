@@ -29,7 +29,7 @@ const SHOUTS := [
 	{"id": "go", "label": "CARRY ON", "needs": "", "say": "Carry on. Your call."},
 ]
 const NAME_COL := [Color(0.95, 0.8, 0.45), Color(0.6, 0.85, 1.0), Color(1.0, 0.55, 0.55), Color(0.7, 1.0, 0.6)]
-const TILE := Vector2(86, 48)
+const TILE := Vector2(88, 40)
 
 var game: Node
 var data: Dictionary
@@ -42,6 +42,7 @@ var sq: RefCounted
 var en: RefCounted
 var feeds: Array = []            # {kind, actor, label, vp, cam, post, tex}
 var main_cam: Camera3D
+var main_vp: SubViewport          # the big feed renders here (FIELD LINK panel), not full screen
 var main_post: ShaderMaterial
 var main_i := 3
 var hud: Control
@@ -75,7 +76,7 @@ func _ready() -> void:
 	add_child(view)
 	world = Node3D.new()
 	view.vp.add_child(world)
-	view.vp.audio_listener_enable_3d = true
+	view.vp.audio_listener_enable_3d = false
 	_environment()
 	level = Level.new()
 	world.add_child(level)
@@ -136,6 +137,7 @@ func _spawn() -> void:
 		if not def.has("id"):
 			def["id"] = "f%d" % i
 		a.setup_actor(def, "us", level)
+		a.set_meta("head", str(def.get("head", "helmet")))
 		a.position = Vector3(float(sp[0]) + (i % 2) * 0.8 - 0.4, 0, float(sp[1]) + 0.3 - int(i / 2) * 0.9)
 		a.face_yaw = 0.0
 		_wire(a)
@@ -206,7 +208,15 @@ func _post_for(cam: Camera3D, layer: int) -> ShaderMaterial:
 func _cameras() -> void:
 	main_cam = Camera3D.new()
 	main_cam.near = 0.05
-	world.add_child(main_cam)
+	main_vp = SubViewport.new()
+	main_vp.size = Vector2i(350, 165)
+	main_vp.world_3d = view.vp.find_world_3d()
+	main_vp.audio_listener_enable_3d = true
+	main_vp.canvas_item_default_texture_filter = Viewport.DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NEAREST
+	main_vp.msaa_3d = Viewport.MSAA_DISABLED
+	add_child(main_vp)
+	main_vp.add_child(main_cam)
+	main_cam.keep_aspect = Camera3D.KEEP_WIDTH
 	main_cam.current = true
 	main_post = _post_for(main_cam, 2)
 	var layer := 3
@@ -264,7 +274,7 @@ func _update_cameras(delta: float) -> void:
 		_apply_feed_look(f["post"], f)
 	var mf: Dictionary = feeds[main_i]
 	main_cam.global_transform = _feed_xform(mf)
-	main_cam.fov = 64.0 if mf["kind"] == "cctv" else 86.0
+	main_cam.fov = 80.0 if mf["kind"] == "cctv" else 100.0
 	_apply_feed_look(main_post, mf)
 	var hfv = main_post.get_shader_parameter("hit_flash")
 	var hf: float = hfv if hfv != null else 0.0
@@ -293,8 +303,11 @@ func _process(delta: float) -> void:
 	barks = barks.filter(func(b: Dictionary) -> bool: return float(b["t"]) < 6.0)
 	_update_cameras(delta)
 	if board:
-		board.size = Vector2(112, hud.size.y - TILE.y - 62)
-		board.position = Vector2(hud.size.x - board.size.x - 6, 50)
+		var mr := _map_rect()
+		board.position = mr.position + Vector2(2, 15)
+		board.size = mr.size - Vector2(4, 17)
+		board.visible = phase != "report"
+	_fit_main_vp()
 	if not paused and phase == "op":
 		_cctv_spot()
 	if pending >= 0:
@@ -393,7 +406,9 @@ func issue(id: String, label: String, say_line: String, target = null) -> void:
 ## What's under the mouse on the main feed, for the shout that's waiting.
 func _pick_target(needs: String) -> Dictionary:
 	var mp := view.ui.get_local_mouse_position() as Vector2
-	var m3 := PixelView.to_3d(view.ui, main_cam, mp)
+	var m3 := _ui_to_main(mp)
+	if m3.x < 0.0:
+		return {}
 	var o := main_cam.project_ray_origin(m3)
 	var dir := main_cam.project_ray_normal(m3)
 	var q := PhysicsRayQueryParameters3D.create(o, o + dir * 40.0)
@@ -467,6 +482,16 @@ func _input(e: InputEvent) -> void:
 						pending = wheel_hover
 			get_viewport().set_input_as_handled()
 		elif e.button_index == MOUSE_BUTTON_LEFT and e.pressed:
+			# a squad row? (their cam goes big)
+			for i in squad.size():
+				if _squad_row(i).has_point(mp):
+					for k in feeds.size():
+						if feeds[k]["kind"] == "helmet" and feeds[k]["actor"] == squad[i]:
+							main_i = k
+					if game:
+						game.sfx.play("switch_002", 1.0 + i * 0.05, -10.0)
+					get_viewport().set_input_as_handled()
+					return
 			# a tile?
 			for i in feeds.size():
 				if _tile_rect(i).has_point(mp):
@@ -582,70 +607,283 @@ func _clock(t: float) -> String:
 	return "%02d:%02d:%02d" % [(s / 3600) % 24, (s / 60) % 60, s % 60]
 
 
+# ------------------------------------------------------------------ FIELD LINK layout (mission face-lift)
+# User 2026-11-22: the "UPRISING / FIELD LINK" sheet: one big helmet cam, the map as paper recon,
+# a squad list, a strip of feeds; every fighter has a face, and when their cam dies the face stays.
+
+const UI_BG := Color(0.07, 0.085, 0.085)
+const UI_PANEL := Color(0.1, 0.12, 0.12)
+const UI_LINE := Color(0.72, 0.68, 0.56)
+const UI_TEXT := Color(0.9, 0.87, 0.78)
+const UI_DIM := Color(0.6, 0.58, 0.52)
+const UI_AMBER := Color(0.95, 0.72, 0.3)
+const UI_TEAL := Color(0.45, 0.72, 0.7)
+const UI_RED := Color(0.9, 0.3, 0.22)
+const STRIP_H := 76.0
+const Face := preload("res://v2/ui/face.gd")
+
+
+func _top_rect() -> Rect2:
+	return Rect2(4, 3, hud.size.x - 8, 24)
+
+
+func _main_rect() -> Rect2:
+	var w := floorf((hud.size.x - 12) * 0.68)
+	return Rect2(4, 31, w, hud.size.y - 31 - STRIP_H - 24)
+
+
+func _main_img() -> Rect2:
+	var m := _main_rect()
+	return Rect2(m.position + Vector2(1, 27), m.size - Vector2(2, 28))
+
+
+func _side_x() -> float:
+	return _main_rect().end.x + 4
+
+
+func _map_rect() -> Rect2:
+	var x := _side_x()
+	return Rect2(x, 31, hud.size.x - 4 - x, floorf(_main_rect().size.y * 0.46))
+
+
+func _squad_rect() -> Rect2:
+	var mr := _map_rect()
+	return Rect2(mr.position.x, mr.end.y + 4, mr.size.x, _main_rect().end.y - mr.end.y - 4)
+
+
+func _squad_row(i: int) -> Rect2:
+	var r := _squad_rect()
+	var h := minf(26.0, (r.size.y - 40) / maxf(1, squad.size()))
+	return Rect2(r.position.x + 3, r.position.y + 15 + i * (h + 2), r.size.x - 6, h)
+
+
 func _tile_rect(i: int) -> Rect2:
-	var w := hud.size.x if hud else 533.0
-	var h := hud.size.y if hud else 300.0
-	var total := feeds.size() * (TILE.x + 3) - 3
-	var x0 := (w - total) * 0.5
-	return Rect2(Vector2(x0 + i * (TILE.x + 3), h - TILE.y - 4), TILE)
+	var n := maxi(1, feeds.size())
+	var w := floorf((hud.size.x - 8 - (n - 1) * 4) / n)
+	return Rect2(4 + i * (w + 4), hud.size.y - STRIP_H - 20, w, STRIP_H)
 
 
-# ------------------------------------------------------------------ the overlay
+func _tile_img(i: int) -> Rect2:
+	var r := _tile_rect(i)
+	return Rect2(r.position + Vector2(1, 19), Vector2(r.size.x - 2, r.size.y - 32))
+
+
+## Mouse (UI units) -> the main feed's viewport pixels, or (-1,-1) if off the feed.
+func _ui_to_main(p: Vector2) -> Vector2:
+	var img := _main_img()
+	if not img.has_point(p) or main_vp == null:
+		return Vector2(-1, -1)
+	return (p - img.position) * Vector2(main_vp.size) / img.size
+
+
+func _main_to_ui(p: Vector2) -> Vector2:
+	var img := _main_img()
+	return img.position + p * img.size / Vector2(main_vp.size)
+
+
+func _fit_main_vp() -> void:
+	if main_vp == null or hud == null or hud.size.x < 10:
+		return
+	var px := 3.0
+	if game:
+		px = float(game.settings.get_v("pixel"))
+	var want := Vector2i((_main_img().size * PixelView.UI_SCALE / px).round())
+	if want.x > 8 and want.y > 8 and main_vp.size != want:
+		main_vp.size = want
+
+
+func _elapsed() -> String:
+	var s := int(t_op)
+	return "%02d:%02d:%02d" % [s / 3600, (s / 60) % 60, s % 60]
+
+
+func _bars(p: Vector2, level_: int, col: Color) -> void:
+	for k in 4:
+		var hh := 3.0 + k * 2.0
+		hud.draw_rect(Rect2(p + Vector2(k * 3.5, 9 - hh), Vector2(2.5, hh)), col if k < level_ else Color(col, 0.2))
+
+
+func _signal(a) -> int:
+	if a == null:
+		return 4
+	if a.state == "dead":
+		return 0
+	if a.state == "down":
+		return 1
+	return 3 if a.wounds > 0 else 4
+
+
+func _face(a, r: Rect2) -> void:
+	Face.draw(hud, r, str(a.fighter_name), str(a.get_meta("head", "helmet")), a.state == "dead")
+	hud.draw_rect(r, UI_LINE, false, 1.0)
+
+
+func _state_word(a) -> Array:
+	match a.state:
+		"dead":
+			return ["KIA", UI_DIM]
+		"down":
+			return ["DOWN", UI_RED]
+	if a.wounds > 0:
+		return ["BLEEDING", UI_RED]
+	if a.reloading > 0.0:
+		return ["RELOADING", UI_AMBER]
+	if a.target != null:
+		return ["ENGAGING", UI_AMBER]
+	return ["STEADY", UI_TEAL]
+
+
+func _panel(r: Rect2, title := "", hot := false) -> void:
+	hud.draw_rect(r, UI_PANEL)
+	hud.draw_rect(r, UI_AMBER if hot else UI_LINE, false, 2.0 if hot else 1.0)
+	if title != "":
+		Pal.text(hud, r.position + Vector2(5, 2), title, 9, UI_TEXT)
+		hud.draw_line(r.position + Vector2(3, 13.5), Vector2(r.end.x - 3, r.position.y + 13.5), Color(UI_LINE, 0.5), 1.0)
+
 
 func _draw_hud() -> void:
 	var w := hud.size.x
 	var h := hud.size.y
-	var col := Color(0.85, 0.95, 0.9)
+	hud.draw_rect(Rect2(Vector2.ZERO, hud.size), UI_BG)
+	# ---- the top bar
+	var tb := _top_rect()
+	_panel(tb)
+	Pal.text(hud, tb.position + Vector2(6, 6), "UPRISING / FIELD LINK", 10, UI_TEXT)
+	var obj := str(data.get("objective", {}).get("text", "")).to_upper() + ("  [DONE]" if sq.have_objective else "")
+	var cx := tb.position.x + tb.size.x * 0.36
+	var dc := Vector2(cx, tb.get_center().y)
+	hud.draw_colored_polygon(PackedVector2Array([dc + Vector2(0, -5), dc + Vector2(5, 0), dc + Vector2(0, 5), dc + Vector2(-5, 0)]), UI_AMBER)
+	hud.draw_colored_polygon(PackedVector2Array([dc + Vector2(0, -2.5), dc + Vector2(2.5, 0), dc + Vector2(0, 2.5), dc + Vector2(-2.5, 0)]), UI_PANEL)
+	Pal.text(hud, Vector2(cx + 10, tb.position.y + 1), obj, 8, UI_AMBER, HORIZONTAL_ALIGNMENT_LEFT, tb.end.x - cx - 140)
+	Pal.text(hud, Vector2(cx + 10, tb.position.y + 12), _task_text(), 8, UI_DIM, HORIZONTAL_ALIGNMENT_LEFT, tb.end.x - cx - 140)
+	var pr := Rect2(tb.end.x - 118, tb.position.y + 4, 16, 16)
+	hud.draw_rect(pr, UI_LINE, false, 1.0)
+	if paused:
+		hud.draw_colored_polygon(PackedVector2Array([pr.position + Vector2(5, 4), pr.position + Vector2(12, 8), pr.position + Vector2(5, 12)]), UI_TEXT)
+	else:
+		hud.draw_rect(Rect2(pr.position + Vector2(4, 4), Vector2(3, 8)), UI_TEXT)
+		hud.draw_rect(Rect2(pr.position + Vector2(9, 4), Vector2(3, 8)), UI_TEXT)
+	Pal.text(hud, Vector2(tb.end.x - 96, tb.position.y + 6), "ELAPSED  " + _elapsed(), 9, UI_TEXT)
+	# ---- the main feed
+	var mr := _main_rect()
+	var img := _main_img()
 	var mf: Dictionary = feeds[main_i]
-	Pal.text(hud, Vector2(10, 8), mf["label"], 9, Color(0.6, 1.0, 0.6) if mf["kind"] == "cctv" else col)
+	_panel(mr, "", true)
+	if main_vp:
+		hud.draw_texture_rect(main_vp.get_texture(), img, false)
+	var hx := mr.position.x + 4
 	if mf["kind"] == "helmet":
 		var a = mf["actor"]
-		Pal.text(hud, Vector2(10, 19), "%s  %s" % [str(a.role).to_upper(), _status(a)], 8, Color(col, 0.6))
-	if fmod(t_op, 1.0) < 0.6:
-		hud.draw_circle(Vector2(w - 98, 13), 2.5, Color(0.9, 0.15, 0.1))
-	Pal.text(hud, Vector2(w - 92, 8), "REC  " + _clock(t_op), 9, col)
-	Pal.text(hud, Vector2(w - 160, 19), "VAN, 40 m out. You're on the radio.", 8, Color(col, 0.45))
-	Pal.text(hud, Vector2(0, 8), str(data.get("objective", {}).get("text", "")).to_upper() + ("  [DONE]" if sq.have_objective else ""), 8, Color(1, 0.8, 0.4), HORIZONTAL_ALIGNMENT_CENTER, w)
-	var task_txt := _task_text()
-	Pal.text(hud, Vector2(0, 19), task_txt, 8, Color(col, 0.6), HORIZONTAL_ALIGNMENT_CENTER, w)
+		_face(a, Rect2(mr.position + Vector2(3, 3), Vector2(22, 22)))
+		hx += 26
+		Pal.text(hud, Vector2(hx, mr.position.y + 3), "%02d / %s" % [main_i + 1, str(a.fighter_name).to_upper()], 10, UI_TEXT)
+		Pal.text(hud, Vector2(hx, mr.position.y + 15), "%s  -  HELMET CAM" % str(a.role).to_upper(), 8, UI_TEAL)
+		var sig := _signal(a)
+		_bars(Vector2(mr.end.x - 104, mr.position.y + 6), sig, UI_TEXT)
+		Pal.text(hud, Vector2(mr.end.x - 86, mr.position.y + 6), ["LOST", "POOR", "FAIR", "GOOD", "GOOD"][sig], 8, UI_TEAL)
+		if a.state == "dead":
+			Pal.text(hud, Vector2(img.position.x, img.get_center().y - 20), "SIGNAL LOST", 14, UI_RED, HORIZONTAL_ALIGNMENT_CENTER, img.size.x)
+			Face.draw(hud, Rect2(img.get_center() - Vector2(24, 0), Vector2(48, 54)), str(a.fighter_name), str(a.get_meta("head", "helmet")), true)
+	else:
+		_cam_icon(Vector2(hx + 2, mr.position.y + 7))
+		hx += 22
+		Pal.text(hud, Vector2(hx, mr.position.y + 3), str(mf["def"]["id"]).to_upper(), 10, Color(0.6, 1.0, 0.6))
+		Pal.text(hud, Vector2(hx, mr.position.y + 15), "FIXED CAMERA  -  %s" % str(mf["def"]["label"]).to_upper(), 8, UI_DIM)
+	if fmod(t_op, 1.0) < 0.6 or paused:
+		hud.draw_circle(Vector2(mr.end.x - 42, mr.position.y + 11), 3.0, UI_RED)
+	Pal.text(hud, Vector2(mr.end.x - 36, mr.position.y + 6), "REC", 8, UI_RED)
+	# radio subtitles, bottom left of the feed, with the speaker's face
+	var y := img.end.y - 16
+	var shown := 0
+	for k in range(barks.size() - 1, -1, -1):
+		if shown >= 3:
+			break
+		var b: Dictionary = barks[k]
+		var al := clampf(1.0 - (float(b["t"]) - 4.5) / 1.5, 0.0, 1.0)
+		var who = _by_name(str(b["name"]))
+		var line := "%s: %s" % [b["name"], b["text"]]
+		var tw := minf(img.size.x - 30, line.length() * 5.6 + 8)
+		hud.draw_rect(Rect2(img.position.x + 4, y - 2, tw + 18, 14), Color(0, 0, 0, 0.55 * al))
+		if who != null:
+			Face.draw(hud, Rect2(img.position.x + 5, y - 1, 12, 12), str(who.fighter_name), str(who.get_meta("head", "helmet")), who.state == "dead")
+		Pal.text(hud, Vector2(img.position.x + 20, y), line, 9, Color(b["col"], al), HORIZONTAL_ALIGNMENT_LEFT, tw)
+		y -= 16
+		shown += 1
 	if paused:
-		Pal.text(hud, Vector2(0, h * 0.3), "PAUSED  (Space)", 12, Color(1, 1, 1), HORIZONTAL_ALIGNMENT_CENTER, w)
-	# feed tiles
+		Pal.text(hud, Vector2(img.position.x, img.position.y + img.size.y * 0.35), "PAUSED  (Space)", 12, UI_TEXT, HORIZONTAL_ALIGNMENT_CENTER, img.size.x)
+	# ---- the map
+	var mp_r := _map_rect()
+	_panel(mp_r, "OPS MAP / RECON")
+	# ---- the squad
+	var sr := _squad_rect()
+	_panel(sr, "SQUAD")
+	for i in squad.size():
+		var a = squad[i]
+		var r := _squad_row(i)
+		var on: bool = mf["kind"] == "helmet" and mf["actor"] == a
+		hud.draw_rect(r, Color(UI_AMBER, 0.08) if on else Color(0, 0, 0, 0))
+		hud.draw_rect(r, UI_AMBER if on else (Color(UI_AMBER, 0.7) if recipients.has(a) else Color(UI_LINE, 0.35)), false, 2.0 if on else 1.0)
+		var nb := Rect2(r.position + Vector2(3, 4), Vector2(r.size.y - 8, r.size.y - 8))
+		hud.draw_rect(nb, UI_LINE, false, 1.0)
+		Pal.text(hud, nb.position + Vector2(0, (nb.size.y - 10) * 0.5), str(i + 1), 8, UI_TEXT, HORIZONTAL_ALIGNMENT_CENTER, nb.size.x)
+		_face(a, Rect2(Vector2(nb.end.x + 3, r.position.y + 2), Vector2(r.size.y - 4, r.size.y - 4)))
+		var nx := nb.end.x + r.size.y + 3
+		var sw: Array = _state_word(a)
+		if sw[1] == UI_RED:
+			_warn(Vector2(nx + 3, r.get_center().y))
+			nx += 10
+		Pal.text(hud, Vector2(nx, r.get_center().y - 5), _first(a).to_upper(), 9, UI_TEXT)
+		_bars(Vector2(r.end.x - 74, r.get_center().y - 5), _signal(a), UI_TEXT)
+		if a.state == "down" and fmod(t_op, 0.6) < 0.3:
+			pass
+		else:
+			Pal.text(hud, Vector2(r.end.x - 58, r.get_center().y - 5), sw[0], 8, sw[1])
+	var to := "TALKING TO: ALL" if recipients.is_empty() else "TALKING TO: " + _first(recipients[0]).to_upper()
+	var tr := Rect2(sr.position.x + 3, sr.end.y - 17, sr.size.x * 0.55, 14)
+	hud.draw_rect(tr, UI_LINE, false, 1.0)
+	Pal.text(hud, tr.position + Vector2(4, 2), to, 8, UI_AMBER)
+	# ---- the feed strip
 	for i in feeds.size():
 		var f: Dictionary = feeds[i]
 		var r := _tile_rect(i)
-		hud.draw_texture_rect((f["vp"] as SubViewport).get_texture(), r, false)
-		var bc := Color(0.3, 0.35, 0.33)
-		if i == main_i:
-			bc = Color(0.9, 0.9, 0.9)
-		var sub := ""
+		var ti := _tile_img(i)
+		var on := i == main_i
+		hud.draw_rect(r, UI_PANEL)
+		hud.draw_texture_rect((f["vp"] as SubViewport).get_texture(), ti, false)
+		var cap := ""
 		if f["kind"] == "helmet":
 			var a = f["actor"]
-			if recipients.has(a):
-				bc = Color(1, 0.8, 0.3)
-			sub = _status(a)
-			if a.state == "down":
-				bc = Color(1, 0.3, 0.2) if fmod(t_op, 0.6) < 0.3 else bc
-			Pal.text(hud, r.position + Vector2(2, 1), "%d %s" % [i + 1, _first(a).to_upper()], 8, NAME_COL[i % 4])
-			# health, mag, meds
-			hud.draw_rect(Rect2(r.position + Vector2(2, r.size.y - 5), Vector2((r.size.x - 4) * clampf(a.hp / 100.0, 0, 1), 2)), Color(0.4, 0.9, 0.4) if a.wounds == 0 else Color(1, 0.35, 0.25))
-			Pal.text(hud, r.position + Vector2(2, r.size.y - 15), "%d/%d+%d  M%d" % [a.mag_rounds, int(a.st["mag"]), a.mags, a.meds], 8, Color(col, 0.8))
+			_face(a, Rect2(r.position + Vector2(2, 1), Vector2(16, 17)))
+			Pal.text(hud, r.position + Vector2(21, 3), "%d %s" % [i + 1, _first(a).to_upper()], 9, UI_TEXT)
+			if _state_word(a)[1] == UI_RED:
+				_warn(Vector2(r.end.x - 26, r.position.y + 8))
+			_bars(Vector2(r.end.x - 17, r.position.y + 3), _signal(a), UI_TEXT)
+			cap = _title(str(level.room(level.room_at(a.global_position)).get("name", "")))
+			if a.state == "dead":
+				hud.draw_rect(ti, Color(0.03, 0.03, 0.03, clampf(float(f["dead_t"]) / 2.5, 0.0, 0.85)))
+				var fs := minf(ti.size.y - 6, 40.0)
+				Face.draw(hud, Rect2(ti.get_center() - Vector2(fs * 0.45, fs * 0.5), Vector2(fs * 0.9, fs)), str(a.fighter_name), str(a.get_meta("head", "helmet")), true)
+				Pal.text(hud, Vector2(ti.position.x, ti.end.y - 11), "SIGNAL LOST", 8, UI_RED, HORIZONTAL_ALIGNMENT_CENTER, ti.size.x)
+			else:
+				Pal.text(hud, Vector2(r.end.x - 52, r.end.y - 12), "%d+%d" % [a.mag_rounds, a.mags], 8, UI_DIM, HORIZONTAL_ALIGNMENT_RIGHT, 48)
+				hud.draw_rect(Rect2(ti.position + Vector2(0, ti.size.y - 2), Vector2(ti.size.x * clampf(a.hp / 100.0, 0, 1), 2)), UI_TEAL if a.wounds == 0 else UI_RED)
 		else:
-			Pal.text(hud, r.position + Vector2(2, 1), str(f["def"]["id"]), 8, Color(0.6, 1.0, 0.6))
-		hud.draw_rect(r, bc, false, 1.0)
-		if sub != "" and sub != "OK":
-			Pal.text(hud, r.position + Vector2(2, 11), sub, 8, Color(1, 0.5, 0.4))
-	# radio barks
-	var y := h - TILE.y - 16
-	for k in range(barks.size() - 1, -1, -1):
-		var b: Dictionary = barks[k]
-		var a := clampf(1.0 - (float(b["t"]) - 4.5) / 1.5, 0.0, 1.0)
-		Pal.text(hud, Vector2(10, y), "%s: %s" % [b["name"], b["text"]], 9, Color(b["col"], a))
-		y -= 11
-	# who you're talking to
-	var to := "TALKING TO: ALL (1-4 one person)" if recipients.is_empty() else "TALKING TO: " + _first(recipients[0]).to_upper() + " (0 = all)"
-	Pal.text(hud, Vector2(10, 30), to, 8, Color(1, 0.8, 0.3, 0.8))
-	Pal.text(hud, Vector2(10, 40), "Right mouse: shout   Tab: feed   Space: pause   G: carry on", 8, Color(col, 0.4))
+			_cam_icon(r.position + Vector2(4, 4))
+			Pal.text(hud, r.position + Vector2(20, 2), str(f["def"]["id"]).to_upper(), 9, UI_TEXT)
+			_bars(Vector2(r.end.x - 17, r.position.y + 3), 3, UI_TEXT)
+			cap = _title(str(f["def"]["label"]))
+		Pal.text(hud, Vector2(r.position.x + 3, r.end.y - 12), cap, 8, UI_TEXT, HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 44)
+		hud.draw_rect(r, UI_AMBER if on else UI_LINE, false, 2.0 if on else 1.0)
+	# ---- key hints
+	var hb := Rect2(4, h - 17, w - 8, 15)
+	_panel(hb)
+	var hx2 := hb.position.x + 6
+	for kv in [["1-4", "Talk to one"], ["Tab", "Next feed"], ["R-mouse", "Shout"], ["Space", "Pause"], ["G", "Carry on"], ["Esc", "Back"]]:
+		Pal.text(hud, Vector2(hx2, hb.position.y + 3), kv[0], 8, UI_TEXT)
+		hx2 += kv[0].length() * 5.0 + 6
+		Pal.text(hud, Vector2(hx2, hb.position.y + 3), kv[1], 8, UI_TEAL)
+		hx2 += kv[1].length() * 5.0 + 16
+	# ---- shouts, the target marker, objections, the report
 	if wheel_open:
 		_draw_wheel()
 	if pending >= 0:
@@ -663,7 +901,6 @@ func _draw_hud() -> void:
 				tag = s["label"] + " here"
 			else:
 				tag = "%s %s" % [s["label"], _first(v) if v.team == "us" else str(v.fighter_name)]
-			# mark it in the feed
 			var wp: Vector3 = Vector3.ZERO
 			if v is Dictionary:
 				wp = level.door_world(v, 1.0)
@@ -675,13 +912,39 @@ func _draw_hud() -> void:
 			else:
 				wp = v.chest_pos()
 			if not main_cam.is_position_behind(wp):
-				var sp := PixelView.to_ui(hud, main_cam, main_cam.unproject_position(wp))
+				var sp := _main_to_ui(main_cam.unproject_position(wp))
 				hud.draw_arc(sp, 9.0 + sin(t_op * 8.0) * 1.5, 0, TAU, 16, Color(1, 0.3, 0.85), 1.0)
-		hud.draw_rect(Rect2(mp + Vector2(10, -6), Vector2(tag.length() * 5 + 6, 11)), Color(0, 0, 0, 0.7))
+		hud.draw_rect(Rect2(mp + Vector2(10, -6), Vector2(tag.length() * 5.5 + 6, 12)), Color(0, 0, 0, 0.75))
 		Pal.text(hud, mp + Vector2(13, -5), tag, 8, Color(1, 0.3, 0.85) if ok else Color(0.8, 0.8, 0.8))
 	_draw_objection()
 	if phase == "report":
 		_draw_report()
+
+
+## "B2 CORRIDOR" -> "B2 Corridor".
+func _title(s: String) -> String:
+	var out: Array = []
+	for wd in s.to_lower().split(" "):
+		out.append(wd.substr(0, 1).to_upper() + wd.substr(1))
+	return " ".join(PackedStringArray(out))
+
+
+func _by_name(n: String):
+	for a in squad:
+		if _first(a).to_upper() == n.to_upper() or str(a.fighter_name).to_upper() == n.to_upper():
+			return a
+	return null
+
+
+func _warn(c: Vector2) -> void:
+	hud.draw_colored_polygon(PackedVector2Array([c + Vector2(0, -5), c + Vector2(5, 4), c + Vector2(-5, 4)]), UI_RED)
+	hud.draw_rect(Rect2(c + Vector2(-0.5, -2), Vector2(1.2, 3)), UI_PANEL)
+
+
+func _cam_icon(p: Vector2) -> void:
+	hud.draw_rect(Rect2(p, Vector2(10, 6)), UI_TEXT)
+	hud.draw_colored_polygon(PackedVector2Array([p + Vector2(10, 1), p + Vector2(14, -1), p + Vector2(14, 7), p + Vector2(10, 5)]), UI_TEXT)
+	hud.draw_line(p + Vector2(3, 6), p + Vector2(1, 10), UI_TEXT, 1.0)
 
 
 func _status(a) -> String:
@@ -745,36 +1008,47 @@ func _draw_wheel() -> void:
 func _draw_report() -> void:
 	var w := hud.size.x
 	var h := hud.size.y
-	var r := Rect2(Vector2(30, 24), Vector2(w - 60, h - 48))
-	hud.draw_rect(r, Color(0.04, 0.035, 0.04, 0.94))
-	hud.draw_rect(r, Color(0.6, 0.55, 0.4), false, 1.0)
-	var head := "OP REPORT - " + ("SUCCESS: THE MANIFESTS ARE OURS" if outcome == "success" else "FAILED")
-	Pal.text(hud, r.position + Vector2(8, 6), head, 11, Color(0.5, 1, 0.5) if outcome == "success" else Color(1, 0.4, 0.3))
-	Pal.text(hud, r.position + Vector2(8, 20), "%s   %s" % [data.get("name", ""), _clock(t_op)], 8, Color(0.7, 0.7, 0.7))
-	var y := r.position.y + 34
-	for a in squad:
-		var line := "%-12s %-9s %-14s shots %3d  hits %2d  meds left %d" % [a.fighter_name, a.role, _status(a), a.shots, a.hits, a.meds]
-		Pal.text(hud, Vector2(r.position.x + 8, y), line, 8, Color(0.9, 0.85, 0.75) if a.state == "ok" else Color(1, 0.45, 0.35))
-		y += 10
-	y += 4
+	hud.draw_rect(Rect2(Vector2.ZERO, hud.size), Color(0, 0, 0, 0.55))
+	var r := Rect2(Vector2(40, 30), Vector2(w - 80, h - 60))
+	_panel(r)
+	var good := outcome == "success"
+	var head := "OP REPORT  -  " + ("THE MANIFESTS ARE OURS" if good else "FAILED")
+	Pal.text(hud, r.position + Vector2(10, 8), head, 12, Color(0.55, 0.9, 0.55) if good else UI_RED)
+	Pal.text(hud, r.position + Vector2(10, 24), "%s   elapsed %s" % [data.get("name", ""), _elapsed()], 8, UI_DIM)
+	# your people: a card each, with their face (greyed if they didn't come home)
+	var cw := minf(120.0, (r.size.x - 20 - (squad.size() - 1) * 6) / maxf(1, squad.size()))
+	for i in squad.size():
+		var a = squad[i]
+		var cr := Rect2(r.position + Vector2(10 + i * (cw + 6), 40), Vector2(cw, 62))
+		hud.draw_rect(cr, Color(0, 0, 0, 0.25))
+		hud.draw_rect(cr, UI_RED if a.state == "dead" else UI_LINE, false, 1.0)
+		Face.draw(hud, Rect2(cr.position + Vector2(4, 4), Vector2(30, 34)), str(a.fighter_name), str(a.get_meta("head", "helmet")), a.state == "dead")
+		Pal.text(hud, cr.position + Vector2(38, 4), _first(a).to_upper(), 9, UI_TEXT, HORIZONTAL_ALIGNMENT_LEFT, cw - 40)
+		var sw: Array = _state_word(a)
+		Pal.text(hud, cr.position + Vector2(38, 16), "KIA" if a.state == "dead" else ("HOME" if a.state == "ok" else sw[0]), 8, UI_RED if a.state != "ok" else UI_TEAL)
+		Pal.text(hud, cr.position + Vector2(38, 27), str(a.role), 8, UI_DIM)
+		Pal.text(hud, cr.position + Vector2(4, 42), "shots %d  hits %d" % [a.shots, a.hits], 8, UI_DIM, HORIZONTAL_ALIGNMENT_LEFT, cw - 8)
+		Pal.text(hud, cr.position + Vector2(4, 51), "meds left %d" % a.meds, 8, UI_DIM)
+	var y := r.position.y + 110
 	var tally := {"dead": 0, "down": 0, "cuffed": 0, "surrendered": 0, "fled": 0, "ok": 0}
 	for e in enemies:
 		tally[e.state] = int(tally.get(e.state, 0)) + 1
-	Pal.text(hud, Vector2(r.position.x + 8, y), "Them: %d dead, %d down, %d zip-tied, %d gave up, %d ran, %d still standing" % [tally["dead"], tally["down"], tally["cuffed"], tally["surrendered"], tally["fled"], tally["ok"]], 8, Color(0.8, 0.8, 0.8))
-	y += 14
-	Pal.text(hud, Vector2(r.position.x + 8, y), "YOUR SHOUTS", 8, Color(1, 0.8, 0.4))
-	y += 10
-	for s in shout_log.slice(maxi(0, shout_log.size() - 8)):
-		Pal.text(hud, Vector2(r.position.x + 8, y), "%s  %s" % [_clock(s["t"]), s["text"]], 8, Color(0.9, 0.9, 0.9))
-		y += 9
+	Pal.text(hud, Vector2(r.position.x + 10, y), "THEM: %d dead, %d down, %d zip-tied, %d gave up, %d ran, %d still standing" % [tally["dead"], tally["down"], tally["cuffed"], tally["surrendered"], tally["fled"], tally["ok"]], 8, UI_TEXT)
+	y += 16
+	Pal.text(hud, Vector2(r.position.x + 10, y), "YOUR SHOUTS", 8, UI_AMBER)
+	y += 11
+	for s in shout_log.slice(maxi(0, shout_log.size() - 7)):
+		Pal.text(hud, Vector2(r.position.x + 10, y), "%s  %s" % [_clock(s["t"]), s["text"]], 8, UI_TEXT, HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 20)
+		y += 10
 	if shout_log.is_empty():
-		Pal.text(hud, Vector2(r.position.x + 8, y), "(none: they ran it on their own)", 8, Color(0.6, 0.6, 0.6))
-	_restart_r = Rect2(r.end - Vector2(150, 20), Vector2(64, 14))
-	_title_r = Rect2(r.end - Vector2(80, 20), Vector2(72, 14))
-	for b in [[_restart_r, "Run it again"], [_title_r, "Back home" if from_garage else "Title"]]:
-		hud.draw_rect(b[0], Color(0.2, 0.2, 0.2))
-		hud.draw_rect(b[0], Color(0.7, 0.7, 0.6), false, 1.0)
-		Pal.text(hud, (b[0] as Rect2).position + Vector2(0, 2), b[1], 8, Color(1, 1, 1), HORIZONTAL_ALIGNMENT_CENTER, (b[0] as Rect2).size.x)
+		Pal.text(hud, Vector2(r.position.x + 10, y), "(none: they ran it on their own)", 8, UI_DIM)
+	_restart_r = Rect2(r.end - Vector2(196, 24), Vector2(90, 16))
+	_title_r = Rect2(r.end - Vector2(100, 24), Vector2(90, 16))
+	for b in [[_restart_r, "Run it again", false], [_title_r, "Back home" if from_garage else "Title", true]]:
+		var br: Rect2 = b[0]
+		hud.draw_rect(br, Color(0.78, 0.45, 0.2) if b[2] else UI_PANEL)
+		hud.draw_rect(br, UI_LINE, false, 1.0)
+		Pal.text(hud, br.position + Vector2(0, 3), b[1], 8, UI_TEXT, HORIZONTAL_ALIGNMENT_CENTER, br.size.x)
 
 
 ## The plan on the board: the depot's blueprint comes with the hack (the Jobs app). Run from the title
