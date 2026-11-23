@@ -32,6 +32,7 @@ var _fx: Array[AudioStreamPlayer] = []
 var _fxi := 0
 var _last_h := 0.0
 var _t := 0.0
+var _tick_t := 0.0
 
 
 func start(p_lock: String, p_state: RefCounted, p_seed: int) -> void:
@@ -126,12 +127,6 @@ func _unhandled_key_input(e: InputEvent) -> void:
 	if lock == null or not visible or _done_t >= 0.0 or not (e is InputEventKey) or not e.pressed:
 		return
 	match e.keycode:
-		KEY_W, KEY_UP:
-			_tension(0.04)
-		KEY_S, KEY_DOWN:
-			_tension(-0.04)
-		KEY_SPACE:
-			lock.set_tension(0.0)
 		KEY_ESCAPE:
 			_quit()
 		_:
@@ -179,8 +174,25 @@ func _process(delta: float) -> void:
 	var target_x := _pin_x(_nearest_pin(mouse.x))
 	_pick_x = lerpf(_pick_x, target_x, 1.0 - exp(-delta * 18.0)) if _pick_x != 0.0 else target_x
 	lock.at = _nearest_pin(_pick_x)
-	var want := clampf((_y0() - mouse.y) / L, 0.0, 1.0) if holding else 0.0
-	lock.lift = lerpf(lock.lift, want, 1.0 - exp(-delta * 25.0))
+	# tension: hold E (or W) for more, Q (or S) for less; the wheel nudges it
+	var dt := 0.0
+	if Input.is_key_pressed(KEY_E) or Input.is_key_pressed(KEY_W):
+		dt += 1.0
+	if Input.is_key_pressed(KEY_Q) or Input.is_key_pressed(KEY_S):
+		dt -= 1.0
+	if dt != 0.0:
+		lock.set_tension(lock.tension + dt * 0.45 * delta)
+		_tick_t -= delta
+		if _tick_t <= 0.0:
+			_tick_t = 0.06
+			_play(Synth.tick(900.0 + lock.tension * 600.0, 0.008, 0.6), 1.0, -20.0)
+	if Input.is_key_pressed(KEY_SPACE):
+		lock.set_tension(0.0)
+	# lift: hold the left button and the pick pushes the pin up steadily; let go and it falls back
+	if holding:
+		lock.lift = minf(1.0, lock.lift + delta * 0.5)
+	else:
+		lock.lift = maxf(0.0, lock.lift - delta * 1.6)
 	lock.tick(delta)
 	for ev in lock.events:
 		match ev:
@@ -246,7 +258,8 @@ func _draw() -> void:
 		draw_circle(size * Vector2(0.45, 0.45), 260.0 - k * 36.0, Color(1.0, 0.6, 0.2, 0.025))
 	if lock == null:
 		return
-	var sh := Vector2(randf_range(-1, 1), randf_range(-1, 1)) * _shake * 3.0
+	var jig := lock.feel * 1.2 if holding else 0.0
+	var sh := Vector2(randf_range(-1, 1), randf_range(-1, 1)) * (_shake * 3.0 + jig)
 	draw_set_transform(sh)
 	var b := _box()
 	var y0 := _y0()
@@ -270,6 +283,12 @@ func _draw() -> void:
 func _draw_pin(i: int, binding: bool) -> void:
 	var p: Dictionary = lock.pins[i]
 	var x := _pin_x(i)
+	# the pin under the pick shakes as you push it: harder near the sweet spot (Skyrim's tell), a rattle when the tension is too high
+	if i == lock.at and holding and not p["set"]:
+		var amt := 0.4 + (lock.feel * 3.0 if binding else 0.3)
+		if lock.tension > lock.t_hi:
+			amt += 1.5
+		x += randf_range(-1.0, 1.0) * amt
 	var y0 := _y0()
 	var ys := _ys()
 	var top := _box().position.y + 8
@@ -377,7 +396,7 @@ func _draw_hud() -> void:
 	draw_rect(br, Pal.METAL_D)
 	draw_rect(Rect2(br.position, Vector2(br.size.x * lock.bend, br.size.y)), Color(1.0, 0.35, 0.15))
 	draw_string(Pal.font(), Vector2(size.x - 150, 46), "BEND", HORIZONTAL_ALIGNMENT_RIGHT, 134, 7, Pal.DIM)
-	var help := "MOVE: pick under a pin     HOLD LEFT + MOVE UP: lift     WHEEL / W S: tension     SPACE: let go     ESC: give up"
+	var help := "MOUSE: pick under a pin     HOLD LEFT: push the pin up     E / Q (or wheel): tension up / down     SPACE: let go     ESC: give up"
 	draw_string(Pal.font(), Vector2(16, size.y - 12), help, HORIZONTAL_ALIGNMENT_CENTER, size.x - 32, 7, Pal.DIM)
 	if _msg_t > 0.0:
 		var a := minf(1.0, _msg_t)

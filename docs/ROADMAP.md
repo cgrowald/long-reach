@@ -16,6 +16,17 @@ The user asked for this to stop us creating more and more new work before finish
 
 ## M0. Play what's already built (the backlog)
 **Status: in playtest since 2026-11-23** (work list: docs/PLAYTEST_M0.md).
+
+**Playtest notes, round 1 (user, 2026-11-23):**
+- **Fixed:**
+  - Lockpick: W/S did nothing. Tension is now held on E/Q (W/S work too). Holding left pushes the pin up steadily. The pin and lock shake near the sweet spot, and rattle when the tension is too high.
+  - Hacking: the program codes were pushed under THE BOX by the long buffer (moved back into the middle). New sounds: tiles thunk and click, picks rise in pitch, a run of notes when a program runs or the link comes up, a low pulse at 50, 75 and 90% trace.
+  - The gadget case lid was turned the wrong way on its hinge.
+  - The roller door now shows your fixer trust out of 5, and the F1 shortcut.
+- **For the bench face-lift** (see the Parking lot):
+  - the sewing table's fabric blocks the view, and it needs crisp animations (the user will find games to copy);
+  - the gun bench parts are hard to pick up (broken since day one);
+  - the code chain needs to make more sense.
 Nothing new is built. The user plays the unplayed builds, then Claude fixes bugs until sign-off:
 - markets (ShopNet, Lantern, the Tram Yard curfew dash, barter, stings);
 - lockpicking (the yard gate and the title toy);
@@ -25,6 +36,7 @@ Nothing new is built. The user plays the unplayed builds, then Claude fixes bugs
 - the hacking build.
 
 ## M1. The depot raid, the whole loop (the proof the game is playable). One big build.
+**Status: started 2026-11-23, in parallel with M0 fixes (user's request).** Done so far: piece 1, the person generator (v2/sim/people_gen.gd, data/v2/people.json).
 Design is in docs/DEPOT_SLICE.md (sections 1, 4, 5).
 
 | # | Piece | Done when |
@@ -79,6 +91,9 @@ The face-lift goes piece by piece inside each milestone, using docs/LOOK_BIBLE.m
 ---
 
 ## Parking lot (ideas waiting for a milestone; not built until scheduled)
+- **Bench mechanics and face-lift (needs a slot on the roadmap).** Redo each bench step by step, with defining questions about what each step does. Crisp animations from reference games the user finds. The sewing table's fabric blocks the view; the gun bench parts are hard to pick up.
+- **Better models:** walk through Blender together to line things up; GPT-made 2D images used as "stickers" (decals) on the 3D models for detail.
+- **The code chain to make more sense** (questions asked 2026-11-23).
 - Leaders asking for promotion themselves (from G6).
 - More vault doors via unlocks (from R2).
 - A deeper health system, limb by limb (from G10).

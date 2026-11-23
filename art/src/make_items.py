@@ -100,7 +100,7 @@ def case(it, w, d, h, lid_angle, col="olive"):
 	a = math.radians(lid_angle)
 	lh = 0.012
 	cy = d / 2 + math.sin(a) * 0  # hinge at the back top edge
-	it.box((0, d / 2 - math.cos(a) * d / 2, h + math.sin(a) * d / 2), (w, d, lh), col, rot=(lid_angle, 0, 0))
+	it.box((0, d / 2 - math.cos(a) * d / 2, h + math.sin(a) * d / 2), (w, d, lh), col, rot=(-lid_angle, 0, 0))
 	for sx in (-1, 1):
 		for sy in (-1, 1):
 			it.cyl((sx * (w / 2 - 0.012), sy * (d / 2 - 0.012), h * 0.3), 0.004, 0.003, "screw", verts=6)
@@ -136,8 +136,8 @@ it.cyl((0.04, 0.028, 0.016), 0.003, 0.003, "led", verts=6, emission=3.0)
 it.box((0.0, -0.049, 0.018), (0.02, 0.006, 0.01), "usb")                                     # usb out the front
 # the screen in the lid, with its ribbon
 a = math.radians(70)
-it.box((0, 0.045 - math.cos(a) * 0.045, 0.03 + math.sin(a) * 0.045 + 0.001), (0.07, 0.036, 0.008), "bezel", rot=(70, 0, 0))
-it.box((0, 0.045 - math.cos(a) * 0.045 - 0.005, 0.03 + math.sin(a) * 0.045 + 0.002), (0.055, 0.024, 0.004), "lcd", rot=(70, 0, 0), emission=1.5)
+it.box((0, 0.045 - math.cos(a) * 0.045, 0.03 + math.sin(a) * 0.045 + 0.001), (0.07, 0.036, 0.008), "bezel", rot=(-70, 0, 0))
+it.box((0, 0.045 - math.cos(a) * 0.045 - 0.005, 0.03 + math.sin(a) * 0.045 + 0.002), (0.055, 0.024, 0.004), "lcd", rot=(-70, 0, 0), emission=1.5)
 for k, c in enumerate(("wire_r", "batt_y", "wire_k")):
 	it.box((-0.006 + k * 0.006, 0.035, 0.03), (0.005, 0.003, 0.03), c, rot=(-20, 0, 0))
 it.build()

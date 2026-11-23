@@ -1,0 +1,37 @@
+{
+	"_note": "The person generator (v2/sim/people_gen.gd, roadmap M1 piece 1). Guards, prisoners and recruits are rolled from these lists: a name, an age, a background (sets tech 0-5 and a skill), a motive (what keeps them with you, or what they want), one or two traits, and a line. Guard tiers: low = slate grey and dark blue (the lowly guards you fight first), high = the flame-orange units (later). All text is placeholder the user may rewrite.",
+	"first_names": ["Ruta", "Emil", "Petra", "Jonas", "Ilse", "Marek", "Vera", "Oskar", "Dana", "Teodor", "Lena", "Pavlo", "Bruno", "Agata", "Kazimir", "Mila", "Tomas", "Hedda", "Stepan", "Ines", "Lukas", "Zofia", "Anton", "Rosa", "Viggo", "Nadia", "Feliks", "Greta", "Ivan", "Sabine"],
+	"last_names": ["Kalnina", "Dobrev", "Holm", "Sava", "Brenner", "Okafor", "Lind", "Novak", "Varga", "Petrak", "Zeman", "Kral", "Moravec", "Ilic", "Brandt", "Halas", "Sorensen", "Vukovic", "Adler", "Kowal", "Strand", "Fischer", "Rakic", "Bauer"],
+	"backgrounds": [
+		{"id": "mill", "name": "Mill hand", "tech": [0, 1], "skill": "carry", "line": "Twelve hours a day at the looms. Strong hands."},
+		{"id": "mechanic", "name": "Mechanic", "tech": [2, 3], "skill": "repair", "line": "Fixes anything with an engine, and some things without."},
+		{"id": "nurse", "name": "Nurse", "tech": [1, 2], "skill": "medic", "line": "Hospital night shifts. Steady with a needle."},
+		{"id": "clerk", "name": "Records clerk", "tech": [2, 3], "skill": "paper", "line": "Knows how the forms work, and who signs them."},
+		{"id": "student", "name": "Student", "tech": [3, 4], "skill": "tech", "line": "Expelled for a pamphlet. Good with machines."},
+		{"id": "electrician", "name": "Electrician", "tech": [3, 5], "skill": "tech", "line": "Wired half the district. Knows where the cables go."},
+		{"id": "deserter", "name": "Army deserter", "tech": [1, 2], "skill": "shoot", "line": "Walked away from a checkpoint with his rifle. They want it back."},
+		{"id": "dockhand", "name": "Dock worker", "tech": [0, 1], "skill": "carry", "line": "Lifts crates. Knows which ones get waved through."},
+		{"id": "driver", "name": "Tram driver", "tech": [1, 2], "skill": "drive", "line": "Knows every street and every patrol's coffee break."},
+		{"id": "cook", "name": "Canteen cook", "tech": [0, 1], "skill": "morale", "line": "Feeds people. People talk to people who feed them."},
+		{"id": "teacher", "name": "Schoolteacher", "tech": [1, 3], "skill": "talk", "line": "Taught the approved curriculum for twenty years. Not anymore."},
+		{"id": "radioman", "name": "Radio repairman", "tech": [4, 5], "skill": "tech", "line": "Builds receivers that hear the banned stations."}
+	],
+	"motives": [
+		{"id": "grief", "name": "Grief", "line": "They took someone. Nothing else matters much.", "likes": ["ops_bureau"], "dislikes": ["let_go"]},
+		{"id": "money", "name": "Money", "line": "Family to feed. Pays the bills, asks few questions.", "likes": ["paid"], "dislikes": ["unpaid"]},
+		{"id": "pride", "name": "Pride", "line": "Wants to be good at something that matters.", "likes": ["good_gear", "promoted"], "dislikes": ["benched"]},
+		{"id": "family", "name": "Family", "line": "Doing this so their kids don't have to.", "likes": ["careful"], "dislikes": ["kill_prisoner", "losses"]},
+		{"id": "belief", "name": "Belief", "line": "Believes the country can be different.", "likes": ["recruit", "post"], "dislikes": ["kill_prisoner"]},
+		{"id": "friendship", "name": "Friendship", "line": "Came because a friend did. Stays for the friend.", "likes": ["squad_together"], "dislikes": ["losses"]},
+		{"id": "revenge", "name": "Revenge", "line": "Has a name in mind. Wants to be there when it happens.", "likes": ["ops_bureau", "kill_prisoner"], "dislikes": ["let_go"]},
+		{"id": "thrill", "name": "Thrill", "line": "Bored to death of the state. This is the first time they feel awake.", "likes": ["ops"], "dislikes": ["benched"]}
+	],
+	"traits": ["steady", "cocky", "jumpy", "careful", "loud", "cold", "kind", "stubborn", "quick", "slow"],
+	"opposites": [["quick", "slow"], ["careful", "loud"], ["kind", "cold"], ["steady", "jumpy"]],
+	"guards": {
+		"low": {"ranks": ["Watchman", "Guard", "Guard", "Senior guard"], "colors": "slate grey and dark blue", "weapons": ["service_pistol", "service_pistol", "guard_smg"], "years": [1, 19],
+			"lines": ["Nineteen years and still on nights.", "Took the job for the ration card.", "Hates the depot, hates the cold, hates you.", "Two kids. Wants to go home.", "Thinks the alarm button is a myth."]}
+	},
+	"offenses": ["Late for curfew by four minutes", "Listened to a banned station", "Complained about the rations in a queue", "Missed a gratitude break", "Wrong colour coat on Marshal's Day", "Laughed at the wrong moment", "Lent a book with a missing page", "Owed a fine of 3 credits"],
+	"recruit_hooks": ["Heard from a friend you're hitting the old warehouse.", "Saw your post on Nod. Wants in.", "Worked there for six years before they let them go.", "Their brother is in the holding cells."]
+}

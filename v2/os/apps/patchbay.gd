@@ -25,11 +25,19 @@ var _msg := ""
 var _msg_t := 0.0
 var _guide_next := 0              # tutorial: the next kettle line to show during the inject
 var _last_stage := ""
+var _aps: Array[AudioStreamPlayer] = []
+var _api := 0
+var _warned := 0.0             # last trace warning level played
+const Synth := preload("res://v2/ui/synth.gd")
 var _t := 0.0
 
 
 func build() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
+	for i in 6:
+		var ap := AudioStreamPlayer.new()
+		add_child(ap)
+		_aps.append(ap)
 	if win and not win.maximized:
 		win.toggle_max()
 	refresh()
@@ -229,10 +237,12 @@ func click_cell(c: Vector2i) -> void:
 	if cell["kind"] == "empty" and sel_tray >= 0:
 		if s.place(sel_tray, c):
 			os.game.sfx.play("drop_002", 1.2, -10.0)
+			_beep(220.0, 0.05, 0.7, -6.0)
 			sel_tray = _next_free_tray()
 	elif cell["kind"] == "placed":
 		s.turn(c)
 		os.game.sfx.play("click_001", 1.3, -8.0)
+		_beep(1800.0, 0.008, 0.5, -12.0, randf_range(0.9, 1.1))
 	_after_move()
 	queue_redraw()
 
@@ -249,6 +259,7 @@ func _after_move() -> void:
 		_flash = 1.0
 		os.game.sfx.play("confirmation_002", 1.0, -6.0)
 		_say("LINK UP. Now spell the programs into the buffer.")
+		_arp([520.0, 780.0, 1040.0, 1560.0])
 
 
 func pick(p: Vector2i) -> void:
@@ -257,8 +268,13 @@ func pick(p: Vector2i) -> void:
 		return
 	var ran: Array = s.pick(p)
 	os.game.sfx.play("click_001", 1.0 + s.buffer.size() * 0.05, -8.0)
+	_beep(900.0 + s.buffer.size() * 110.0, 0.02, 0.2, -10.0)
+	if ran.is_empty() and s.buffer.size() >= s.buf_max:
+		_beep(140.0, 0.12, 0.6, -4.0)
 	for pid in ran:
 		_say("%s RAN." % Hack.program(pid).get("name", pid))
+		_arp([660.0, 990.0, 1320.0])
+		_flash = 0.6
 		os.game.sfx.play("confirmation_002", 1.2, -6.0)
 	if s.stage == "done":
 		_end()
@@ -345,6 +361,7 @@ func _process(delta: float) -> void:
 	if s != null and report.is_empty():
 		var was: String = s.stage
 		s.tick(delta)
+		_trace_warn()
 		if was == "tune" and s.stage == "inject":
 			_flash = 1.0
 			os.game.sfx.play("confirmation_002", 1.0, -6.0)
@@ -634,8 +651,9 @@ func _draw_inject() -> void:
 	var m := _mid()
 	P.text(self, m.position + Vector2(6, 2), "INJECT  -  pick along the lit %s" % ("row" if s.axis == "row" else "column"), P.FACE_L)
 	# the buffer
+	var bw := minf(26.0, (m.size.x - 12.0) / maxf(1.0, s.buf_max))
 	for i in s.buf_max:
-		var br := Rect2(m.position.x + 6 + i * 26, m.position.y + 15, 24, 14)
+		var br := Rect2(m.position.x + 6 + i * bw, m.position.y + 15, bw - 2, 14)
 		draw_rect(br, P.PETROL_D)
 		draw_rect(br, Color(P.FACE_L, 0.3), false, 1.0)
 		if i < s.buffer.size():
@@ -654,7 +672,7 @@ func _draw_inject() -> void:
 				draw_rect(r, P.COPPER)
 			P.text(self, r.position + Vector2(0, 4), "[ ]" if used else s.chain[y][x], Color(P.FACE_L, 0.25) if used else (P.FACE_L if on_line else Color(P.FACE_L, 0.55)), HORIZONTAL_ALIGNMENT_CENTER, r.size.x)
 	# the programs
-	var px: float = m.position.x + 20 + maxf(s.chain_n * _chain_cell(), s.buf_max * 26.0)
+	var px: float = m.position.x + 20 + s.chain_n * _chain_cell()
 	var py := m.position.y + 48
 	P.text(self, Vector2(px, py - 14), "PROGRAMS", Color(P.FACE_L, 0.6))
 	for pr in s.programs:
@@ -684,3 +702,36 @@ func _draw_report() -> void:
 		y += _mid_text(Vector2(x, y), "- " + str(ln), P.FACE_L) + 3
 	y += 6
 	_mid_text(Vector2(x, y), "Files land on the shelves as intel. Sell them or post them from the Drop app.", Color(P.FACE_L, 0.6))
+
+
+# ------------------------------------------------------------------ sounds (made in code: v2/ui/synth.gd)
+
+func _beep(freq: float, decay: float, noise := 0.3, db := -8.0, pitch := 1.0) -> void:
+	if _aps.is_empty():
+		return
+	var ap := _aps[_api]
+	_api = (_api + 1) % _aps.size()
+	ap.stream = Synth.tick(freq, decay, noise)
+	ap.pitch_scale = pitch
+	ap.volume_db = db
+	ap.play()
+
+
+## A quick rising run of notes: a program ran, the link came up.
+func _arp(freqs: Array) -> void:
+	for i in freqs.size():
+		get_tree().create_timer(0.06 * i).timeout.connect(_beep.bind(float(freqs[i]), 0.05, 0.1, -8.0))
+
+
+## Trace warnings: a low double pulse at 50%, 75% and 90%.
+func _trace_warn() -> void:
+	if s == null or s.stage == "done":
+		_warned = 0.0
+		return
+	if s.trace < 0.05:
+		_warned = 0.0
+	for lv in [0.5, 0.75, 0.9]:
+		if s.trace >= lv and _warned < lv:
+			_warned = lv
+			_beep(180.0, 0.07, 0.4, -6.0)
+			get_tree().create_timer(0.14).timeout.connect(_beep.bind(180.0, 0.07, 0.4, -6.0))

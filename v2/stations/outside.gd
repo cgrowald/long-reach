@@ -412,7 +412,11 @@ func _draw_brief() -> void:
 	var y := r.position.y + 26
 	if not Markets.unlocked(st, "curfew"):
 		draw_string(Pal.bold(), Vector2(x, y), "Nowhere to go yet.", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Pal.TEXT)
-		draw_multiline_string(Pal.font(), Vector2(x, y + 20), "After curfew the town shuts. Somewhere a market opens, but you don't know where. The fixer does: sell him enough files from the Dead Drop and he'll tell you (trust %d)." % int(Markets.mdef("curfew").get("unlock_trust", 5)), HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 32, 9, -1, Pal.DIM)
+		draw_multiline_string(Pal.font(), Vector2(x, y + 20), "After curfew the town shuts. Somewhere a market opens, but you don't know where. The fixer does.
+
+Sell him files from the Dead Drop app on the PC: each sale is +1 trust. Fixer trust now: %d / %d.
+
+(Testing: F1, then Open all markets.)" % [int(st.os.get("market", {}).get("trust", 0)), int(Markets.mdef("curfew").get("unlock_trust", 5))], HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 32, 9, -1, Pal.DIM)
 		_btn(Rect2(r.end.x - 110, r.end.y - 34, 94, 22), "STAY IN", "stay")
 		return
 	draw_string(Pal.bold(), Vector2(x, y), "THE TRAM YARD, AFTER CURFEW", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Pal.BRASS)
