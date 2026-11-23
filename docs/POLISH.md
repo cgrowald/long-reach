@@ -35,6 +35,12 @@ Give the existing garage a restrained environment-art pass. Preserve its layout,
 - **Key hints:** 1-3 Helmet cams, Tab Next feed, Space Pause, Esc Back.
 - *Read:* our feed wall + ops board + squad list, reorganised into one calm screen: one big feed, the map as stale paper intel, states as words, CCTV as equal feeds. Medium job when we get there (layout and styling; the parts mostly exist).
 
+### Version 2 of the sheet: faces (user, 2026-11-22: "use this as the face-lift for the missions")
+*Same layout, plus a pixel portrait everywhere a person appears:* a big portrait beside "02 / ADA LIND — HELMET CAM" on the main feed, a small one next to whoever is talking in the radio subtitles (Viktor: "Room clear."), one in each squad row, and one on each helmet-cam thumbnail. Hurt = a red warning triangle by the name; BLEEDING in red. CCTV feeds get a camera icon instead of a face.
+- **The point (user):** "we want the feel of getting close to our operators", so every fighter has a **procedurally generated face** you see on their cam while they fight. **When their cam cuts out, the face stays**, and that's how you know they're gone.
+- *So:* a dead fighter's tile keeps the portrait over a dead feed (static, then black, "SIGNAL LOST"); the face doesn't vanish from the screen. The same face shows in the gear cage, the op report and the people list, so you know them before you send them.
+- **Gap to ask before building:** how the faces are made: (a) 2D pixel portraits built from layered parts (face shape, skin, eyes, nose, hair, beard, scars, headwear from their kit), seeded per person and saved; or (b) rendered from the 3D soldier head with a generated face texture. Claude leans to (a): matches the sheet, cheap, and kit (helmet, mask) can still be drawn over it. The user may want GPT to make the part sheets.
+
 ## HEARTH OS concept sheets (user via GPT, 2026-11-22: use NOW with the hacking build, not later)
 *Arrived inline only.* Five screens: desktop (Files and Mail windows, a "Kettle. Fuses. Bandages." sticky, parts_list.txt, a "Job updated: Dispatch records" toast), login ("LOCAL SESSION", a pixel portrait, "citizen / Workshop account", SIGN IN in copper, DISPLAY/LOCAL DISK/RADIO status ticks, "ONE HEARTH. ONE PEOPLE."), PATCHBAY, WATCHLINE, SPOOL (all described in docs/HACKING.md section 2).
 - **Palette:** dark petrol desktop with a faint factory line drawing bottom right, warm ivory windows, copper for selection and primary buttons, sage green for "ready" chips, dark petrol panel headers with ivory caps.
