@@ -1,0 +1,51 @@
+{
+	"_note": "Hacking (docs/HACKING.md). Targets: the fixed specials in os.json plus places generated from the town (kinds below). One hack = CONNECT (route the signal, PATCHBAY) then INJECT (code chain: spell program codes). On site (air gap): TUNE (match the signal) then INJECT against a patrol clock. Text here is placeholder flavour; the user may rewrite any of it. Numbers are first guesses: tune here.",
+	"symbols": ["1C", "55", "BD", "E9", "7A", "FF"],
+	"programs": {
+		"grab": {"name": "GRAB", "len": 2, "known": true, "text": "Copy the files worth taking."},
+		"wipe": {"name": "WIPE", "len": 2, "known": true, "text": "Wipe the logs: trace down by a third."},
+		"dirt": {"name": "DIRT", "len": 3, "text": "Dig through the owner's mail: dirt on them, and their password for next time."},
+		"camera": {"name": "EYES", "len": 3, "text": "Link the building's cameras: you'll see them in a raid there."},
+		"redirect": {"name": "REROUTE", "len": 3, "text": "Redirect a delivery: a crate waits at a drop tomorrow morning."},
+		"payroll": {"name": "PAYDAY", "len": 4, "text": "Skim the payroll: money now, more heat."}
+	},
+	"knowledge_note": "Programs without known:true are locked until learned (state.os.know). How you learn them is decided later (user 2026-11-22: build it all first). Debug: F1 panel or Hack.learn_all().",
+	"tiers": {
+		"1": {"grid": [5, 4], "fixed": 0.45, "blocked": 0.25, "chain": 5, "trace_rate": 1.0, "hours": 2.0},
+		"2": {"grid": [6, 4], "fixed": 0.35, "blocked": 0.3, "chain": 5, "trace_rate": 1.25, "hours": 2.0},
+		"3": {"grid": [7, 5], "fixed": 0.25, "blocked": 0.3, "chain": 6, "trace_rate": 1.5, "hours": 2.0}
+	},
+	"trace": {"connect_per_s": 0.004, "inject_per_s": 0.022, "wipe": 0.33, "onsite_seconds": 75},
+	"buffer": 5,
+	"lock_nights": 3,
+	"caught_attention": 8,
+	"onsite_caught_attention": 12,
+	"payroll_cr": [40, 70, 110],
+	"payroll_attention": 6,
+	"kinds": {
+		"office": {"names": ["Sector %d Water Office", "District %d Housing Office", "Ration Office %d", "Tax Annex %d"], "what": "the records server", "tier": [1, 2],
+			"programs": ["grab", "wipe", "dirt", "payroll"], "family": "electronics",
+			"files": [["ledger_q%d.xls", "dirt", "The books don't add up. Someone skims the difference."], ["residents_%d.csv", "names", "Names and flats, street by street."], ["memo_%d.txt", "plan", "Next week's inspections, block by block."]]},
+		"depot": {"names": ["%s Freight Yard", "%s Haulage Depot", "Ring Road Depot %d"], "what": "the dispatch office", "tier": [1, 2],
+			"programs": ["grab", "wipe", "camera", "redirect"], "family": "parts",
+			"files": [["manifests_%d.csv", "plan", "Which trucks carry what, and when."], ["rota_%d.txt", "plan", "When the yard guards change."], ["fuelcards_%d.xls", "money", "Company fuel cards and their limits."]]},
+		"shop": {"names": ["%s Hardware", "%s Electrics", "%s Outfitters"], "what": "the stock computer", "tier": [1, 1],
+			"programs": ["grab", "wipe", "redirect", "camera"], "family": "cloth",
+			"files": [["orders_%d.csv", "plan", "What's coming in, and when the van comes."], ["customers_%d.csv", "names", "Who bought what. Some of it is interesting."]]},
+		"clinic": {"names": ["%s Clinic", "District %d Polyclinic"], "what": "the pharmacy terminal", "tier": [1, 2],
+			"programs": ["grab", "wipe", "dirt", "redirect", "camera"], "family": "medical",
+			"files": [["patients_%d.csv", "names", "Patient lists. Some names are Bureau."], ["dispensary_%d.xls", "money", "Drugs signed out that never reached a patient."]]},
+		"police": {"names": ["%s Police Station", "Precinct %d"], "what": "the duty desk (air-gapped)", "tier": [3, 3], "air_gap": true,
+			"programs": ["grab", "wipe", "dirt", "camera"], "family": "parts",
+			"files": [["duty_roster_%d.txt", "plan", "Who's on, who's off, who sleeps at the desk."], ["armoury_log_%d.xls", "plan", "What's in the armoury, and who holds the keys."], ["informants_%d.csv", "names", "Names the precinct pays. Dangerous to hold."]]}
+	},
+	"streets": ["Tannery", "Harbour", "Lindgren", "Mill Lane", "Varga", "Kestrel", "Old Bridge", "Ring Road"],
+	"first_names": ["Ruta", "Emil", "Petra", "Jonas", "Ilse", "Marek", "Vera", "Oskar", "Dana", "Teodor", "Lena", "Pavlo"],
+	"last_names": ["Kalnina", "Dobrev", "Holm", "Sava", "Brenner", "Okafor", "Lind", "Novak", "Varga", "Petrak", "Zeman", "Kral"],
+	"jobs": ["clerk", "night manager", "dispatcher", "pharmacist", "duty sergeant", "stock keeper", "deputy"],
+	"families": {"medical": ["shirt", "alcohol", "tape"], "cloth": ["bag", "strap", "buckle"], "parts": ["alu", "pins"], "metal": ["alu", "pins"], "electronics": ["board", "chips"]},
+	"roster": 9,
+	"per_night": 3,
+	"sell": {"dirt": 30, "plan": 25, "names": 20, "money": 35, "drop": 0.15, "floor": 0.3, "trust_market": 5},
+	"post": {"dirt": 40, "plan": 15, "names": 25, "money": 10, "heat": {"dirt": 30, "plan": 15, "names": 35, "money": 10}, "burn_at": 100, "recruit_every": 150}
+}
