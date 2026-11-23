@@ -250,3 +250,14 @@ Title screen > **Combat: depot raid** (`v2/combat/fight.tscn`, content in `data/
 - **Verdict:** "This is what I was afraid to tackle and what could ruin the game, but this is exactly what I wanted." Tweak slowly over time.
 
 **Later:** better weapons lower the TTK; specific targets field better-armoured enemies, which needs better rounds and more ammo.
+
+## 11. The combat face-lift (user, 2026-11-22: later; the garage and the economy come first)
+- **"The combat is good, but it needs a massive face lift."**
+- **Realistic weapon handling and damage:**
+  - reloads, malfunctions, shouldering, shown on the body;
+  - damage by where it lands: a head shot ends it.
+- **Cheap weapons have their moments.** The pump shotgun is cheap, but up close it beats a rifle, and a guard who just aims at a soldier's face ends the fight. Stopped on a road by a small army squad, you're done; clearing a small roadblock on foot, you can win. The scenario decides.
+- **One AI for any place:** trenches, roads, houses, gas stations, bars. The doctrine and the cover logic can't be built only for corridors.
+- **Lighting pass:** good shadows and light where it matters, across the game. Weapon flashlights become an attachment you make or buy (cheap guns have none: dark cams).
+- **An easier first mission to test with,** so the first team isn't slammed by the depot: something small (the bar with the politician, or a small roadblock), a couple of guards, no Bureau.
+- **The police officer beat (not story, a mechanic):** exploit or befriend a cop, steal his keys, rob the police station. A job chain that ends in your first real guns.
