@@ -150,3 +150,14 @@ The other ideas (a work audit, a checkpoint) all go in too. At first the consequ
 - slice B (variants, the on-site hack, upgrades);
 - slice C (prisoner and interrogation, Krall, the recruit);
 - slice D (lots and echelons)?
+
+## 4. Answers (user, 2026-11-23)
+- **G1, the interrogation:** you bring the person back to the garage. Pressure, bluffing, bargaining and leverage, as listed. It ends in one of three outcomes, each with its own pluses and minuses:
+  - let them go;
+  - kill them;
+  - recruit them.
+- **G2, the hack in the op:** you are never there in combat. It's one of your fighters with a USB or hacking device you handed them: "stick it in any computer you see".
+- **G4, roguelite:** the user asked for better questions (asked in chat).
+- **G5, the numbers:** start at 5 handmade crafts to master an item, then see if that's too easy. Lot sizes depend on the economy we build.
+- **G12, the order:** one big build. The depot is the proof that the game is playable.
+- **Rule:** questions always go in the chat, not only in docs.
