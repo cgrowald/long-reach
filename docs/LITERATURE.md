@@ -75,6 +75,8 @@ Every one of these stories climbs the same ladder:
 
 ## 3. Where our game doesn't make sense yet (gaps)
 
+> **User correction (2026-11-23):** this is a game, not real life. You make it all yourself; that is the point. Stealing and buying guns are extras. The capital needs an army of at least 1000 men, and you can always try early and get lucky. Gaps 9 and 11 below stand only as flavour. Every gap from now on is a question with options (see docs/LOOP_RUNDOWN.md section 4).
+
 Each gap lists what the works do, what we do, and the fix. Ordered by how soon it bites.
 
 1. **Money has nowhere to go.** In every story scarcity drives the plot and money is spent constantly.
