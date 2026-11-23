@@ -276,7 +276,9 @@ static func apply_op(state: RefCounted, results: Array, loot: Array) -> Array:
 		p["ops"] = int(p.get("ops", 0)) + 1
 		var used: Dictionary = r.get("used", {})
 		_spend(state, p, "ammo", int(used.get("mags", 0)))
-		_spend(state, p, "med", int(used.get("meds", 0)))
+		for nm in _spend(state, p, "med", int(used.get("meds", 0))):
+			notes.append("%s used %s." % [_first(p), nm])
+		notes.append_array(_wounds(state, p, r))
 		_spend(state, p, "flash", int(used.get("flash", 0)))
 		_spend(state, p, "charge", int(used.get("charges", 0)))
 	for gid in loot:
@@ -285,7 +287,9 @@ static func apply_op(state: RefCounted, results: Array, loot: Array) -> Array:
 	return notes
 
 
-static func _spend(state: RefCounted, p: Dictionary, what: String, n: int) -> void:
+## Take n things of a kind out of their rig. Returns the names of hand-made items used ("your dressing (3 stars, day 2)").
+static func _spend(state: RefCounted, p: Dictionary, what: String, n: int) -> Array:
+	var names: Array = []
 	for k in n:
 		for i in range(p["grid"].size() - 1, -1, -1):
 			var e: Dictionary = p["grid"][i]
@@ -302,6 +306,80 @@ static func _spend(state: RefCounted, p: Dictionary, what: String, n: int) -> vo
 					hit = d.has("charge")
 			if hit:
 				if e.has("item"):
+					var it := item_by_id(state, int(e["item"]))
+					if not it.is_empty():
+						names.append("your %s (%s, made day %d)" % [str(it.get("name", "item")).to_lower(), "*".repeat(int(it.get("stars", 0))), int(it.get("day", 0))])
 					state.items.erase(item_by_id(state, int(e["item"])))
 				p["grid"].remove_at(i)
 				break
+	return names
+
+
+# ------------------------------------------------------------------ health between fights (roadmap M1 piece 10)
+## Tarkov-like (user 2026-11-23): bandages heal health in the raid; what's still missing at the end becomes injury days.
+## Heavy hits leave a scar on the face (it stays). Clothes and rigs take damage when the wearer is hurt (condition).
+## p.hp (0-100, what they came home with), p.injury_days, p.scars [], items get "condition" (0-100).
+
+const SCAR_SPOTS := ["brow", "cheek", "chin", "nose"]
+
+
+static func _first(p: Dictionary) -> String:
+	return str(p.get("name", "?")).split(" ")[0].capitalize()
+
+
+static func _wounds(state: RefCounted, p: Dictionary, r: Dictionary) -> Array:
+	var notes: Array = []
+	var hp := clampf(float(r.get("hp", 100.0)), 0.0, 100.0)
+	var downed: bool = r.get("state", "ok") == "down" or bool(r.get("was_down", false))
+	var missing := 100.0 - hp
+	var days := int(ceil(missing / 20.0))
+	if downed:
+		days = maxi(days, 5 + int(missing / 50.0))
+	p["hp"] = hp
+	p["injury_days"] = maxi(int(p.get("injury_days", 0)), days)
+	if days > 0:
+		notes.append("%s came home hurt: %d health missing, out for %d day%s." % [_first(p), int(missing), days, "" if days == 1 else "s"])
+	var hits := int(r.get("hits", 0))
+	if downed or hits >= 3:
+		var scars: Array = p.get("scars", [])
+		var spot: String = SCAR_SPOTS[(hash(str(p["id"]) + str(state.day)) & 0x7fffffff) % SCAR_SPOTS.size()]
+		if not scars.has(spot):
+			scars.append(spot)
+			notes.append("%s will carry a scar on the %s." % [_first(p), spot])
+		p["scars"] = scars
+	if hits > 0:
+		for slot in ["clothes", "rig"]:
+			var it := worn(state, p, slot)
+			if not it.is_empty():
+				it["condition"] = maxi(0, int(it.get("condition", 100)) - hits * 12)
+	return notes
+
+
+## Can they go on an op? (alive, not walked out, not injured)
+static func fit_for_duty(p: Dictionary) -> bool:
+	return p.get("alive", true) and not p.get("left", false) and int(p.get("injury_days", 0)) <= 0
+
+
+## Overnight: one day of healing each.
+static func heal_night(state: RefCounted) -> Array:
+	var lines: Array = []
+	for p in state.people:
+		if not p.get("alive", true) or int(p.get("injury_days", 0)) <= 0:
+			continue
+		p["injury_days"] = int(p["injury_days"]) - 1
+		p["hp"] = minf(100.0, float(p.get("hp", 100.0)) + 20.0)
+		if int(p["injury_days"]) == 0:
+			p["hp"] = 100.0
+			lines.append("%s is back on their feet." % _first(p))
+	return lines
+
+
+## Treat someone with a med item from the stash: better meds take more days off (a 5-star dressing can heal them fully).
+static func treat(state: RefCounted, p: Dictionary, item: Dictionary) -> int:
+	var heal := int(item.get("heal", 10)) + int(item.get("stars", 0)) * 5
+	var off := clampi(int(round(heal / 12.0)), 1, 7)
+	p["injury_days"] = maxi(0, int(p.get("injury_days", 0)) - off)
+	if int(p["injury_days"]) == 0:
+		p["hp"] = 100.0
+	state.items.erase(item)
+	return off

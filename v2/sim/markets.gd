@@ -137,6 +137,7 @@ static func _stung(state: RefCounted, o: Dictionary) -> Dictionary:
 	state.attention = minf(100.0, state.attention + float(md.get("sting_attention", 20)))
 	_s(state)["carry"] = []
 	state.flags["stung"] = int(state.flags.get("stung", 0)) + 1
+	load("res://v2/sim/krall.gd").bump(state, 2.0, "a Bureau sting at the Tram Yard")
 	return {"ok": false, "sting": true, "msg": "STING. Two men from the shed. You ran, and dropped your bag and %d cr. The Bureau has your face now." % lose}
 
 
@@ -209,6 +210,9 @@ static func deliver(state: RefCounted) -> Array:
 			keep.append(od)
 			continue
 		var o: Dictionary = od["offer"]
+		if load("res://v2/sim/krall.gd").seize_delivery(state):
+			lines.append("SEIZED: %s never came. Krall's people took it." % o["name"])
+			continue
 		var rng := RandomNumberGenerator.new()
 		rng.seed = hash(str(state.world_seed) + str(od))
 		if od["market"] == "lantern" and rng.randf() < float(mdef("lantern").get("scam", 0.0)):

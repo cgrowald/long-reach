@@ -103,9 +103,11 @@ func end_day() -> Array:
 	var drop := rng.randi_range(0, 60)
 	pool = maxi(1, pool - drop)
 	lines.append("Suspect pool: %d (-%d)." % [pool, drop])
+	lines.append_array(load("res://v2/sim/krall.gd").night(self))
 	lines.append_array(Economy.end_of_day(self))
 	lines.append_array(load("res://v2/sim/hack.gd").deliver_drops(self))
 	lines.append_array(load("res://v2/sim/markets.gd").deliver(self))
+	lines.append_array(load("res://v2/sim/loadout.gd").heal_night(self))
 	ledger.append({"day": day, "lines": lines})
 	if ledger.size() > 30:
 		ledger.pop_front()

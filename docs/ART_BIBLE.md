@@ -76,6 +76,7 @@ The images are in `docs/refs/bible/` (GPT-made, picked by the user). Other refer
 | 19 the garage evening | **Bench face-lift** and **M2** (garage moments) |
 | 16 district colours | **M7** (districts) |
 | 09 the town street | **M6** (going out), and the curfew map restyle |
+| (decision) | The curfew trips are 2D painted backgrounds with paper cut-out people (Paper Mario) and 3D lights. Solo hacks and break-ins are full 3D. |
 | 03 the honour uniform | **M7 / M9** (the high tiers show up later) |
 
 ## Rule

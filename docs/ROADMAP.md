@@ -79,6 +79,7 @@ Generated buildings (a new one every time), more op types, and the enemy coverin
 Lots after mastery, lot-size upgrades, upkeep that climbs the chain of command (person, squad, platoon, company, battalion).
 
 ## M6. Going out
+**Look decided (user 2026-11-23):** the night trips (the curfew dash, getting to and from places) are 2D: a painted town like art bible 09, with you and the guards as flat cut-outs standing up on it (Paper Mario), and real 3D lights, shadows and effects over it. "Cute charm". Going somewhere on your own to hack or break in is full 3D.
 A town map with destinations: contacts, on-site hacks, leaflets, the Tram Yard.
 
 ## M7. Districts and the war room

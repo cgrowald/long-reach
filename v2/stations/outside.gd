@@ -295,6 +295,7 @@ func _try_bribe() -> void:
 func _searched() -> void:
 	var st: RefCounted = game.state
 	var lost: int = Markets.lose_carry(st)
+	load("res://v2/sim/krall.gd").bump(st, 1.0, "stopped after curfew")
 	st.attention = minf(100.0, st.attention + 8.0)
 	_end_lines = ["Stopped after curfew. Papers checked, name written down (+8 Bureau attention)."]
 	if lost > 0:

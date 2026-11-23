@@ -669,6 +669,11 @@ func finish(state: RefCounted) -> Dictionary:
 			if not knows(state, pid):
 				learn(state, pid)
 				lines.append("You learned %s. It works anywhere now." % program(pid).get("name", pid))
+	var Krall = load("res://v2/sim/krall.gd")
+	if cut:
+		Krall.bump(state, 1.0, "cut out of %s" % target.get("name", "a hack"))
+	elif ran.has("wipe"):
+		Krall.push_back(state, 0.5, "wiped the logs at %s" % target.get("name", "a hack"))
 	if cut:
 		var clue := str(target.get("clue", "Someone broke in tonight."))
 		var clues: Array = state.flags.get("clues", [])
@@ -705,6 +710,9 @@ static func deliver_drops(state: RefCounted) -> Array:
 	for d in drops:
 		if int(d["day"]) > int(state.day) + 1:
 			keep.append(d)
+			continue
+		if load("res://v2/sim/krall.gd").seize_delivery(state):
+			lines.append("SEIZED: the crate from %s was gone. Krall's people got there first." % d.get("from", "?"))
 			continue
 		# a few units of a material of that family, grade by tier
 		var fam: String = d.get("family", "parts")
