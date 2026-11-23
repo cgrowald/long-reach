@@ -1,0 +1,89 @@
+# Roadmap (agreed process, 2026-11-23)
+
+The user asked for this to stop us creating more and more new work before finishing what we were talking about.
+
+## How we work
+1. **One milestone at a time, in this order.** Claude builds the whole milestone.
+2. **Claude checks it** with bot tests and screenshots.
+3. **Claude hands over a playtest work list** (numbered steps: what to try, what should happen) **and opens the game.**
+4. **The user plays** and sends notes.
+5. **Claude fixes** them, and steps 3-4 repeat until the user **signs off**.
+6. **Then the next milestone, exactly as planned here.** Changing the order is the user's call.
+7. **New ideas go to the Parking lot** (bottom), not into the current build. They get a milestone when the user says so.
+8. Before each milestone, Claude asks its open questions **in the chat**, with options.
+
+---
+
+## M0. Play what's already built (the backlog)
+Nothing new is built. The user plays the unplayed builds, then Claude fixes bugs until sign-off:
+- markets (ShopNet, Lantern, the Tram Yard curfew dash, barter, stings);
+- lockpicking (the yard gate and the title toy);
+- the tutorial hacks (post office, town hall);
+- the bench lamps and the new models;
+- the garage, mission and OS face-lifts;
+- the hacking build.
+
+## M1. The depot raid, the whole loop (the proof the game is playable). One big build.
+Design is in docs/DEPOT_SLICE.md (sections 1, 4, 5).
+
+| # | Piece | Done when |
+|---|---|---|
+| 1 | **Person generator** | Guards, prisoners and recruits get a name, a face, a background, a motive, a tech level and traits. |
+| 2 | **Depot run generation** | One hand-made layout, but every raid rolls the depot type (one per bench), the guards (count, posts, patrols, poor weapons, infinite ammo with reloads) and the stores behind the doors. |
+| 3 | **Intel before the raid** | Hacking the depot gives a plan file (layout and guard rotation drawn on the ops board); more hacking can hint what's behind each vault door. EYES gives the cameras. |
+| 4 | **EYES in the fight** | Camera tiles show enemies your squad can't see. A ping only alerts the squad; the shout wheel makes them target it. |
+| 5 | **The vault** | Three locked doors in the secure section, time to open one. Dungeon Crawler Carl loot: mostly junk, sometimes great (blueprints, bench upgrades with quirks, rare gear). Your team escorts it out. |
+| 6 | **The backup timer** | Reinforcements arrive when it runs out. Upgrades push it back. You can fight out with meds, good guns, good people and good gear. |
+| 7 | **The stick carrier** | A fighter with enough tech asks "Boss, PC here, hit it?". Yes = the squad hunkers down, and either you hack it (a quick hack from the van) or their auto-hacker grabs some, half or all of it by quality. The time costs backup timer. |
+| 8 | **Squad AI self-preservation** | A priority list: their lives first, even against your orders. |
+| 9 | **Loot by carrying** | Tarkov grids. Pick up what fits, swap your gun for a guard's SMG (low ammo). |
+| 10 | **Health and injury** | Bandages heal HP in the raid; the report turns missing HP into injury days; heavy wounds, scars; better meds heal fully. |
+| 11 | **Items by name** | "Ada used your dressing (★★★, day 2)" in the report; gear history. |
+| 12 | **The prisoner** | From the depot's holding cells, or a captured guard, brought to the garage. Interrogation (pressure, bluff, bargain, leverage), then let go (raises the hunt), kill (off-screen; loyalty drops) or recruit (a risk). |
+| 13 | **Krall's ladder** | A corkboard clock. Anyone you've been near is questioned, then a delivery is intercepted, then the garage is searched. Each op moves it; destroying evidence pushes it back. |
+| 14 | **The depot recruit** | An ex-worker on Nod ("hey, we're hitting the old warehouse"), or the prisoner. |
+| 15 | **After the raid** | The depot locks behind a reset timer and remembers how you won (just recorded for now; the learning is M4). |
+| 16 | **Mastery count** | 5 handmade crafts before an item can be made in lots (lots themselves are M5). |
+| 17 | **The look of this milestone** (face-lift piece) | Our people's clothes (Wolverines mismatch plus the movement colour), the guards' uniforms, the plan file and the prisoner's ID as documents. |
+
+**Playtest question at sign-off:** what did you make, who used it, what did you learn on the PC that changed the raid, and what will you do tomorrow because of Krall?
+
+## M2. Your people grow
+Recruits from Nod, prisoners and coworkers; motives and loyalty reacting to your choices; leaders (after N ops, when your organisation can support a new squad); your own squad always stays yours.
+
+## M3. The week
+Hana and cell needs with deadlines, a real rule of the day (blackout, ration week, checkpoint), ration cards. Money always a little short.
+
+## M4. More hits, and an enemy that learns
+Generated buildings (a new one every time), more op types, and the enemy covering the exploits you used last time.
+
+## M5. Production at scale
+Lots after mastery, lot-size upgrades, upkeep that climbs the chain of command (person, squad, platoon, company, battalion).
+
+## M6. Going out
+A town map with destinations: contacts, on-site hacks, leaflets, the Tram Yard.
+
+## M7. Districts and the war room
+District companies under your leaders; the army meter toward 1000.
+
+## M8. Vehicles and targets outside town.
+
+## M9. The capital.
+
+## M10. The campaign wrapper
+New country each run, unlocks after a campaign (cosmetics, starting classes).
+
+The face-lift goes piece by piece inside each milestone, using docs/LOOK_BIBLE.md.
+
+---
+
+## Parking lot (ideas waiting for a milestone; not built until scheduled)
+- Leaders asking for promotion themselves (from G6).
+- More vault doors via unlocks (from R2).
+- A deeper health system, limb by limb (from G10).
+- Garage moments, morale items, bonds (docs/RESEARCH_IDEAS.md D).
+- Repair at the bench, Pacific Drive style; gear that remembers its history in full (RESEARCH_IDEAS A).
+- Files as readable documents about people you recognise (RESEARCH_IDEAS B).
+- Propaganda clips from helmet cams (RESEARCH_IDEAS I).
+- The fixer as a character with commissions.
+- Vehicles from somewhere other than depots.

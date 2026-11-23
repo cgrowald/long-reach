@@ -161,3 +161,80 @@ The other ideas (a work audit, a checkpoint) all go in too. At first the consequ
 - **G5, the numbers:** start at 5 handmade crafts to master an item, then see if that's too easy. Lot sizes depend on the economy we build.
 - **G12, the order:** one big build. The depot is the proof that the game is playable.
 - **Rule:** questions always go in the chat, not only in docs.
+
+## 5. Answers, round 2 (user, 2026-11-23)
+
+**R1. Roguelite = every game feels new.**
+- Everything is built modular.
+- Only unlocks earned after a campaign persist: some cosmetic, some new starting classes.
+- The whole in-game economy and every upgrade are earned again in each run.
+- There is one depot per city, and other hits are generated.
+- Every depot raid is different: guards, stores (meds, materials, weapons, gear and armour), rooms. This needs a **person generator**.
+
+**R2. Three locked doors in the most secure section.**
+- You only have time to open one. Unlocks may allow more later.
+- Each door is random, but enough hacking beforehand can tell you which door you want.
+- Your team escorts the loot out.
+- A **timer for backup** runs, and upgrades can push it back.
+
+**R3. After a raid the depot gets too hard to hit.**
+- It has a reset timer.
+- Next time they have covered the exploits you used: the enemy learns from how you win.
+- You capture it for good when you capture the town.
+- No grinding it for gear: you must feel you can't risk being in the same place twice.
+
+**R4. Upgrades with quirks (c).**
+- You can learn to use a quirk right.
+- **Blueprints for sure.**
+- Bench upgrades are found in depots.
+- The feel to aim for: Dungeon Crawler Carl's system AI. It sort of gives you what you need, with lots of junk in between, so a raid can end with "OH YES WE GOT SOMETHING GOOD THIS TIME".
+
+**R5. Upgrades combine across benches (b).**
+
+**I1/I2. The interrogation outcomes carry risk.**
+- **Kill:** your people may not like it.
+- **Let go:** raises the Bureau's hunt on you.
+- **Recruit:** a risk too: recruits are more likely to dislike your decisions.
+
+**I3. A death is off-screen** (a ledger line). "We don't need to glorify killing people that can't fight back."
+
+**S1. The hack in the op.**
+- By hand it is risky: the longer you take, the sooner reinforcements come.
+- Auto-hackers of varying quality get some, half or all of it.
+
+**S2. The fighter with the stick.**
+- They need a minimum tech background. Almost everyone has some; higher is faster and lets them pick better devices.
+- The device sits in their inventory.
+- In the op: "Hey boss, I see a PC to exploit, want me to hit it?" Yes or no. On yes you tell the squad to hunker down.
+- **You can fight your way out against reinforcements, but it needs meds, good guns, good people and good gear.**
+
+**G3. One hand-made layout now.** Later the building is generated, a new one EVERY time.
+
+**G6. Leaders are a mix.**
+- People are only considered after a certain number of ops.
+- They can ask for it (noted for later, not built now).
+- You can only assign them when your organisation can support a new team, squad or platoon. They can be ready while you aren't.
+
+**G7. Krall's ladder: a clock you can push back (b), plus each op moves it (c).**
+- Anyone you've been near can be questioned: a shop worker, a coworker, a neighbour, family, one of your soldiers.
+- Some ops push him back (destroying evidence).
+
+**G8. Warnings: tag and shout (a + b).**
+- A ping, as in Battlefield or Wardogs, only ALERTS them.
+- The shout wheel makes them TARGET it.
+- The squad AI has a priority list and ALWAYS values its own lives first, even to the point of disobeying you.
+
+**G9. Loot is what they can carry.**
+- Each fighter has a Tarkov-style grid, so they only take what fits.
+- They can swap a bad weapon for a guard's nicer SMG, but with little ammo: risky if a guard was missed.
+- Guards are always badly equipped (for balance). Guards have infinite ammo but must reload. You never get access to what they have; a guard's kit is not like ours, or it could be exploited.
+
+**G10. Injuries: all three (a, b, c), Tarkov-like.**
+- Better gear can fully repair a limb.
+- Bandages work as in most games: they heal health during the raid, and only take a day or so off the recovery.
+- The op report shows missing health, turned into injury days.
+- A deeper health system can come later.
+
+**G11. Both (c).**
+- Most buildings have holding cells: the regime jails people for the smallest rule.
+- Or an ex-worker who heard from a friend ("hey, we're hitting the old warehouse").
