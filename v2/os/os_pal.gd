@@ -1,34 +1,40 @@
 extends RefCounted
-## HEARTH OS look: ReactOS / Win2000 grey bevels, Unity orange for the state brand, an old-Linux steel desktop.
-## Drawn at the game's pixel resolution, so everything is small (8 px text, 16 px icons).
+## HEARTH OS look (face-lift 2026-11-22, from the user's GPT concept sheets, docs/POLISH.md):
+## a dark petrol desktop, warm ivory windows, copper for selection and the main buttons, sage "ready" chips,
+## flat panels with thin rules (no Win2000 bevels). Text is sharp (UI drawn at full resolution).
 
 const Pal := preload("res://v2/ui/pal.gd")
 
-const FACE := Color(0.76, 0.75, 0.72)
-const FACE_L := Color(0.96, 0.95, 0.91)
-const FACE_D := Color(0.45, 0.44, 0.42)
-const SHADOW := Color(0.12, 0.12, 0.14)
-const WIN := Color(0.97, 0.96, 0.93)
-const INK := Color(0.08, 0.08, 0.1)
-const INK_DIM := Color(0.38, 0.38, 0.4)
-const TITLE_A := Color(0.07, 0.14, 0.4)
-const TITLE_B := Color(0.32, 0.47, 0.74)
-const TITLE_OFF_A := Color(0.42, 0.42, 0.44)
-const TITLE_OFF_B := Color(0.66, 0.66, 0.66)
-const SEL := Color(0.16, 0.27, 0.58)
-const BRAND := Color(0.9, 0.42, 0.15)       # the state orange
-const LINK := Color(0.1, 0.2, 0.75)
-const BAD := Color(0.75, 0.12, 0.1)
-const GOOD := Color(0.1, 0.5, 0.15)
+const PETROL := Color(0.09, 0.2, 0.22)
+const PETROL_D := Color(0.05, 0.12, 0.13)
+const PETROL_L := Color(0.16, 0.3, 0.32)
+const COPPER := Color(0.78, 0.45, 0.2)
+const SAGE := Color(0.55, 0.64, 0.45)
+const FACE := Color(0.9, 0.86, 0.77)          # ivory panels
+const FACE_L := Color(0.96, 0.93, 0.86)
+const FACE_D := Color(0.6, 0.55, 0.46)        # rules and borders
+const SHADOW := PETROL_D
+const WIN := Color(0.95, 0.92, 0.85)          # fields, lists
+const INK := Color(0.12, 0.12, 0.11)
+const INK_DIM := Color(0.42, 0.4, 0.36)
+const TITLE_A := PETROL
+const TITLE_B := PETROL
+const TITLE_OFF_A := Color(0.3, 0.35, 0.35)
+const TITLE_OFF_B := Color(0.3, 0.35, 0.35)
+const SEL := COPPER
+const BRAND := COPPER                          # the state's flame
+const LINK := Color(0.1, 0.38, 0.42)
+const BAD := Color(0.65, 0.17, 0.1)
+const GOOD := Color(0.3, 0.48, 0.28)
 
 ## Wallpapers: [top, bottom, line] colours. Index saved in state.os.wallpaper.
 const WALLPAPERS := [
-	{"name": "Civic Steel", "a": Color(0.42, 0.5, 0.62), "b": Color(0.17, 0.21, 0.3), "line": Color(0.75, 0.82, 0.92, 0.18)},
-	{"name": "Hearth Dawn", "a": Color(0.42, 0.12, 0.27), "b": Color(0.86, 0.38, 0.18), "line": Color(1.0, 0.8, 0.7, 0.16)},
-	{"name": "Ministry Grey", "a": Color(0.5, 0.5, 0.49), "b": Color(0.26, 0.26, 0.27), "line": Color(1, 1, 1, 0.12)},
+	{"name": "Petrol", "a": Color(0.11, 0.23, 0.25), "b": Color(0.07, 0.16, 0.18), "line": Color(0.6, 0.75, 0.75, 0.14)},
+	{"name": "Ministry Grey", "a": Color(0.3, 0.31, 0.3), "b": Color(0.17, 0.18, 0.18), "line": Color(1, 1, 1, 0.1)},
+	{"name": "Hearth Dawn", "a": Color(0.3, 0.12, 0.1), "b": Color(0.55, 0.28, 0.14), "line": Color(1.0, 0.8, 0.7, 0.14)},
 ]
 
-const FS := 9   # font size everywhere in the OS
+const FS := 8   # font size everywhere in the OS (20 px on screen)
 
 static var _theme: Theme
 static var _font: Font
@@ -69,15 +75,10 @@ static func fit(s: String, w: float) -> String:
 	return t + ".."
 
 
-## Raised (or sunken) Win2000 bevel.
+## A flat panel with a thin rule (the old Win2000 bevel, face-lifted). Sunken = a slightly darker well.
 static func bevel(ci: CanvasItem, r: Rect2, col := FACE, raised := true) -> void:
-	ci.draw_rect(r, col)
-	var hi := FACE_L if raised else SHADOW
-	var lo := SHADOW if raised else FACE_L
-	ci.draw_line(r.position, Vector2(r.end.x - 1, r.position.y), hi)
-	ci.draw_line(r.position, Vector2(r.position.x, r.end.y - 1), hi)
-	ci.draw_line(Vector2(r.position.x, r.end.y - 1), Vector2(r.end.x - 1, r.end.y - 1), lo)
-	ci.draw_line(Vector2(r.end.x - 1, r.position.y), Vector2(r.end.x - 1, r.end.y - 1), lo)
+	ci.draw_rect(r, col if raised else col.darkened(0.06))
+	ci.draw_rect(r, FACE_D if raised else Color(PETROL_D, 0.45), false, 1.0)
 
 
 ## Horizontal gradient bar (title bars), drawn in a few hard steps so it dithers in the pixel look.
@@ -288,6 +289,12 @@ static func icon(ci: CanvasItem, kind: String, p: Vector2, s := 16.0) -> void:
 			R.call(7.5, 11, 1, 4, Color(0.4, 1, 0.4))
 			R.call(1, 7.5, 4, 1, Color(0.4, 1, 0.4))
 			R.call(11, 7.5, 4, 1, Color(0.4, 1, 0.4))
+		"drop":
+			R.call(2, 5, 12, 9, Color(0.72, 0.6, 0.42))
+			O.call(2, 5, 12, 9, Color(0.35, 0.27, 0.15))
+			R.call(2, 8, 12, 1, Color(0.35, 0.27, 0.15))
+			R.call(10, 2, 4, 5, COPPER)
+			ci.draw_line(p + Vector2(12, 7) * k, p + Vector2(10, 9) * k, COPPER)
 		"hearth":
 			ci.draw_circle(p + Vector2(8, 8) * k, 7 * k, BRAND)
 			ci.draw_colored_polygon(PackedVector2Array([p + Vector2(8, 3) * k, p + Vector2(11, 10) * k, p + Vector2(8, 13) * k, p + Vector2(5, 10) * k]), Color(1, 0.9, 0.5))

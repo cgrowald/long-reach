@@ -113,6 +113,16 @@
 			],
 			"makes": {"type": "gadget", "box_slot": "net"},
 			"perks": [{"min": 0.8, "text": "Quiet: trace climbs even slower"}]
+		},
+		{
+			"id": "drop_stick", "name": "Drop stick", "bench": "electronics", "tier": 1, "hours": 1.0,
+			"needs": {"board": 1, "chips": 1}, "tool": "cheap_iron", "material_mult": 0.9, "piece": "board",
+			"steps": [
+				{"verb": "fit", "parts": ["memory chip", "plug"], "text": "Place the memory and the plug"},
+				{"verb": "solder", "count": 3, "text": "Solder each joint"}
+			],
+			"makes": {"type": "device", "device": "drop_stick"},
+			"perks": [{"min": 0.8, "text": "Fast write: the upload starts sooner"}]
 		}
 	]
 }

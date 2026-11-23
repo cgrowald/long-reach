@@ -15,7 +15,7 @@ func build() -> void:
 	for i in facts.size():
 		var p: Vector2 = spots[i % spots.size()] + Vector2(rng.randf_range(-8, 8), rng.randf_range(-6, 6))
 		_notes.append({"rect": Rect2(p, Vector2(92, 34)), "text": facts[i]["fact"], "pinned": facts[i]["pinned"]})
-	# clues from your own blown jobs (hack_job.gd), pinned by the inspector
+	# clues from your own blown jobs (hack.gd), pinned by the inspector
 	var clues: Array = game.state.flags.get("clues", [])
 	for k in clues.size():
 		var cp := Vector2(300 + k * 10, 108 + k * 7)

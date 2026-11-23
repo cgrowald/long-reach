@@ -61,3 +61,17 @@ The trace bar runs through both beats; getting cut out = Bureau attention + the 
 
 ## 6. The OS face-lift goes with it
 Build the hacking window in the new look (GPT's petrol / ivory / copper, the left dock, top bar, toasts) and move the rest of HEARTH to it in the same pass. The unreadable font is already fixed game-wide (2026-11-22: one sharp monospace, UI drawn at full resolution).
+
+## 7. Decided (user, 2026-11-22)
+- **Main hacking:** CONNECT = PATCHBAY, INJECT = A (code chain), ON SITE = D (signal tuning), plus F (the owner's password from dirt skips CONNECT). B, C and E come later for different hacks.
+- **Faces** for the mission face-lift: option a (2D layered pixel portraits).
+- **Order:** this hacking build, then the face-lift, then bench by bench, step by step, until each looks clean and perfect.
+
+## 8. Built (2026-11-22)
+- **Rules** (`v2/sim/hack.gd`, `data/v2/hacking.json`): the two fixed targets plus 9 town places generated from the world seed (office, depot, shop, clinic, police); 3 or 4 show each night, rotating. Tiers 1-3 set the board size and trace speed. Programs: GRAB and WIPE known from the start; DIRT, EYES (cameras), REROUTE (a crate at the drop next morning) and PAYDAY (money, more heat) are locked until learned (no way to learn them in play yet: F1 > "Learn all hacks"). Cut out = clue + Bureau attention + target locked 3 nights. Air-gapped places need a **drop stick** (new hacking-bench recipe) and you go there: TUNE then INJECT against a 75 s patrol clock.
+- **PATCHBAY app** (`v2/os/apps/patchbay.gd`, the dock's Jobs button): one maximized window. Left = tonight's targets (tier dots, READY / AIR GAP / LOCKED / DONE chips), middle = briefing, then the puzzle, then the report, right = the box's gadgets, top = steps and the trace bar. A hack costs one night action.
+  - CONNECT: click a tray piece, click a slot to place it, click it again to turn it, right-click to take it back; the signal lights up copper as it flows and the link opens the moment it reaches OUT. SCAN gadget = ghost tiles.
+  - INJECT: a 5x5 (6x6) code grid; pick along the lit row, then the lit column...; programs run the moment their code shows up in the buffer. CRACK gadget = longer buffer, NET gadget = slower trace. JACK OUT any time.
+- **DEAD DROP app** (`v2/os/apps/drop.gd`, the dock's Drop button): every intel file has SELL (the fixer; price drops per kind) and POST (Nod; followers, recruit leads, account heat; burned at 100 = new account). Fixer trust 5 = "market behind the market" (not built).
+- **OS face-lift:** petrol desktop with a factory line drawing, ivory windows with flat petrol title bars, copper selection, a top bar (HEARTH, Applications, Files, Session, OFFLINE, clock), a left dock (Files, Mail, Jobs, Drop, Tools, Shell), window tabs at the bottom, the LOCAL SESSION login. Old Jobs/job windows and hack_job.gd deleted.
+- **Tested:** rules bot (30 checks), and a bot driving the real PC (login, brief, connect by clicks, inject, report, on-site tuning, Dead Drop) with screenshots. Not tested by a person: whether it's fun, the knob feel, the difficulty.

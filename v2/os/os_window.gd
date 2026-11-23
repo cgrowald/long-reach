@@ -7,7 +7,7 @@ signal closed
 signal focus_me
 
 const P := preload("res://v2/os/os_pal.gd")
-const TITLE_H := 14.0
+const TITLE_H := 16.0
 const MIN_SIZE := Vector2(120, 70)
 
 var title := ""
@@ -47,8 +47,8 @@ func set_app(a: Control) -> void:
 func _layout() -> void:
 	if body == null:
 		return
-	body.position = Vector2(3, TITLE_H + 4)
-	body.size = size - Vector2(6, TITLE_H + 7)
+	body.position = Vector2(2, TITLE_H + 3)
+	body.size = size - Vector2(4, TITLE_H + 5)
 	if app:
 		app.position = Vector2.ZERO
 		app.size = body.size
@@ -61,44 +61,40 @@ func set_active(on: bool) -> void:
 
 
 func _buttons() -> Array:
-	var y := 5.0
-	var w := 10.0
-	var x := size.x - 4.0 - w
-	return [Rect2(x - 2 * (w + 1), y, w, 9), Rect2(x - (w + 1) - 1, y, w, 9), Rect2(x, y, w, 9)]
+	var y := 3.0
+	var w := 12.0
+	var x := size.x - 3.0 - w
+	return [Rect2(x - 2 * (w + 2), y, w, 11), Rect2(x - (w + 2), y, w, 11), Rect2(x, y, w, 11)]
 
 
 func _draw() -> void:
-	P.bevel(self, Rect2(Vector2.ZERO, size), P.FACE, true)
-	var bar := Rect2(3, 3, size.x - 6, TITLE_H)
-	if active:
-		P.grad_h(self, bar, P.TITLE_A, P.TITLE_B)
-	else:
-		P.grad_h(self, bar, P.TITLE_OFF_A, P.TITLE_OFF_B)
-	P.icon(self, icon, Vector2(5, 5), 10.0)
-	var tw := size.x - 60.0
-	P.text(self, Vector2(17, 4), P.fit(title, tw), Color.WHITE if active else P.FACE_L)
+	# ivory body, a petrol frame line, a flat petrol title bar (GPT concept sheets)
+	draw_rect(Rect2(Vector2(2, 3), size), Color(0, 0, 0, 0.35))
+	draw_rect(Rect2(Vector2.ZERO, size), P.FACE)
+	var bar := Rect2(0, 0, size.x, TITLE_H + 1)
+	draw_rect(bar, P.PETROL if active else P.TITLE_OFF_A)
+	P.icon(self, icon, Vector2(4, 3), 11.0)
+	var tw := size.x - 70.0
+	P.text(self, Vector2(19, 3), P.fit(title.to_upper(), tw), P.FACE_L if active else P.FACE)
 	var b := _buttons()
 	for i in 3:
 		var r: Rect2 = b[i]
-		P.bevel(self, r, P.FACE, true)
+		draw_rect(r, P.FACE_L)
+		draw_rect(r, P.PETROL_D, false, 1.0)
 		var c := r.get_center()
 		match i:
 			0:
-				draw_rect(Rect2(c.x - 3, c.y + 1, 5, 2), P.INK)
+				draw_rect(Rect2(c.x - 3, c.y + 2, 6, 1.5), P.INK)
 			1:
-				draw_rect(Rect2(c.x - 3, c.y - 3, 6, 5), P.INK, false, 1.0)
-				draw_line(Vector2(c.x - 3, c.y - 2), Vector2(c.x + 3, c.y - 2), P.INK)
+				draw_rect(Rect2(c.x - 3, c.y - 3, 6, 6), P.INK, false, 1.0)
 			2:
-				draw_line(c + Vector2(-2.5, -2.5), c + Vector2(2.5, 2.5), P.INK, 1.5)
-				draw_line(c + Vector2(2.5, -2.5), c + Vector2(-2.5, 2.5), P.INK, 1.5)
-	# inner sunken edge round the body
-	var br := Rect2(body.position - Vector2(1, 1), body.size + Vector2(2, 2))
-	draw_rect(br, P.FACE_D, false, 1.0)
+				draw_line(c + Vector2(-3, -3), c + Vector2(3, 3), P.INK, 1.5)
+				draw_line(c + Vector2(3, -3), c + Vector2(-3, 3), P.INK, 1.5)
+	draw_rect(Rect2(Vector2.ZERO, size), P.PETROL_D, false, 1.0)
 	if not maximized:
 		for i in 3:
 			var o := 3.0 + i * 3.0
 			draw_line(size - Vector2(o, 2), size - Vector2(2, o), P.FACE_D)
-
 
 
 func _gui_input(e: InputEvent) -> void:

@@ -23,12 +23,16 @@
 		{"name": "Computer", "icon": "computer", "app": "files", "arg": "/"},
 		{"name": "Home", "icon": "home", "app": "files", "arg": "/home/citizen"},
 		{"name": "Trash", "icon": "trash", "app": "files", "arg": "/home/citizen/.trash"},
-		{"name": "Terminal", "icon": "terminal", "app": "terminal"},
 		{"name": "StateNet", "icon": "globe", "app": "browser"},
+		{"name": "commands", "icon": "note", "app": "notepad", "arg": "/home/citizen/commands.txt"}
+	],
+	"dock": [
+		{"name": "Files", "icon": "folder", "app": "files", "arg": "/home/citizen"},
 		{"name": "Mail", "icon": "mail", "app": "mail"},
-		{"name": "commands", "icon": "note", "app": "notepad", "arg": "/home/citizen/commands.txt"},
-		{"name": "Software", "icon": "package", "app": "software"},
-		{"name": "Jobs", "icon": "target", "app": "jobs"}
+		{"name": "Jobs", "icon": "target", "app": "jobs"},
+		{"name": "Drop", "icon": "drop", "app": "drop"},
+		{"name": "Tools", "icon": "package", "app": "software"},
+		{"name": "Shell", "icon": "terminal", "app": "terminal"}
 	],
 	"apps": [
 		{"id": "files", "name": "Files", "icon": "folder", "size": [300, 190], "keys": "explorer folders documents"},
@@ -39,7 +43,8 @@
 		{"id": "software", "name": "Software", "icon": "package", "size": [280, 180], "keys": "install programs packages store"},
 		{"id": "monitor", "name": "Monitor", "icon": "chart", "size": [260, 180], "keys": "system processes cpu task manager"},
 		{"id": "settings", "name": "Preferences", "icon": "gear", "size": [270, 170], "keys": "settings control panel wallpaper appearance"},
-		{"id": "jobs", "name": "Jobs", "icon": "target", "size": [300, 190], "keys": "hack hacking targets missions box"},
+		{"id": "jobs", "name": "Patchbay", "icon": "target", "size": [600, 300], "keys": "hack hacking targets missions box jobs patchbay"},
+		{"id": "drop", "name": "Dead Drop", "icon": "drop", "size": [420, 240], "keys": "sell post fixer nod intel files followers"},
 		{"id": "war", "name": "War room", "icon": "war", "locked": true, "keys": "map squads"}
 	],
 	"commands_note": "THINGS KETTLE TOLD ME (keep this hidden)\n\npassword: hearth123  (everyone's is)\n\nin the Terminal:\n  ls          what's in this folder\n  cd NAME     go into a folder\n  cd ..       back out\n  cat FILE    read a file\n  ps          what's running\n  pkg list    programs you can get\n  help        everything else\n\nTab finishes a name. Up arrow = last command.\nNever type kill on hearthd. Just don't.",

@@ -48,6 +48,14 @@ func setup(p_garage: Node) -> void:
 		for r in load("res://v2/sim/crafting.gd").data().get("recipes", []):
 			game.state.mastery[r["id"]] = {"made": 3, "good": 3, "sum": 2.4}
 		garage.toast("Every recipe mastered (batching on)."))
+	add.call("Learn all hacks", func() -> void:
+		load("res://v2/sim/hack.gd").learn_all(game.state)
+		garage.toast("Every hacking program learned (DIRT, EYES, REROUTE, PAYDAY)."))
+	add.call("+1 drop stick", func() -> void:
+		game.state.items.append({"id": game.state.next_item_id, "name": "Drop stick", "type": "device", "device": "drop_stick", "stars": 2, "quality": 0.6, "perks": [], "day": game.state.day})
+		game.state.next_item_id += 1
+		garage.toast("A drop stick is on the shelves."))
+	add.call("+1 night action", func() -> void: game.state.actions += 1)
 	add.call("Raid warning", func() -> void: garage.raid())
 	add.call("Arrest", func() -> void: garage.arrest("They came at 04:00. Placeholder."))
 	add.call("Quicksave (F5)", func() -> void: garage.quicksave())

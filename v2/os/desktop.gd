@@ -21,10 +21,13 @@ const APPS := {
 	"settings": preload("res://v2/os/apps/settings.gd"),
 	"viewer": preload("res://v2/os/apps/viewer.gd"),
 	"alert": preload("res://v2/os/apps/alert.gd"),
-	"jobs": preload("res://v2/os/apps/jobs.gd"),
-	"job": preload("res://v2/os/apps/job.gd"),
+	"jobs": preload("res://v2/os/apps/patchbay.gd"),
+	"drop": preload("res://v2/os/apps/drop.gd"),
 }
 const TASKBAR_H := 16.0
+const TOPBAR_H := 14.0
+const DOCK_W := 44.0
+const TOP_MENU := [["HEARTH", "start"], ["Applications", "start"], ["Files", "files"], ["Session", "leave"]]
 
 var game: Node
 var on_leave: Callable
@@ -86,6 +89,17 @@ func _gui_input(e: InputEvent) -> void:
 		if phase == "boot":
 			_show_login()
 			accept_event()
+		elif phase == "desk" and e.position.y < TOPBAR_H and e.button_index == MOUSE_BUTTON_LEFT:
+			for i in TOP_MENU.size():
+				if _top_rect(i).has_point(e.position):
+					match TOP_MENU[i][1]:
+						"start":
+							toggle_start()
+						"files":
+							launch("files", Fs.HOME)
+						"leave":
+							context_menu(get_global_mouse_position() + Vector2(0, 6), [["Leave the PC", func() -> void: leave()], ["Change wallpaper", func() -> void: cycle_wallpaper()]])
+			accept_event()
 		elif phase == "desk":
 			close_menus()
 			for t in _tiles:
@@ -105,20 +119,29 @@ func _show_login() -> void:
 	_login.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_login)
 	var box := VBoxContainer.new()
-	box.custom_minimum_size = Vector2(130, 0)
-	box.position = (size - Vector2(130, 60)) * 0.5 + Vector2(0, 14)
+	box.custom_minimum_size = Vector2(170, 0)
+	box.position = (size * 0.5 + Vector2(-85, 0)).round()
+	box.add_theme_constant_override("separation", 4)
 	_login.add_child(box)
-	var name_l := P.label(str(data().get("user", "citizen")), Color.WHITE)
-	name_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	box.add_child(name_l)
+	box.add_child(P.label("Password", P.INK))
 	_pw = LineEdit.new()
 	_pw.secret = true
 	_pw.placeholder_text = "password"
-	_pw.alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_pw.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	_pw.text_submitted.connect(func(_s: String) -> void: try_login())
 	box.add_child(_pw)
 	var go := Button.new()
-	go.text = "Log in"
+	go.text = "SIGN IN"
+	var gsb := StyleBoxFlat.new()
+	gsb.bg_color = P.COPPER
+	gsb.set_content_margin_all(3)
+	go.add_theme_stylebox_override("normal", gsb)
+	var gh := gsb.duplicate() as StyleBoxFlat
+	gh.bg_color = P.COPPER.lightened(0.12)
+	go.add_theme_stylebox_override("hover", gh)
+	go.add_theme_stylebox_override("pressed", gh)
+	go.add_theme_color_override("font_color", P.FACE_L)
+	go.add_theme_color_override("font_hover_color", P.FACE_L)
 	go.focus_mode = Control.FOCUS_NONE
 	go.pressed.connect(try_login)
 	box.add_child(go)
@@ -145,24 +168,34 @@ func _show_desktop() -> void:
 	_icons.size = size - Vector2(0, TASKBAR_H)
 	_icons.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_icons)
-	var x := 4.0
-	var y := 4.0
+	# the dock (GPT concept): big labelled icons down the left
+	var y := TOPBAR_H + 4.0
+	for d in data().get("dock", []):
+		var def: Dictionary = d
+		var t: Control = Tile.new()
+		t.setup(def["icon"], def["name"], true, Vector2(DOCK_W - 4, 36))
+		t.single_click_opens = true
+		t.position = Vector2(2, y)
+		_icons.add_child(t)
+		_tiles.append(t)
+		t.picked.connect(func() -> void: _select_tile(t))
+		t.opened.connect(func() -> void: launch(def["app"], def.get("arg", "")))
+		y += 40.0
+	# the other desktop icons, top right
+	y = TOPBAR_H + 4.0
 	for d in data().get("desktop", []):
 		var def: Dictionary = d
 		var t: Control = Tile.new()
 		t.setup(def["icon"], def["name"], true, Vector2(52, 32))
-		t.position = Vector2(x, y)
+		t.position = Vector2(size.x - 56, y)
 		_icons.add_child(t)
 		_tiles.append(t)
 		t.picked.connect(func() -> void: _select_tile(t))
 		t.opened.connect(func() -> void: launch(def["app"], def.get("arg", "")))
 		y += 34.0
-		if y + 34.0 > size.y - TASKBAR_H:
-			y = 4.0
-			x += 54.0
 	windows_layer = Control.new()
-	windows_layer.position = Vector2.ZERO
-	windows_layer.size = size - Vector2(0, TASKBAR_H)
+	windows_layer.position = Vector2(DOCK_W, TOPBAR_H)
+	windows_layer.size = size - Vector2(DOCK_W, TASKBAR_H + TOPBAR_H)
 	windows_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(windows_layer)
 	taskbar = Taskbar.new()
@@ -397,16 +430,58 @@ func _draw() -> void:
 		P.text(self, Vector2(size.x - 70, size.y - 12), "click to skip", Color(0.4, 0.4, 0.4))
 		return
 	_draw_wallpaper(r)
+	if phase == "desk":
+		_draw_chrome()
 	if phase == "login":
 		var c := size * 0.5
-		var panel := Rect2(c - Vector2(80, 46), Vector2(160, 96))
-		draw_rect(panel, Color(0, 0, 0, 0.35))
-		draw_rect(panel, Color(1, 1, 1, 0.25), false, 1.0)
-		P.icon(self, "user", c - Vector2(12, 42), 24.0)
-		P.text(self, Vector2(panel.position.x, panel.end.y + 4), _pw_msg, Color(1, 0.85, 0.7), HORIZONTAL_ALIGNMENT_CENTER, panel.size.x)
-		P.text(self, Vector2(6, 6), str(data().get("version", "")), Color(1, 1, 1, 0.7))
-		P.text(self, Vector2(6, size.y - 12), game.state.clock_text(), Color(1, 1, 1, 0.7))
-		_draw_sticky(Vector2(size.x - 62, 8))
+		var panel := Rect2(c - Vector2(95, 64), Vector2(190, 118))
+		draw_rect(Rect2(panel.position + Vector2(3, 4), panel.size), Color(0, 0, 0, 0.4))
+		draw_rect(panel, P.FACE)
+		draw_rect(Rect2(panel.position, Vector2(panel.size.x, 15)), P.PETROL)
+		P.text(self, panel.position + Vector2(18, 3), "LOCAL SESSION", P.FACE_L)
+		draw_colored_polygon(PackedVector2Array([panel.position + Vector2(9, 3), panel.position + Vector2(12, 9), panel.position + Vector2(9, 12), panel.position + Vector2(6, 9)]), P.COPPER)
+		var pr := Rect2(panel.position + Vector2(10, 22), Vector2(30, 30))
+		draw_rect(pr, P.WIN)
+		draw_rect(pr, P.PETROL_D, false, 1.0)
+		P.icon(self, "user", pr.position + Vector2(3, 3), 24.0)
+		P.text(self, pr.position + Vector2(38, 4), str(data().get("user", "citizen")), P.INK)
+		P.text(self, pr.position + Vector2(38, 16), "Workshop account", P.INK_DIM)
+		draw_line(panel.position + Vector2(10, 58), panel.position + Vector2(panel.size.x - 10, 58), P.FACE_D)
+		P.text(self, Vector2(panel.position.x, panel.end.y + 5), _pw_msg, Color(1, 0.85, 0.7), HORIZONTAL_ALIGNMENT_CENTER, panel.size.x)
+		draw_rect(Rect2(0, 0, size.x, TOPBAR_H), P.FACE)
+		P.text(self, Vector2(6, 2), str(data().get("version", "")), P.INK)
+		P.text(self, Vector2(6, 2), game.state.clock_text(), P.INK, HORIZONTAL_ALIGNMENT_RIGHT, size.x - 12)
+		var ticks := [["DISPLAY READY", true], ["LOCAL DISK READY", true], ["RADIO OFFLINE", false]]
+		for i in ticks.size():
+			var ty := size.y - 40 + i * 11
+			if ticks[i][1]:
+				draw_rect(Rect2(8, ty + 2, 6, 6), Color(P.FACE_L, 0.8))
+			else:
+				draw_rect(Rect2(8, ty + 2, 6, 6), Color(P.FACE_L, 0.8), false, 1.0)
+			P.text(self, Vector2(18, ty), ticks[i][0], Color(P.FACE_L, 0.75))
+		_draw_sticky(Vector2(size.x - 64, TOPBAR_H + 6))
+
+
+func _top_rect(i: int) -> Rect2:
+	var x := 6.0
+	for k in i:
+		x += P.tw(TOP_MENU[k][0]) + 14.0
+	return Rect2(x - 4, 0, P.tw(TOP_MENU[i][0]) + 8, TOPBAR_H)
+
+
+## The top bar and the dock's backing (desktop only).
+func _draw_chrome() -> void:
+	draw_rect(Rect2(0, 0, size.x, TOPBAR_H), P.FACE)
+	draw_line(Vector2(0, TOPBAR_H - 0.5), Vector2(size.x, TOPBAR_H - 0.5), P.PETROL_D)
+	for i in TOP_MENU.size():
+		var r := _top_rect(i)
+		P.text(self, r.position + Vector2(4, 2), TOP_MENU[i][0], P.INK)
+	var right := "OFFLINE  |  %s" % game.state.clock_text()
+	var rw := P.tw(right)
+	draw_circle(Vector2(size.x - rw - 14, TOPBAR_H * 0.5), 3.0, P.COPPER)
+	P.text(self, Vector2(size.x - rw - 6, 2), right, P.INK)
+	draw_rect(Rect2(0, TOPBAR_H, DOCK_W, size.y - TOPBAR_H - TASKBAR_H), Color(P.PETROL_D, 0.85))
+	draw_line(Vector2(DOCK_W - 0.5, TOPBAR_H), Vector2(DOCK_W - 0.5, size.y - TASKBAR_H), Color(P.FACE_D, 0.4))
 
 
 func _draw_wallpaper(r: Rect2) -> void:
@@ -414,16 +489,23 @@ func _draw_wallpaper(r: Rect2) -> void:
 	var wp: Dictionary = P.WALLPAPERS[i]
 	P.grad_v(self, r, wp["a"], wp["b"])
 	var lc: Color = wp["line"]
-	# big sweeping arcs (the old Linux wallpaper curves)
-	for k in 6:
-		var cc := Vector2(size.x * (0.15 + k * 0.17), size.y * (1.6 - k * 0.12))
-		draw_arc(cc, size.y * (0.9 + k * 0.18), PI * 1.1, PI * 1.9, 48, lc, 1.0)
-		draw_arc(Vector2(size.x * (1.1 - k * 0.1), -size.y * 0.4), size.y * (0.8 + k * 0.15), PI * 0.15, PI * 0.85, 48, lc, 1.0)
-	# the state emblem, faint
-	var c := Vector2(size.x * 0.62, size.y * 0.46)
-	draw_circle(c, 34, Color(1, 1, 1, 0.06))
-	draw_colored_polygon(PackedVector2Array([c + Vector2(0, -24), c + Vector2(13, 6), c + Vector2(0, 18), c + Vector2(-13, 6)]), Color(1, 1, 1, 0.08))
-	P.text(self, Vector2(c.x - 60, c.y + 40), "ONE HEARTH. ONE PEOPLE.", Color(1, 1, 1, 0.22), HORIZONTAL_ALIGNMENT_CENTER, 120)
+	# a faint line drawing of the works, bottom right (GPT concept sheets)
+	var base := Vector2(size.x - 210, size.y - TASKBAR_H - 8)
+	var outline := [Vector2(0, 0), Vector2(0, -34), Vector2(40, -34), Vector2(40, -52), Vector2(90, -52), Vector2(90, -40),
+		Vector2(120, -40), Vector2(120, -70), Vector2(128, -70), Vector2(128, -40), Vector2(150, -40), Vector2(150, -58),
+		Vector2(200, -58), Vector2(200, 0)]
+	for j in outline.size() - 1:
+		draw_line(base + outline[j], base + outline[j + 1], lc, 1.0)
+	for wx in 6:
+		draw_rect(Rect2(base + Vector2(48 + wx * 7, -44), Vector2(4, 5)), lc, false, 1.0)
+		draw_rect(Rect2(base + Vector2(156 + (wx % 4) * 10, -50), Vector2(6, 6)), lc, false, 1.0)
+	draw_line(base + Vector2(-60, 0), base + Vector2(210, 0), lc, 1.0)
+	# the state's flame and name
+	var fp := Vector2(size.x - 120, size.y - TASKBAR_H - 30)
+	draw_colored_polygon(PackedVector2Array([fp + Vector2(0, -12), fp + Vector2(6, 2), fp + Vector2(0, 8), fp + Vector2(-6, 2)]), P.COPPER)
+	draw_colored_polygon(PackedVector2Array([fp + Vector2(0, -3), fp + Vector2(2.5, 3), fp + Vector2(0, 6), fp + Vector2(-2.5, 3)]), P.PETROL_D)
+	P.text(self, fp + Vector2(12, -12), "H E A R T H", Color(P.FACE_L, 0.85))
+	P.text(self, fp + Vector2(12, -2), "WORKSTATION 04", Color(P.FACE_L, 0.6))
 
 
 func _draw_sticky(p: Vector2) -> void:
