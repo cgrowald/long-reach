@@ -35,6 +35,12 @@ Give the existing garage a restrained environment-art pass. Preserve its layout,
 - **Key hints:** 1-3 Helmet cams, Tab Next feed, Space Pause, Esc Back.
 - *Read:* our feed wall + ops board + squad list, reorganised into one calm screen: one big feed, the map as stale paper intel, states as words, CCTV as equal feeds. Medium job when we get there (layout and styling; the parts mostly exist).
 
+## HEARTH OS concept sheets (user via GPT, 2026-11-22: use NOW with the hacking build, not later)
+*Arrived inline only.* Five screens: desktop (Files and Mail windows, a "Kettle. Fuses. Bandages." sticky, parts_list.txt, a "Job updated: Dispatch records" toast), login ("LOCAL SESSION", a pixel portrait, "citizen / Workshop account", SIGN IN in copper, DISPLAY/LOCAL DISK/RADIO status ticks, "ONE HEARTH. ONE PEOPLE."), PATCHBAY, WATCHLINE, SPOOL (all described in docs/HACKING.md section 2).
+- **Palette:** dark petrol desktop with a faint factory line drawing bottom right, warm ivory windows, copper for selection and primary buttons, sage green for "ready" chips, dark petrol panel headers with ivory caps.
+- **Frame:** a top bar (HEARTH, Applications, Files, Session ... OFFLINE, 18:30), a left dock of big labelled icons (Files, Mail, Jobs, Tools, Field), a bottom taskbar of window tabs; windows with a petrol title, square min/max/close.
+- **Type:** a clean monospace, caps for headers. GPT's notes: one consistent icon set and window controls; each app has one clear job.
+
 ## The gun bench, done properly (user, 2026-11-22: a design change for later, not just polish)
 *"This is more what I meant for this bench, not the three holes we make now, which makes no sense."* The reference is a ChatGPT sheet titled "ENGINE WORKSHOP" (it called the gun an engine to get past ChatGPT's rules):
 - a first-person view at a green **drill press / mill**: the part clamped in a vise on a cross-slide table;
