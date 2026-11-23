@@ -168,6 +168,11 @@ static func free_spot(state: RefCounted, p: Dictionary, gid: String) -> Vector2i
 static func pack(state: RefCounted, p: Dictionary, gid: String, x: int, y: int, item_id := -1) -> String:
 	if not fits(state, p, gid, x, y):
 		return "Doesn't fit there."
+	var tmin := int(gdef(gid).get("tech_min", 0))
+	if int(p.get("tech", 0)) < tmin:
+		return "%s can't run a stick (tech %d, needs %d)." % [_first(p), int(p.get("tech", 0)), tmin]
+	if gid == "drop_stick" and not stick_carrier(state).is_empty():
+		return "%s already carries a stick." % _first(stick_carrier(state))
 	if item_id >= 0:
 		var it := item_by_id(state, item_id)
 		if it.is_empty() or str(it.get("on", "")) != "":
@@ -206,10 +211,28 @@ static func _trim_grid(state: RefCounted, p: Dictionary) -> void:
 static func packable_items(state: RefCounted) -> Array:
 	var out: Array = []
 	for it in state.items:
+		if str(it.get("device", "")) == "drop_stick" and not it.has("gear"):
+			it["gear"] = "drop_stick"          # crafted sticks pack like gear (one carrier per op)
 		var d := gdef(str(it.get("gear", "")))
 		if d.has("cells") and str(it.get("on", "")) == "":
 			out.append(it)
 	return out
+
+
+## Who has a drop stick packed (the one who plugs into the vault PC), or {}.
+static func stick_carrier(state: RefCounted) -> Dictionary:
+	for p in state.people:
+		if p.get("alive", true) and not stick_of(state, p).is_empty():
+			return p
+	return {}
+
+
+## The drop stick item this person carries, or {}.
+static func stick_of(state: RefCounted, p: Dictionary) -> Dictionary:
+	for e in p.get("grid", []):
+		if e["gear"] == "drop_stick" and e.has("item"):
+			return item_by_id(state, int(e["item"]))
+	return {}
 
 
 # ------------------------------------------------------------------ into the fight
@@ -242,6 +265,7 @@ static func to_fighter(state: RefCounted, p: Dictionary) -> Dictionary:
 	var clothes := worn(state, p, "clothes")
 	return {
 		"id": p["id"], "name": p["name"], "role": p.get("role", "rear"), "trait": p.get("trait", ""), "line": p.get("line", ""),
+		"tech": int(p.get("tech", 0)), "stick": int(stick_of(state, p).get("stars", -1)),     # -1 = no stick
 		"camo": gdef(clothes.get("gear", "street")).get("camo", "street") if not clothes.is_empty() else "street",
 		"head": {"Gear_Helmet": "helmet", "Gear_Cap": "cap", "Gear_Beanie": "beanie"}.get(gdef(head.get("gear", "")).get("mesh", ""), "none"),
 		"mask": not face.is_empty(),

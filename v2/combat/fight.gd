@@ -875,7 +875,8 @@ func _draw_hud() -> void:
 			hud.draw_rect(r, UI_AMBER if on else Color(UI_LINE, 0.35), false, 2.0 if on else 1.0)
 			_cam_icon(r.position + Vector2(4, (r.size.y - 9) * 0.5))
 			Pal.text(hud, r.position + Vector2(20, (r.size.y - 10) * 0.5), str(f["def"]["id"]).to_upper(), 8, Color(0.6, 1.0, 0.6))
-			Pal.text(hud, r.position + Vector2(58, (r.size.y - 10) * 0.5), _title(str(f["def"]["label"])), 8, UI_TEXT, HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 62)
+			var lx := 24.0 + str(f["def"]["id"]).length() * 5.2
+			Pal.text(hud, r.position + Vector2(lx, (r.size.y - 10) * 0.5), _title(str(f["def"]["label"])), 8, UI_TEXT, HORIZONTAL_ALIGNMENT_LEFT, r.size.x - lx - 4)
 	# ---- key hints
 	var hb := Rect2(4, h - 17, w - 8, 15)
 	_panel(hb)
@@ -1123,7 +1124,13 @@ func _return_home() -> void:
 			results[-1].merge(op.fighter_result(a))
 	var loot: Array = []
 	var loot_map := {"smg": "guard_smg", "carbine": "bureau_carbine", "pistol": "service_pistol"}
+	for a in squad:
+		# a guard's gun taken mid-fight comes home in their hands, whatever the outcome
+		if a.has_meta("swapped") and a.state != "dead":
+			loot.append(str(a.get_meta("swapped")))
 	for e in (enemies if outcome == "success" else []):          # you only strip the fallen if you held the field
+		if e.has_meta("stripped"):
+			continue
 		if e.state in ["dead", "down", "cuffed", "surrendered"]:
 			var wid: String = (e.get_meta("def") as Dictionary).get("gear", {}).get("weapon", "")
 			if loot_map.has(wid):

@@ -129,6 +129,15 @@ func setup(p_loadout: Dictionary) -> void:
 	_pose(0.0)
 
 
+## Swap the gun in their hands (a looted guard weapon mid-fight). The weapon light stays on the joint.
+func set_weapon_mesh(wm: String) -> void:
+	for c in rifle.get_children():
+		if c is MeshInstance3D:
+			c.queue_free()
+	_hang(rifle, wm, str(loadout.get("camo", "multicam")))
+	armed = true
+
+
 func _joint(parent: Node3D, at: Vector3) -> Node3D:
 	var j := Node3D.new()
 	j.position = at

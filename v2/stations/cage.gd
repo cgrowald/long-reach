@@ -173,6 +173,9 @@ func _refresh() -> void:
 	if not p.is_empty():
 		_people_box.add_child(_face_ctl(p, Vector2(44, 50)))
 		_people_box.add_child(Kit.label(str(p.get("role", "")).to_upper() + "  " + str(p.get("trait", "")), Pal.AMBER, 8))
+		var tech := int(p.get("tech", 0))
+		var has_stick := not Loadout.stick_of(st, p).is_empty()
+		_people_box.add_child(Kit.label("Tech %d%s" % [tech, "  STICK CARRIER" if has_stick else ("  (can carry the stick)" if tech >= 1 else "  (too low for a stick)")], Pal.GREEN if has_stick else Pal.DIM, 8, 120))
 		var mot = p.get("motive", {})
 		if mot is Dictionary and not mot.is_empty():
 			_people_box.add_child(Kit.label("In it for: " + str(mot.get("name", "")), Pal.DIM, 8, 120))
@@ -341,6 +344,8 @@ func _auto_pack() -> void:
 		if ammo != "":
 			want.append({"gear": ammo})
 	for it in Loadout.packable_items(st):
+		if it["gear"] == "drop_stick":
+			continue                 # the stick goes to whoever you choose, by hand
 		want.append({"gear": it["gear"], "item": int(it["id"])})
 		break
 	for gid in ["flash", "charge"]:
@@ -440,7 +445,7 @@ func _draw() -> void:
 
 
 func _abbr(gid: String) -> String:
-	var a: String = {"clip_5": "CL", "shells": "SH", "mag_30": "MAG", "mag_pistol": "PM", "bandage": "+", "dressing": "++", "flash": "FL", "charge": "CH"}.get(gid, "?")
+	var a: String = {"clip_5": "CL", "shells": "SH", "mag_30": "MAG", "mag_pistol": "PM", "bandage": "+", "dressing": "++", "flash": "FL", "charge": "CH", "drop_stick": "USB"}.get(gid, "?")
 	return a
 
 
@@ -461,6 +466,13 @@ func _send() -> void:
 		_say("Nobody fit to send. The hurt need time, or treatment.")
 		game.deny()
 		return
+	var carrier := Loadout.stick_carrier(st)
+	if carrier.is_empty() or not team.has(carrier["id"]):
+		if not has_meta("warned_stick"):
+			set_meta("warned_stick", true)
+			_say("Nobody going carries a drop stick: the vault PC can't be hit. Send again to go anyway.")
+			game.deny()
+			return
 	game.set_meta("op_team", team)
 	game.goto("res://v2/combat/fight.tscn")
 

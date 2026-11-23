@@ -9,9 +9,11 @@ signal objective_done
 signal exfil_done
 
 const Audio := preload("res://v2/combat/combat_audio.gd")
+const Rules := preload("res://v2/combat/rules.gd")
 const WALK := 0.85
 const RUN := 1.9
 const ENTRY_GAP := 1.3
+const STICK_TECH_MIN := 1
 const BREATH := 2.2
 
 var fighters: Array = []
@@ -41,6 +43,34 @@ func setup(p_fighters: Array, p_enemies: Array, p_level: Node3D, p_enemy_ai: Ref
 	rng.seed = 5
 	cleared["hall"] = true        # they start in it
 	_next_doctrine()
+
+
+## Who carries the drop stick (picked in the cage). If they're down or dead, the nearest fighter with
+## enough tech takes it off them. null = nobody has one.
+func stick_carrier():
+	var had = null
+	for f in fighters:
+		if f.stick >= 0:
+			had = f
+	if had == null:
+		return null
+	if had.alive():
+		return had
+	var best = null
+	var bd := 1e9
+	for f in alive_fighters():
+		if f.tech >= STICK_TECH_MIN:
+			var d: float = f.global_position.distance_to(had.global_position)
+			if d < bd:
+				bd = d
+				best = f
+	if best == null:
+		return null
+	best.stick = had.stick
+	had.stick = -1
+	best.say("I've got %s's stick." % _first(had), true)
+	log_line.emit("%s took %s's stick" % [_first(best), _first(had)])
+	return best
 
 
 func by_role(r: String):
@@ -439,6 +469,7 @@ func tick(delta: float) -> void:
 		order(p["kind"], p["target"], p["who"])
 	_medic(delta)
 	_cuff()
+	_gun_swap()
 	match task.get("type", "idle"):
 		"stack":
 			_tick_stack(delta)
@@ -693,7 +724,12 @@ func _tick_clear(delta: float) -> void:
 	var obj: Dictionary = level.data.get("objective", {})
 	if obj.get("room", "") == room_id and not have_objective:
 		task = {"type": "grab", "t": 0.0}
-		var g = by_role("rear") if by_role("rear") and level.room_at(by_role("rear").global_position) == room_id else f0
+		var g = stick_carrier()
+		if g == null:
+			g = by_role("rear") if by_role("rear") and level.room_at(by_role("rear").global_position) == room_id else f0
+		elif level.room_at(g.global_position) != room_id:
+			if f0 and f0 != g:
+				f0.say("PC in here. %s, you're up, bring the stick." % _first(g), true)
 		g.go(_route(g, level.objective_pos + Vector3(0.6, 0, 0.5)), WALK)
 		g.set_meta("grabbing", true)
 		task["who"] = g
@@ -822,6 +858,70 @@ func _cuff() -> void:
 		if best and bd2 < 9.0:
 			e.set_meta("cuffer", best)
 			best.go(_route(best, e.global_position + (best.global_position - e.global_position).normalized() * 0.7), WALK)
+
+
+## Out of ammo (docs/DEPOT_SLICE.md section 8): a dry fighter shouts and takes a downed guard's SMG or
+## carbine, with only a few rounds in it. Risky if a guard was missed. HOLD stops it.
+const SWAP_GUNS := {"smg": "guard_smg", "carbine": "bureau_carbine"}
+const SWAP_RANGE := 12.0
+
+
+func _gun_swap() -> void:
+	var holding: bool = task.get("type", "") == "hold"
+	for f in alive_fighters():
+		if f.has_meta("swap_to"):
+			var e = f.get_meta("swap_to")
+			if holding or not is_instance_valid(e) or e.has_meta("stripped"):
+				f.remove_meta("swap_to")
+				if holding:
+					f.stop()
+				continue
+			if f.moving() or f.busy > 0.0:
+				continue
+			if f.global_position.distance_to(e.global_position) > 1.1:
+				f.go(_route(f, e.global_position), RUN)
+				continue
+			_take_gun(f, e)
+			continue
+		if holding or f.mags > 0 or f.mag_rounds > 0 or f.reloading > 0.0 or f.busy > 0.0 or f.has_meta("patient") or f.has_meta("swapped"):
+			continue
+		var best = null
+		var bd := SWAP_RANGE
+		for e in enemies:
+			if not (e.state in ["dead", "down", "cuffed"]) or e.has_meta("stripped") or e.has_meta("swap_claimed"):
+				continue
+			var wid: String = (e.get_meta("def", {}) as Dictionary).get("gear", {}).get("weapon", "")
+			if not SWAP_GUNS.has(wid):
+				continue
+			var d: float = f.global_position.distance_to(e.global_position)
+			if d < bd and level.clear_line(f.eye(), e.chest_pos()):
+				bd = d
+				best = e
+		if best == null:
+			continue
+		best.set_meta("swap_claimed", true)
+		f.set_meta("swap_to", best)
+		f.say("I'm dry! Taking his!", true)
+		log_line.emit("%s is dry, going for a guard's gun" % _first(f))
+		f.go(_route(f, best.global_position), RUN)
+
+
+func _take_gun(f, e) -> void:
+	var wid: String = (e.get_meta("def", {}) as Dictionary).get("gear", {}).get("weapon", "smg")
+	var ws := Rules.stats({"weapon": wid, "round": "fmj"}, f.trait_name)
+	for k in ["weapon", "round", "acc", "dmg", "pen", "armor_dmg", "burst", "rate", "recoil", "mag", "reload", "ads", "jam", "falloff"]:
+		f.st[k] = ws[k]
+	f.mag_rounds = rng.randi_range(5, 14)       # what was left in it
+	f.mags = 0
+	f.has_light = false
+	f.busy = 1.5
+	f.crouch = 0.8
+	f.set_weapon_mesh("Gear_Rifle")
+	f.set_meta("swapped", SWAP_GUNS[wid])
+	f.remove_meta("swap_to")
+	e.set_meta("stripped", true)
+	f.say("Got it. %d rounds, make them count." % f.mag_rounds, true)
+	log_line.emit("%s took a %s (%d rounds)" % [_first(f), str(ws["weapon"]).to_lower(), f.mag_rounds])
 
 
 func _first(a) -> String:

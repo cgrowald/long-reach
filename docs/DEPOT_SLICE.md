@@ -270,3 +270,10 @@ The other ideas (a work audit, a checkpoint) all go in too. At first the consequ
 - **C5. The cage shows only what each fighter carried home.**
 - **C6. The bench face-lift comes right after M1.**
 - **The art bible** (docs/ART_BIBLE.md) is the look target.
+
+## 8. Answers, round 5: the rest of M1 (user, 2026-11-23)
+- **Gun swap:** automatic. "I'm dry, taking his!" They go to a downed guard's SMG and fight on with few rounds. HOLD stops it. The SMG comes home in their rig, graded and worn.
+- **Stick carrier:** picked in the cage. The fighter's tech shows; too low can't carry it. In the fight, whoever finds the PC calls the carrier over.
+- **The vault:** a 3D room (bible 18: doors 01 02 03, cables along the wall to the control PC). Hack in with a command hack in a **small draggable terminal popup** (looks like a plain shell): you tell the carrier what to type, and the time is them typing it (faster with tech) while they are out of the fight, so you cover them; no auto hunker-down, no countdown bars (user revision 2026-11-23). Logged in, a second small popup shows the vault camera; click a door in it and it swings open.
+- **Documents:** the plan file (a Bureau SERVICE FORM with the floor plan and guard rotation) and the prisoner's ID (laminated paper card, face, stamp, scrawl) are 2D paper you look at.
+- **Cage:** bible 17 layout. The rig grid opens from the RIG slot, over the stash.

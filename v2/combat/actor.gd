@@ -34,6 +34,8 @@ var meds := 0
 var flashes := 0
 var charges := 0
 var stunned := 0.0
+var tech := 0                    # 0-5: who can run a stick, and how fast the vault hack goes
+var stick := -1                  # the drop stick they carry (its stars), -1 = none
 var level: Node3D
 
 # doing
@@ -69,6 +71,8 @@ func setup_actor(def: Dictionary, p_team: String, p_level: Node3D) -> void:
 	role = str(def.get("role", kind))
 	trait_name = str(def.get("trait", ""))
 	bio = str(def.get("line", ""))
+	tech = int(def.get("tech", 1))
+	stick = int(def.get("stick", -1))
 	setup(def)
 	fighter_name = str(def.get("name", id))
 	if not armed:

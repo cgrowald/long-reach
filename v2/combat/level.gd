@@ -370,7 +370,7 @@ func _props() -> void:
 	var dark := flat(Color(0.12, 0.1, 0.08))
 	for r in rooms:
 		var rc: Rect2 = r["rect"]
-		if r["id"] == "hall":
+		if r["id"] == "hall" or r["id"] in data.get("bare_rooms", []):
 			continue
 		var c := rc.get_center() + Vector2(rng.randf_range(-0.6, 0.6), rng.randf_range(-0.8, 0.8))
 		box(Vector3(1.4, 0.06, 0.8), Vector3(c.x, 0.76, c.y), wood)

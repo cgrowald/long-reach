@@ -5,15 +5,19 @@ extends RefCounted
 ##   - going loud: the first shot starts the neighbours' clock (they always call it in eventually), and one guard
 ##     runs for the alarm box; drop him before he gets there and there's no alarm. Either clock running out =
 ##     BACKUP: Bureau reinforcements come in the front. You can fight out with meds, guns and good people.
-##   - the stick carrier reaches the vault PC: "Boss, PC here, hit it?" You hack it (UNLOCK in the code chain,
-##     from the van), let the stick run on its own (a chance by its stars), or leave it. One door before lockout.
-##   - the door you pick opens: DCC-style loot (mostly junk, sometimes amazing). Then everyone gets out.
+##   - the vault: three steel doors in the secure store, cabled to a control PC (v2/combat/vault_room.gd).
+##     The stick carrier (picked in the cage) reaches the PC: "Boss, PC here, hit it?" Plug in = the guided
+##     command hack (v2/sim/vault_hack.gd), every command costs real seconds; or leave it.
+##   - logged in, the system grants ONE door: click it on the camera feed and it swings open. DCC-style loot
+##     (mostly junk, sometimes amazing). Then everyone gets out.
 ##   - the stores you came for go home as far as the squad can carry; a prisoner from the holding cell, or a
 ##     cuffed guard, comes home for the interrogation.
 
 const Pal := preload("res://v2/ui/pal.gd")
 const DepotRun := preload("res://v2/sim/depot_run.gd")
-const Hack := preload("res://v2/sim/hack.gd")
+const VaultHack := preload("res://v2/sim/vault_hack.gd")
+const VaultRoom := preload("res://v2/combat/vault_room.gd")
+const PopupWin := preload("res://v2/ui/popup_win.gd")
 const People := preload("res://v2/sim/people_gen.gd")
 const Loadout := preload("res://v2/sim/loadout.gd")
 const Krall := preload("res://v2/sim/krall.gd")
@@ -22,13 +26,14 @@ const Actor := preload("res://v2/combat/actor.gd")
 const NEIGHBOURS_S := 150.0       # from the first shot, someone always calls it in
 const ALARM_S := 75.0             # a pressed alarm brings them sooner
 const ALARM_BOX := Vector3(4.6, 0, -13.6)
-const STICK_S := 14.0
 const RUN_SPEED := 1.9
+const PC_POS := Vector3(-1.9, 0, -23.3)
+const OPEN_S := 1.7
 
 var f: Control                    # the fight
 var state: RefCounted
 var run: Dictionary = {}
-var phase := "quiet"              # quiet, loud, prompt, hacking, sticking, doors, opened, out
+var phase := "quiet"              # quiet, prompt, cmd, doors, opening, opened, out
 var loud := false
 var t_loud := 0.0
 var backup := -1.0                # seconds to backup (-1 = not coming yet)
@@ -37,14 +42,24 @@ var runner = null                 # the guard running for the alarm box
 var reinforced := false
 var hits := {}                    # fighter id -> hits taken
 var downed := {}
-var session: RefCounted = null    # the vault hack
-var stick_t := 0.0
-var stick_chance := 0.35
+var vhack: RefCounted = null      # the guided command hack (v2/sim/vault_hack.gd)
+var vault: Node3D                 # the 3D vault room
+var typed := ""                   # the terminal's input line
+var hack_t := 0.0                 # seconds spent at the PC
+var open_t := 0.0
+var _door_rects: Array = []       # [Rect2, i] in the vault camera window
+var _sugg_rects: Array = []       # [Rect2, text] the terminal's suggested commands
+var term_focus := false           # keys go to the terminal (click it), or to the fight (Esc / click away)
+var _win_prompt: Control
+var _win_term: Control
+var _win_door: Control
+var door_vp: SubViewport
+var door_cam: Camera3D
+var door_post: ShaderMaterial
 var opened := -1
 var door_result: Dictionary = {}
 var prisoner: Dictionary = {}
 var lines: Array = []             # for the report
-var _btns: Array = []
 var _t := 0.0
 var _flash := 0.0
 
@@ -57,8 +72,12 @@ func prepare(p_fight: Control, data: Dictionary) -> Dictionary:
 	var d := data.duplicate(true)
 	d["name"] = "Dobrev Freight - %s" % run["kind_name"]
 	d["enemies"] = run["guards"]
-	d["objective"] = {"text": "Reach the vault PC (dispatch office)", "room": "office", "pos": [-1.4, -24.8],
+	d["objective"] = {"text": "Reach the vault PC (secure store)", "room": "office", "pos": [PC_POS.x, PC_POS.z],
 		"grab_line": "Boss, I see the PC that runs the vault doors. Want me to hit it?", "grab_log": "At the vault control PC", "hold_after": true}
+	d["bare_rooms"] = ["office"]           # the vault fills it
+	for r in d.get("rooms", []):
+		if r["id"] == "office":
+			r["name"] = "SECURE STORE"
 	lines.append("%s. %d guards. %s" % [run["kind_name"], run["guards"].size(), ("Your intel marked %d of the vault doors." % hinted) if hinted > 0 else "No intel on the vault."])
 	return d
 
@@ -71,6 +90,10 @@ func start() -> void:
 		a.fired.connect(_on_fired)
 	f.sq.objective_done.connect(_on_objective)
 	f.sq.log_line.connect(_on_log)
+	vault = VaultRoom.new()
+	f.level.add_child(vault)
+	var rc: Rect2 = f.level.room("office")["rect"]
+	vault.build(f.level, rc.position.y, PC_POS, run["doors"])
 
 
 func _on_fired(_who, _target) -> void:
@@ -110,6 +133,7 @@ func _on_log(t: String) -> void:
 func _on_objective() -> void:
 	phase = "prompt"
 	f._event("At the vault PC. Your call.")
+	_open_prompt_win()
 
 
 # ------------------------------------------------------------------ the loop
@@ -134,30 +158,55 @@ func tick(delta: float) -> void:
 		if backup <= 0.0 and not reinforced:
 			_reinforce()
 	match phase:
-		"hacking":
-			if session != null and (session.ran as Array).has("unlock"):
-				phase = "doors"
-				f._event("UNLOCKED. One door, then the system locks out.")
+		"cmd":
+			_tick_hack(delta)
+		"opening":
+			open_t += delta
+			if open_t >= OPEN_S:
+				phase = "opened"
 				_flash = 1.0
-			elif session != null and session.buffer.size() >= session.buf_max:
-				phase = "out"
-				lines.append("The vault hack failed. The doors stayed shut.")
-				f._event("Hack failed. Locked out.")
-				_exfil()
-		"sticking":
-			stick_t += delta
-			if stick_t >= STICK_S:
-				var rng := RandomNumberGenerator.new()
-				rng.seed = int(run["seed"]) + 31
-				if rng.randf() < stick_chance:
-					phase = "doors"
-					f._event("The stick got in. One door.")
-					_flash = 1.0
-				else:
-					phase = "out"
-					lines.append("The stick couldn't crack the vault.")
-					f._event("The stick failed. Locked out.")
-					_exfil()
+				f._event("DOOR %02d: %s" % [opened + 1, str(door_result["label"]).to_upper()])
+
+
+## The hack runs while the stick carrier is at the PC. While they type (and the command runs) they're out of
+## the fight: covering them is your job. If they go down, the next one with the tech takes the stick over.
+func _tick_hack(delta: float) -> void:
+	var c = f.sq.stick_carrier()
+	if c == null:
+		phase = "out"
+		lines.append("Nobody left who could work the vault PC.")
+		f._event("Nobody can work the PC. Get out.")
+		_exfil()
+		return
+	vhack.who = str(c.fighter_name).split(" ")[0].capitalize()
+	if c.global_position.distance_to(PC_POS) > 1.6:
+		if not c.moving():
+			c.go(f.sq._route(c, PC_POS + Vector3(0.6, 0, 0.3)), RUN_SPEED)
+		return
+	hack_t += delta
+	if vhack.busy():
+		c.busy = maxf(c.busy, 0.2)          # hands on the keyboard, not the gun
+		c.crouch = 0.35
+		c.look_at_point = PC_POS + Vector3(0, 1.0, 0)
+	var was_typing: bool = vhack.busy() and not vhack.typing_done()
+	if vhack.tick(delta) and f.game:
+		f.game.sfx.play("switch_002", 1.4, -12.0)
+	elif was_typing and f.game and fmod(hack_t, 0.16) < delta:
+		f.game.sfx.play("switch_002", 2.2 + randf() * 0.4, -26.0)       # keys
+	if vhack.logged_in:
+		phase = "doors"
+		_flash = 1.0
+		vault.grant()
+		lines.append("%s hacked the vault PC in %d seconds." % [vhack.who, int(hack_t)])
+		f._event("ACCESS. The vault camera is up: pick a door.")
+		_close_win(_win_term)
+		_open_door_win()
+	elif vhack.locked_out:
+		phase = "out"
+		lines.append("Three wrong PINs. The vault locked out.")
+		f._event("LOCKOUT. Get out.")
+		_close_win(_win_term)
+		_exfil()
 
 
 func _reinforce() -> void:
@@ -186,17 +235,218 @@ func _exfil() -> void:
 	f.sq._next_doctrine()
 
 
+# ------------------------------------------------------------------ the small windows
+
+func _win(title: String, sz: Vector2, at: Vector2, body: Callable) -> Control:
+	var w: Control = PopupWin.new()
+	w.title = title
+	w.size = sz
+	w.position = at
+	w.draw_body = body
+	w.pressed.connect(_press)
+	f.view.ui.add_child(w)
+	return w
+
+
+func _close_win(w: Control) -> void:
+	if w != null and is_instance_valid(w):
+		w.queue_free()
+
+
+func _over_win(mp: Vector2) -> bool:
+	for w in [_win_prompt, _win_term, _win_door]:
+		if w != null and is_instance_valid(w) and Rect2(w.position, w.size).has_point(mp):
+			return true
+	return false
+
+
+func _open_prompt_win() -> void:
+	var img: Rect2 = f._main_img()
+	_win_prompt = _win("VAULT PC", Vector2(236, 96), img.position + Vector2(10, 30), _draw_prompt)
+
+
+func _open_term_win() -> void:
+	var img: Rect2 = f._main_img()
+	_win_term = _win("terminal", Vector2(228, 128), Vector2(img.position.x + 10, img.end.y - 138), _draw_term)
+	_win_term.accent = Color(0.45, 0.8, 0.55)
+	_win_term.click_body = func(p: Vector2) -> void:
+		term_focus = true
+		for s in _sugg_rects:
+			if (s[0] as Rect2).has_point(p):
+				typed = str(s[1])
+				if not typed.ends_with(" "):
+					_run_typed()
+	term_focus = true
+
+
+## The vault system's own camera, in its own little window, square on the three doors.
+func _open_door_win() -> void:
+	var rc: Rect2 = f.level.room("office")["rect"]
+	door_vp = SubViewport.new()
+	door_vp.size = Vector2i(256, 144)
+	door_vp.world_3d = f.view.vp.find_world_3d()
+	door_vp.audio_listener_enable_3d = false
+	door_vp.msaa_3d = Viewport.MSAA_DISABLED
+	f.add_child(door_vp)
+	door_cam = Camera3D.new()
+	door_cam.near = 0.05
+	door_cam.fov = 70.0
+	door_vp.add_child(door_cam)
+	door_cam.current = true
+	door_cam.position = Vector3(rc.end.x - 0.25, 2.55, rc.end.y - 0.25)
+	door_cam.look_at(Vector3(-0.2, 0.9, vault.wall_z + 0.6), Vector3.UP)
+	door_post = f._post_for(door_cam, 3)
+	var img: Rect2 = f._main_img()
+	_win_door = _win("VAULT-CAM  /  SECURE STORE", Vector2(224, 176), Vector2(img.end.x - 234, img.position.y + 30), _draw_door)
+	_win_door.click_body = func(p: Vector2) -> void:
+		if phase != "doors":
+			return
+		for dr in _door_rects:
+			if (dr[0] as Rect2).has_point(p):
+				_open_door(int(dr[1]))
+				return
+
+
+func _draw_prompt(w: Control, b: Rect2) -> void:
+	var c = f.sq.stick_carrier()
+	var who := "Nobody brought a stick." if c == null else "%s has the stick (tech %d)." % [str(c.fighter_name).split(" ")[0].capitalize(), int(c.tech)]
+	w.draw_multiline_string(Pal.font(), b.position + Vector2(4, 10), "\"Boss, PC here. It runs the vault doors. Hit it?\"\nOne door, then it locks out. %s" % who, HORIZONTAL_ALIGNMENT_LEFT, b.size.x - 8, 8, -1, Pal.TEXT)
+	if c != null:
+		w.button(Rect2(b.position.x + 4, b.end.y - 20, 120, 16), "PLUG IN THE STICK", "plug")
+	w.button(Rect2(b.end.x - 74, b.end.y - 20, 70, 16), "LEAVE IT", "leave", false)
+
+
+const TERM_FG := Color(0.62, 0.95, 0.68)
+const TERM_DIM := Color(0.45, 0.62, 0.5)
+
+
+## A plain shell: what's been run, what they're typing now, then your line (what you tell them) and the
+## suggested commands to click.
+func _draw_term(w: Control, b: Rect2) -> void:
+	w.title = "%s@vaultctl  -  terminal" % vhack.who.to_lower()
+	w.draw_rect(b, Color(0.01, 0.02, 0.015))
+	var lh := 10.0
+	var foot := 34.0
+	var rows := int((b.size.y - foot - 4) / lh) - 1
+	var from := maxi(0, vhack.lines.size() - rows)
+	var y := b.position.y + 2
+	for k in range(from, vhack.lines.size()):
+		var ln: Array = vhack.lines[k]
+		var col: Color = {"cmd": Color(0.85, 0.85, 0.8), "ok": TERM_FG, "bad": Color(1.0, 0.45, 0.35), "hint": Color(0.95, 0.75, 0.35)}.get(str(ln[1]), TERM_DIM)
+		Pal.text(w, Vector2(b.position.x + 3, y), str(ln[0]), 7, col, HORIZONTAL_ALIGNMENT_LEFT, b.size.x - 6)
+		y += lh
+	# the shell line: their typing, or the command running
+	var cur := "_" if fmod(_t, 0.8) < 0.45 else " "
+	var shell: String = vhack.prompt()
+	if vhack.busy():
+		if not vhack.typing_done():
+			shell += vhack.typing_text() + cur
+		else:
+			shell += vhack.typing_text()
+			var dots := ".".repeat(1 + int(_t * 3.0) % 3)
+			if vhack.running["cmd"] == "brute":
+				shell = "trying %04d %s" % [randi() % 10000, dots]
+			elif vhack.running["cmd"] == "sniff":
+				shell = "listening on the wire " + dots
+			else:
+				shell += "  " + dots
+	elif vhack.logged_in or vhack.locked_out:
+		shell = ""
+	else:
+		shell += cur
+	Pal.text(w, Vector2(b.position.x + 3, y), shell, 7, TERM_FG, HORIZONTAL_ALIGNMENT_LEFT, b.size.x - 6)
+	# your line
+	var fy := b.end.y - foot
+	w.draw_line(Vector2(b.position.x, fy), Vector2(b.end.x, fy), Color(TERM_DIM, 0.5), 1.0)
+	var mine := "tell %s: %s%s" % [vhack.who.to_upper(), typed, cur if term_focus and not vhack.busy() else ""]
+	if vhack.busy():
+		mine = "%s is typing. Cover them." % vhack.who
+	Pal.text(w, Vector2(b.position.x + 3, fy + 3), mine, 8, Color(0.95, 0.75, 0.35) if term_focus else TERM_DIM, HORIZONTAL_ALIGNMENT_LEFT, b.size.x - 6)
+	# suggestions to click
+	_sugg_rects = []
+	var sx := b.position.x + 3
+	var sy := fy + 16
+	Pal.text(w, Vector2(sx, sy + 1), "PIN %s" % vhack.pin_shown(), 7, TERM_DIM)
+	sx += 50
+	if not vhack.busy():
+		for s in vhack.suggestions():
+			var lab := str(s).strip_edges()
+			if lab == "login":
+				lab = "login ____"
+			var sw := lab.length() * 4.6 + 8
+			var r := Rect2(sx, sy, sw, 12)
+			var hov := r.has_point(w.get_local_mouse_position())
+			w.draw_rect(r, Color(TERM_FG, 0.25 if hov else 0.1))
+			Pal.text(w, r.position + Vector2(4, 1), lab, 7, TERM_FG)
+			_sugg_rects.append([r, s])
+			sx += sw + 4
+
+
+## The vault camera: the doors marked (hover, click one), then what was behind it.
+func _draw_door(w: Control, b: Rect2) -> void:
+	if door_cam == null:
+		return
+	f._apply_feed_look(door_post, {"kind": "cctv", "dead_t": 0.0})
+	var fr := Rect2(b.position, Vector2(b.size.x, b.size.x * 9.0 / 16.0))
+	w.draw_texture_rect(door_vp.get_texture(), fr, false)
+	_door_rects = []
+	var mp := w.get_local_mouse_position()
+	for i in 3:
+		var p: Vector3 = vault.door_point(i)
+		var a := door_cam.unproject_position(p + Vector3(0, 1.0, 0)) * fr.size / Vector2(door_vp.size) + fr.position
+		var bb := door_cam.unproject_position(p - Vector3(0, 1.05, 0)) * fr.size / Vector2(door_vp.size) + fr.position
+		var hgt := absf(bb.y - a.y)
+		var dr := Rect2(Vector2(a.x - hgt * 0.27, a.y), Vector2(hgt * 0.54, hgt))
+		var on := phase == "doors" and dr.has_point(mp)
+		var c := Color(1.0, 0.8, 0.35) if on or i == opened else Color(1.0, 0.8, 0.35, 0.5)
+		if phase == "doors" or i == opened:
+			w.draw_rect(dr, c, false, 2.0 if on else 1.0)
+		Pal.text(w, Vector2(dr.position.x - 10, dr.end.y + 1), "%02d %s" % [i + 1, DepotRun.door_hint(run, i).to_lower()], 7, c, HORIZONTAL_ALIGNMENT_CENTER, dr.size.x + 20)
+		_door_rects.append([dr, i])
+	var ty := fr.end.y + 3
+	match phase:
+		"doors":
+			Pal.text(w, Vector2(b.position.x + 3, ty), "ONE door, then lockout. Click a door.", 8, Color(0.95, 0.75, 0.35))
+		"opening":
+			Pal.text(w, Vector2(b.position.x + 3, ty), "Door %02d is opening..." % (opened + 1), 8, Pal.TEXT)
+		"opened", "out":
+			if opened >= 0:
+				var tc := {"junk": Pal.DIM, "decent": Pal.TEXT, "good": Color(0.6, 0.9, 0.5), "jackpot": Color(1.0, 0.8, 0.3)}.get(door_result.get("tier", ""), Pal.TEXT) as Color
+				Pal.text(w, Vector2(b.position.x + 3, ty), "%02d: %s%s" % [opened + 1, str(door_result.get("label", "")).to_upper(), "!!" if door_result.get("tier", "") == "jackpot" else ""], 9, tc)
+				Pal.text(w, Vector2(b.position.x + 3, ty + 12), DepotRun.describe(door_result), 7, Pal.TEXT, HORIZONTAL_ALIGNMENT_LEFT, b.size.x - 6)
+			if phase == "opened":
+				w.button(Rect2(b.end.x - 110, b.end.y - 16, 106, 14), "GRAB IT, GET OUT", "go")
+			else:
+				w.button(Rect2(b.end.x - 50, b.end.y - 16, 46, 14), "CLOSE", "close_door", false)
+
+
 # ------------------------------------------------------------------ input
 
 func input(e: InputEvent, mp: Vector2) -> bool:
+	# typing into the vault terminal while it has focus (Esc gives focus back to the fight)
+	if phase == "cmd" and term_focus and e is InputEventKey and e.pressed:
+		var k: int = e.keycode
+		if k == KEY_ESCAPE:
+			term_focus = false
+			return true
+		if k == KEY_TAB:
+			return false
+		if k == KEY_ENTER or k == KEY_KP_ENTER:
+			_run_typed()
+		elif k == KEY_BACKSPACE:
+			typed = typed.substr(0, maxi(0, typed.length() - 1))
+		elif e.unicode >= 32 and e.unicode < 127 and typed.length() < 28:
+			typed += char(e.unicode)
+		return true
+	if e is InputEventMouseButton or e is InputEventMouseMotion:
+		if _over_win(mp):
+			return true               # the window handles it
 	if not (e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT):
 		return false
-	for b in _btns:
-		if (b[0] as Rect2).has_point(mp):
-			_press(str(b[1]))
-			return true
+	if phase == "cmd":
+		term_focus = false            # clicked the fight: keys are the fight's again
 	# EYES ping: on a camera feed, click an enemy to alert the squad (the shout wheel's FOCUS makes them target)
-	if phase in ["quiet", "loud", "out", "opened"] and not f.wheel_open and f.pending < 0:
+	if not f.wheel_open and f.pending < 0:
 		var mf: Dictionary = f.feeds[f.main_i] if f.main_i < f.feeds.size() else {}
 		if mf.get("kind", "") == "cctv":
 			var hit: Dictionary = f._pick_target("enemy")
@@ -210,89 +460,67 @@ func input(e: InputEvent, mp: Vector2) -> bool:
 					pt.say("Copy. Contact, %s." % f.sq._room_name(f.level.room_at(en.global_position)), true)
 				f._event("PING: %s" % en.fighter_name)
 				return true
-	if phase == "hacking" and session != null:
-		for y in session.chain_n:
-			for x in session.chain_n:
-				if _cell(Vector2i(x, y)).has_point(mp):
-					session.pick(Vector2i(x, y))
-					return true
 	return false
+
+
+func _run_typed() -> void:
+	if typed.strip_edges() == "":
+		return
+	var why: String = vhack.submit(typed)
+	if why != "":
+		f._event(why)
+	else:
+		typed = ""
+
+
+func _open_door(i: int) -> void:
+	opened = i
+	door_result = run["doors"][i]
+	phase = "opening"
+	open_t = 0.0
+	vault.open(i)
+	if f.game:
+		f.game.sfx.play("drop_002", 0.5, -4.0)
+	f._event("Door %02d. It's opening." % (i + 1))
 
 
 func _press(id: String) -> void:
 	match id:
-		"hack":
-			var t := {"id": "vault_ctrl", "name": "Vault control", "kind": "office", "tier": 1, "programs": ["unlock"], "teaches": ["unlock"], "buffer": 6, "chain": 5, "trace_rate": 0.0}
-			session = Hack.create(state, t, int(run["seed"]) + 5)
-			session.skip_connect()
-			phase = "hacking"
-			f.sq.order("hold", null, [], true)
-			f._event("Squad hunkers down. Spell UNLOCK.")
-		"stick":
-			stick_chance = _stick_chance()
-			stick_t = 0.0
-			phase = "sticking"
-			f.sq.order("hold", null, [], true)
-			f._event("The stick is running. Squad hunkers down.")
+		"plug":
+			var c = f.sq.stick_carrier()
+			vhack = VaultHack.new()
+			vhack.on_manifest = func() -> void:
+				for i in 3:
+					run["hints"][i] = true
+			vhack.start(int(run["seed"]) + 5, int(c.tech), int(c.stick), str(c.fighter_name).split(" ")[0].capitalize())
+			phase = "cmd"
+			hack_t = 0.0
+			typed = ""
+			_close_win(_win_prompt)
+			_open_term_win()
+			f._event("Stick's in. Tell %s what to type. Cover them while they do." % vhack.who)
 		"leave":
 			phase = "out"
 			lines.append("You left the vault alone.")
+			_close_win(_win_prompt)
 			_exfil()
 		"go":
 			phase = "out"
 			_exfil()
-		_:
-			if id.begins_with("door:"):
-				opened = int(id.substr(5))
-				door_result = run["doors"][opened]
-				phase = "opened"
-				_flash = 1.0
-				f._event("DOOR %02d: %s" % [opened + 1, str(door_result["label"]).to_upper()])
+		"close_door":
+			_close_win(_win_door)
 
 
-func _stick_chance() -> float:
-	var best := 0
-	for it in state.items:
-		if it.get("device", "") == "drop_stick":
-			best = maxi(best, int(it.get("stars", 0)))
-	return clampf(0.3 + best * 0.12, 0.3, 0.9)
-
-
-# ------------------------------------------------------------------ drawing (on the fight's HUD, 640x360 logical)
-
-func _btn(ci: CanvasItem, r: Rect2, label: String, id: String, primary := true) -> void:
-	var hov := r.has_point(ci.get_local_mouse_position())
-	var c := Pal.BRASS if primary else Pal.METAL_L
-	ci.draw_rect(r, c.lightened(0.15) if hov else c)
-	ci.draw_rect(r, Pal.METAL_D, false, 1.0)
-	ci.draw_string(Pal.bold(), Vector2(r.position.x, r.position.y + r.size.y * 0.5 + 4), label, HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 8, Pal.METAL_D if primary else Pal.TEXT)
-	_btns.append([r, id])
-
-
-func _panel(ci: CanvasItem, r: Rect2, title: String) -> void:
-	ci.draw_rect(r, Color(Pal.METAL_D, 0.96))
-	ci.draw_rect(r, Pal.BRASS, false, 1.0)
-	Pal.brackets(ci, r.grow(4), Pal.BRASS, 8.0, 1.0)
-	Pal.tag(ci, r.position + Vector2(10, -8), title, 8)
-
-
-func _cell(p: Vector2i) -> Rect2:
-	var c := 20.0
-	var org := Vector2(ci_size().x * 0.5 - c * 2.5 - 60, ci_size().y * 0.5 - 40)
-	return Rect2(org + Vector2(p.x * c, p.y * c), Vector2(c, c)).grow(-1)
-
-
-func ci_size() -> Vector2:
-	return f.view.ui.size
-
+# ------------------------------------------------------------------ drawing (on the fight's HUD)
 
 func draw(ci: CanvasItem) -> void:
-	_btns = []
-	var sz := ci_size()
+	var sz: Vector2 = f.view.ui.size
 	if f.phase == "report":
+		for w in [_win_prompt, _win_term, _win_door]:
+			_close_win(w)
 		_draw_haul(ci, sz)
 		return
-	# the clocks, top centre
+	# the clocks, top right of the feed
 	var txt := ""
 	var col := Pal.TEXT
 	if runner != null and not alarm:
@@ -310,100 +538,8 @@ func draw(ci: CanvasItem) -> void:
 		ci.draw_rect(tr, Color(0, 0, 0, 0.75))
 		ci.draw_rect(tr, col, false, 1.0)
 		ci.draw_string(Pal.bold(), Vector2(tr.position.x, tr.position.y + 11), txt, HORIZONTAL_ALIGNMENT_CENTER, tr.size.x, 8, col)
-	var r := Rect2(sz.x * 0.5 - 170, sz.y * 0.5 - 80, 340, 160)
-	match phase:
-		"prompt":
-			_panel(ci, r, "THE VAULT PC")
-			ci.draw_multiline_string(Pal.font(), r.position + Vector2(12, 22), "\"Boss, I see the PC that runs the vault doors. Want me to hit it?\"\nThree doors, cabled to it. The system lets you open ONE before it locks out. The squad hunkers down while you work, and the backup clock keeps running.", HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 24, 8, -1, Pal.TEXT)
-			for i in 3:
-				var dr := Rect2(r.position.x + 12 + i * 60, r.position.y + 86, 54, 22)
-				ci.draw_rect(dr, Color(0.18, 0.18, 0.2))
-				ci.draw_string(Pal.bold(), dr.position + Vector2(0, 14), "%02d  %s" % [i + 1, DepotRun.door_hint(run, i)], HORIZONTAL_ALIGNMENT_CENTER, dr.size.x, 7, Pal.BRASS)
-			_btn(ci, Rect2(r.position.x + 12, r.end.y - 30, 100, 20), "HACK IT", "hack")
-			_btn(ci, Rect2(r.position.x + 118, r.end.y - 30, 130, 20), "STICK RUNS IT (%d%%)" % int(_stick_chance() * 100), "stick", false)
-			_btn(ci, Rect2(r.end.x - 82, r.end.y - 30, 70, 20), "LEAVE IT", "leave", false)
-		"hacking":
-			_panel(ci, r, "VAULT CONTROL  |  SPELL UNLOCK")
-			_draw_chain(ci, r)
-		"sticking":
-			_panel(ci, r, "THE STICK IS RUNNING")
-			var k := stick_t / STICK_S
-			var br := Rect2(r.position.x + 20, r.position.y + 60, r.size.x - 40, 10)
-			ci.draw_rect(br, Pal.METAL)
-			ci.draw_rect(Rect2(br.position, Vector2(br.size.x * k, br.size.y)), Pal.BRASS)
-			ci.draw_string(Pal.font(), r.position + Vector2(20, 50), "Chance it gets in: %d%%. Better sticks from the hacking bench do better." % int(stick_chance * 100), HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 40, 8, Pal.TEXT)
-		"doors":
-			_panel(ci, r, "PICK ONE DOOR")
-			ci.draw_string(Pal.font(), r.position + Vector2(12, 22), "One door. Then the system locks out for good.", HORIZONTAL_ALIGNMENT_LEFT, -1, 8, Pal.TEXT)
-			for i in 3:
-				var dr := Rect2(r.position.x + 18 + i * 104, r.position.y + 34, 96, 84)
-				ci.draw_rect(dr, Color(0.14, 0.14, 0.16))
-				ci.draw_rect(dr, Pal.METAL_L, false, 1.0)
-				ci.draw_string(Pal.bold(), dr.position + Vector2(0, 30), "%02d" % (i + 1), HORIZONTAL_ALIGNMENT_CENTER, dr.size.x, 18, Pal.TEXT)
-				ci.draw_string(Pal.font(), dr.position + Vector2(0, 52), "intel: " + DepotRun.door_hint(run, i), HORIZONTAL_ALIGNMENT_CENTER, dr.size.x, 7, Pal.BRASS)
-				_btn(ci, Rect2(dr.position.x + 18, dr.end.y - 24, 60, 18), "OPEN", "door:%d" % i)
-		"opened":
-			var jack: bool = door_result.get("tier", "") == "jackpot"
-			_panel(ci, r, "DOOR %02d" % (opened + 1))
-			var tc := {"junk": Pal.DIM, "decent": Pal.TEXT, "good": Color(0.6, 0.9, 0.5), "jackpot": Color(1.0, 0.8, 0.3)}.get(door_result.get("tier", ""), Pal.TEXT) as Color
-			ci.draw_string(Pal.bold(), r.position + Vector2(0, 40), str(door_result.get("label", "")).to_upper() + ("!!" if jack else ""), HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 16 if jack else 13, tc)
-			ci.draw_multiline_string(Pal.font(), r.position + Vector2(16, 62), "%s\n%s" % [DepotRun.describe(door_result), door_result.get("line", "")], HORIZONTAL_ALIGNMENT_CENTER, r.size.x - 32, 8, -1, Pal.TEXT)
-			_btn(ci, Rect2(r.position.x + r.size.x * 0.5 - 70, r.end.y - 30, 140, 20), "GRAB IT, GET OUT", "go")
 	if _flash > 0.0:
 		ci.draw_rect(Rect2(Vector2.ZERO, sz), Color(1.0, 0.8, 0.3, _flash * 0.12))
-
-
-func _glyph(ci: CanvasItem, id: String, r: Rect2, col: Color) -> void:
-	var c := r.get_center()
-	var h := minf(r.size.x, r.size.y) * 0.32
-	match id:
-		"dia":
-			ci.draw_polyline(PackedVector2Array([c + Vector2(0, -h), c + Vector2(h, 0), c + Vector2(0, h), c + Vector2(-h, 0), c + Vector2(0, -h)]), col, 1.5)
-		"bars":
-			for k in 3:
-				ci.draw_line(Vector2(c.x - h, c.y - h * 0.7 + k * h * 0.7), Vector2(c.x + h, c.y - h * 0.7 + k * h * 0.7), col, 1.5)
-		"step":
-			ci.draw_polyline(PackedVector2Array([c + Vector2(-h, h), c + Vector2(-h * 0.2, h), c + Vector2(-h * 0.2, -h), c + Vector2(h, -h)]), col, 1.5)
-		"ring":
-			ci.draw_arc(c, h * 0.85, 0, TAU, 14, col, 1.5)
-		"cross":
-			ci.draw_line(c + Vector2(-h, 0), c + Vector2(h, 0), col, 2.0)
-			ci.draw_line(c + Vector2(0, -h), c + Vector2(0, h), col, 2.0)
-		"slash":
-			var sq := Rect2(c - Vector2(h, h), Vector2(h, h) * 2.0)
-			ci.draw_rect(sq, col, false, 1.5)
-			ci.draw_colored_polygon(PackedVector2Array([sq.position + Vector2(sq.size.x, 0), sq.end, sq.position + Vector2(0, sq.size.y)]), col)
-
-
-func _draw_chain(ci: CanvasItem, r: Rect2) -> void:
-	var s = session
-	var pr: Dictionary = s.programs[0]
-	var code: Array = pr["code"]
-	var prog: int = s.progress(pr)
-	var want: String = str(code[prog]) if prog < code.size() else ""
-	for y in s.chain_n:
-		for x in s.chain_n:
-			var p := Vector2i(x, y)
-			var cr := _cell(p)
-			var on_line: bool = (s.axis == "row" and y == s.line) or (s.axis == "col" and x == s.line)
-			if on_line:
-				ci.draw_rect(cr.grow(1), Color(Pal.BRASS, 0.18))
-			var sym: String = str(s.chain[y][x])
-			var ok: bool = s.can_pick(p)
-			if ok and sym == want:
-				ci.draw_rect(cr, Color(Pal.BRASS, 0.3 + 0.12 * sin(_t * 5.0)))
-			if s.used.has(p):
-				ci.draw_rect(cr.grow(-6), Color(Pal.TEXT, 0.12))
-			else:
-				_glyph(ci, sym, cr, Pal.BRASS if ok and sym == want else (Pal.TEXT if on_line else Color(Pal.TEXT, 0.4)))
-	var px := _cell(Vector2i(4, 0)).end.x + 20
-	ci.draw_string(Pal.bold(), Vector2(px, r.position.y + 34), "UNLOCK", HORIZONTAL_ALIGNMENT_LEFT, -1, 9, Pal.BRASS)
-	for k in code.size():
-		var cr := Rect2(px + k * 24, r.position.y + 42, 22, 16)
-		ci.draw_rect(cr, Color(Pal.BRASS, 0.85) if k < prog else Pal.METAL)
-		_glyph(ci, str(code[k]), cr, Pal.METAL_D if k < prog else Pal.TEXT)
-	ci.draw_string(Pal.font(), Vector2(px, r.position.y + 76), "Buffer %d / %d" % [s.buffer.size(), s.buf_max], HORIZONTAL_ALIGNMENT_LEFT, -1, 8, Pal.DIM)
-	ci.draw_multiline_string(Pal.font(), Vector2(px, r.position.y + 92), "Pick along the lit row, then the lit column... The glowing cell is the next one you need.", HORIZONTAL_ALIGNMENT_LEFT, r.end.x - px - 10, 7, -1, Pal.DIM)
 
 
 # ------------------------------------------------------------------ going home

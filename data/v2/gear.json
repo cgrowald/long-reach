@@ -40,6 +40,7 @@
 		"dressing": {"name": "Field dressing", "cells": [1, 1], "med": 1, "price": 0},
 		"flash": {"name": "Flashbang", "cells": [1, 1], "flash": 1, "price": 25},
 		"charge": {"name": "Door charge", "cells": [1, 2], "charge": 1, "price": 40},
+		"drop_stick": {"name": "Drop stick", "cells": [1, 1], "device": "drop_stick", "tech_min": 1, "price": 0},
 		"picks": {"name": "Lock pick", "price": 5}
 	},
 	"start_stash": ["bolt_rifle", "pump_shotgun", "pipe", "pipe", "beanie", "cap", "street", "street", "street"],

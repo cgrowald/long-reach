@@ -1,16 +1,19 @@
 # Roadmap (agreed process, 2026-11-23)
 
-> **START HERE (next chat, written 2026-11-23):**
-> - **M0** (play the backlog): round-1 fixes are done; not signed off yet.
-> - **M1** (the depot raid): built and playable, not played yet. The user wants polish before playing.
+> **START HERE (next chat, written 2026-11-23 late):**
+> - **M0** (play the backlog): round-1 fixes done; not signed off yet.
+> - **M1** (the depot raid): almost done, not played yet. Done this session (all bot-tested, screenshots approved):
+>   - combat screen clean-up: one chosen feed, no bottom tiles, ammo + health on the squad rows, CAMERAS list under the squad, ops map wheel zoom / drag pan / double-click fit. Helmet cams stay as the main feed (1-4 or a squad row).
+>   - gun swap: a dry fighter takes a downed guard's SMG (v2/combat/squad_ai.gd `_gun_swap`), it comes home in their rig.
+>   - stick carrier: pack the drop stick into one fighter's rig in the cage (tech 1+; v2/sim/loadout.gd `stick_carrier`).
+>   - the vault: 3D room (v2/combat/vault_room.gd), command hack in a small draggable terminal popup (v2/sim/vault_hack.gd, v2/ui/popup_win.gd): you tell the carrier what to type, the typing takes the time, they're out of the fight meanwhile. Then a vault-camera popup: click a door. User: "exactly what I wanted".
 > - **Next, in order:**
->   1. ~~The combat screen clean-up~~ **done 2026-11-23**: bottom tiles gone, one chosen feed (taller), ammo + health on the squad rows, CAMERAS list under the squad, ops map wheel zoom / drag pan / double-click fit.
-> - **Process change (user 2026-11-23):** small fixes get screenshots in chat, not playtests. Full playtests only after big slice updates.
->   2. The rest of M1's "still to do".
->   3. Hand over PLAYTEST_M1.md and open the game.
-> - **Then M1b**, the bench face-lift.
-> - **Look target:** docs/ART_BIBLE.md.
-> - **Design of record:** docs/DEPOT_SLICE.md (all answers), docs/LOOK_BIBLE.md, docs/LOOP_RUNDOWN.md.
+>   1. The plan file (Bureau SERVICE FORM with floor plan + guard rotation) and the prisoner's ID (laminated paper card) as 2D paper you look at (art bible 13).
+>   2. The gear cage laid out like art bible 17 (fighter in the middle, slot icons on lines, stash right, portraits bottom; the rig grid opens from the RIG slot over the stash). Show the stick carrier there.
+>   3. Update docs/PLAYTEST_M1.md, hand it over, open the game: the user plays M1 for real.
+> - **Then ask the user (do not decide alone):** the user fears the game is boring; combat is great, but it needs a variety of maps, targets and reasons to hit them. Offer to move map/target variety (M4: generated buildings, more op types) ahead of M1b (benches). Also parked: things to do while an op or hack runs (maybe watch the op as a feed on your PC at night); blood splatter and ragdolls.
+> - **Process (user 2026-11-23):** small fixes = screenshots in chat, no playtests; full playtests only after big slices. Keep chats short to save usage: one milestone chunk per chat.
+> - **Look target:** docs/ART_BIBLE.md. **Design of record:** docs/DEPOT_SLICE.md (section 8 = this session's answers), docs/LOOK_BIBLE.md, docs/LOOP_RUNDOWN.md.
 
 The user asked for this to stop us creating more and more new work before finishing what we were talking about.
 
@@ -58,12 +61,12 @@ Nothing new is built. The user plays the unplayed builds, then Claude fixes bugs
   - Drop the bottom camera tiles and keep the operator list. You only see the one camera angle you've chosen (click an operator, or a CCTV entry, to switch).
 - **Still to do in M1:**
   - ~~The combat screen clean-up above~~ (done 2026-11-23).
-  - the gun swap mid-fight (take a guard's SMG when dry);
-  - choosing the stick carrier by tech level (now it's whoever reaches the PC);
-  - the vault room's three door models and cables (the vault is a screen for now);
+  - ~~the gun swap mid-fight~~ (done 2026-11-23);
+  - ~~the stick carrier, picked in the cage by tech~~ (done 2026-11-23);
+  - ~~the vault room: three doors, cables, command-hack terminal popup, vault-cam popup~~ (done 2026-11-23);
   - the plan file and ID drawn as documents;
   - the art bible cage layout.
-Design is in docs/DEPOT_SLICE.md (sections 1, 4, 5).
+Design is in docs/DEPOT_SLICE.md (sections 1, 4, 5, 8).
 
 | # | Piece | Done when |
 |---|---|---|
@@ -136,3 +139,6 @@ The face-lift goes piece by piece inside each milestone, using docs/LOOK_BIBLE.m
 - Explosives to open all three vault doors (late game, V1).
 - Designing your own garments, with the stripe (L1).
 - Vehicles from somewhere other than depots.
+- **Hit and death feedback in fights (user 2026-11-23):** you can see a bullet hit (blood splatter), and the dead ragdoll (a set of random canned ragdolls is fine, whichever is cheaper).
+- **Things to do while an op or hack runs (user 2026-11-23):** maybe the op plays as a feed on your PC while you work on other stuff at night. For now the fight stays the big thing.
+- **Variety is the fun (user 2026-11-23):** "I fear the game is boring." Combat is great; it needs a variety of maps and targets, and reasons to hit them. Candidate to move M4 (generated buildings, more op types) up: ask the user after M1.
