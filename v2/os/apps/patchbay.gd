@@ -647,9 +647,53 @@ func _draw_tune() -> void:
 	P.text(self, Vector2(lr.position.x, lr.end.y + 2), "LOCK %d%%   (drag a knob up/down, or scroll on it)" % int(s.lock * 100), Color(P.FACE_L, 0.7))
 
 
+const PROG_COLS := [Color(0.95, 0.62, 0.28), Color(0.55, 0.85, 0.55), Color(0.5, 0.75, 1.0), Color(0.9, 0.6, 0.9), Color(1.0, 0.85, 0.35), Color(0.6, 0.9, 0.9)]
+
+
+## The code-chain glyphs (art bible 15: the van's PATCHBAY shows symbols, not hex).
+func _glyph(id: String, r: Rect2, col: Color, w := 1.5) -> void:
+	var c := r.get_center()
+	var h := minf(r.size.x, r.size.y) * 0.32
+	match id:
+		"dia":
+			draw_polyline(PackedVector2Array([c + Vector2(0, -h), c + Vector2(h, 0), c + Vector2(0, h), c + Vector2(-h, 0), c + Vector2(0, -h)]), col, w)
+			draw_circle(c, h * 0.25, col)
+		"bars":
+			for k in 3:
+				var yy := c.y - h * 0.7 + k * h * 0.7
+				draw_line(Vector2(c.x - h, yy), Vector2(c.x + h, yy), col, w)
+		"step":
+			draw_polyline(PackedVector2Array([c + Vector2(-h, h), c + Vector2(-h * 0.2, h), c + Vector2(-h * 0.2, -h), c + Vector2(h, -h)]), col, w)
+		"ring":
+			draw_arc(c, h * 0.85, 0, TAU, 16, col, w)
+		"cross":
+			draw_line(c + Vector2(-h, 0), c + Vector2(h, 0), col, w + 0.5)
+			draw_line(c + Vector2(0, -h), c + Vector2(0, h), col, w + 0.5)
+		"slash":
+			var sq := Rect2(c - Vector2(h, h), Vector2(h, h) * 2.0)
+			draw_rect(sq, col, false, w)
+			draw_colored_polygon(PackedVector2Array([sq.position + Vector2(sq.size.x, 0), sq.end, sq.position + Vector2(0, sq.size.y)]), col)
+		_:
+			P.text(self, r.position + Vector2(0, 3), id, col, HORIZONTAL_ALIGNMENT_CENTER, r.size.x)
+
+
+## For each symbol: the colour of a known, unfinished program whose NEXT code is that symbol (the cells worth picking).
+func _wanted() -> Dictionary:
+	var out := {}
+	for i in s.programs.size():
+		var pr: Dictionary = s.programs[i]
+		if pr["done"] or not pr["known"]:
+			continue
+		var code: Array = pr["code"]
+		var prog: int = s.progress(pr)
+		if prog < code.size() and not out.has(code[prog]):
+			out[code[prog]] = PROG_COLS[i % PROG_COLS.size()]
+	return out
+
+
 func _draw_inject() -> void:
 	var m := _mid()
-	P.text(self, m.position + Vector2(6, 2), "INJECT  -  pick along the lit %s" % ("row" if s.axis == "row" else "column"), P.FACE_L)
+	P.text(self, m.position + Vector2(6, 2), "INJECT  -  pick along the lit %s, then the lit %s..." % (["row", "column"] if s.axis == "row" else ["column", "row"]), P.FACE_L)
 	# the buffer
 	var bw := minf(26.0, (m.size.x - 12.0) / maxf(1.0, s.buf_max))
 	for i in s.buf_max:
@@ -657,8 +701,9 @@ func _draw_inject() -> void:
 		draw_rect(br, P.PETROL_D)
 		draw_rect(br, Color(P.FACE_L, 0.3), false, 1.0)
 		if i < s.buffer.size():
-			P.text(self, br.position + Vector2(0, 1), s.buffer[i], P.COPPER, HORIZONTAL_ALIGNMENT_CENTER, br.size.x)
-	# the grid
+			_glyph(str(s.buffer[i]), br, P.COPPER, 1.2)
+	# the grid: the lit line, an arrow showing which way you pick, and glowing cells that continue a program
+	var want := _wanted()
 	for y in s.chain_n:
 		for x in s.chain_n:
 			var p := Vector2i(x, y)
@@ -667,24 +712,48 @@ func _draw_inject() -> void:
 			if on_line and s.stage == "inject":
 				draw_rect(r.grow(1), Color(P.COPPER, 0.22))
 			var used: bool = s.used.has(p)
-			var hov: bool = r.has_point(hover) and s.can_pick(p)
-			if hov:
+			var sym: String = str(s.chain[y][x])
+			var pick_ok: bool = s.can_pick(p)
+			if pick_ok and want.has(sym):
+				var wc: Color = want[sym]
+				draw_rect(r, Color(wc, 0.28 + 0.12 * sin(_t * 5.0)))
+				draw_rect(r, wc, false, 1.0)
+			if r.has_point(hover) and pick_ok:
 				draw_rect(r, P.COPPER)
-			P.text(self, r.position + Vector2(0, 4), "[ ]" if used else s.chain[y][x], Color(P.FACE_L, 0.25) if used else (P.FACE_L if on_line else Color(P.FACE_L, 0.55)), HORIZONTAL_ALIGNMENT_CENTER, r.size.x)
-	# the programs
+			if used:
+				draw_rect(r.grow(-6), Color(P.FACE_L, 0.12))
+			else:
+				var gc := P.FACE_L if on_line else Color(P.FACE_L, 0.45)
+				if pick_ok and want.has(sym):
+					gc = want[sym]
+				_glyph(sym, r, gc)
+	if s.stage == "inject":
+		var a0: Rect2 = _chain_rect(Vector2i(0, s.line)) if s.axis == "row" else _chain_rect(Vector2i(s.line, 0))
+		var tip: Vector2
+		if s.axis == "row":
+			tip = Vector2(a0.position.x - 1, a0.get_center().y)
+			draw_colored_polygon(PackedVector2Array([tip, tip + Vector2(-5, -4), tip + Vector2(-5, 4)]), P.COPPER)
+		else:
+			tip = Vector2(a0.get_center().x, a0.position.y - 1)
+			draw_colored_polygon(PackedVector2Array([tip, tip + Vector2(-4, -5), tip + Vector2(4, -5)]), P.COPPER)
+	# the programs, each in its own colour
 	var px: float = m.position.x + 20 + s.chain_n * _chain_cell()
 	var py := m.position.y + 48
 	P.text(self, Vector2(px, py - 14), "PROGRAMS", Color(P.FACE_L, 0.6))
-	for pr in s.programs:
+	for i in s.programs.size():
+		var pr: Dictionary = s.programs[i]
+		var pc: Color = PROG_COLS[i % PROG_COLS.size()]
 		var code: Array = pr["code"]
 		var prog: int = s.progress(pr)
-		var col := P.SAGE if pr["done"] else (P.FACE_L if pr["known"] else Color(P.FACE_L, 0.3))
+		var col := P.SAGE if pr["done"] else (pc if pr["known"] else Color(P.FACE_L, 0.3))
 		P.text(self, Vector2(px, py), ("OK " if pr["done"] else "") + str(pr["name"]), col)
 		if pr["known"]:
 			for k in code.size():
-				var cr := Rect2(px + 2 + k * 22, py + 11, 20, 12)
-				draw_rect(cr, P.SAGE if k < prog else P.PETROL_D)
-				P.text(self, cr.position + Vector2(0, 0), code[k], P.INK if k < prog else Color(P.FACE_L, 0.8), HORIZONTAL_ALIGNMENT_CENTER, cr.size.x)
+				var cr := Rect2(px + 2 + k * 22, py + 11, 20, 13)
+				draw_rect(cr, Color(pc, 0.85) if k < prog or pr["done"] else P.PETROL_D)
+				if k == prog and not pr["done"]:
+					draw_rect(cr, pc, false, 1.0)
+				_glyph(str(code[k]), cr, P.INK if k < prog or pr["done"] else Color(P.FACE_L, 0.85), 1.2)
 		else:
 			P.text(self, Vector2(px + 2, py + 11), "locked", Color(P.FACE_L, 0.3))
 		py += 28

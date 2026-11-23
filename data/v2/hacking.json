@@ -1,6 +1,6 @@
 {
 	"_note": "Hacking (docs/HACKING.md). Targets: the fixed specials in os.json plus places generated from the town (kinds below). One hack = CONNECT (route the signal, PATCHBAY) then INJECT (code chain: spell program codes). On site (air gap): TUNE (match the signal) then INJECT against a patrol clock. Text here is placeholder flavour; the user may rewrite any of it. Numbers are first guesses: tune here.",
-	"symbols": ["1C", "55", "BD", "E9", "7A", "FF"],
+	"symbols": ["dia", "bars", "step", "ring", "cross", "slash"],
 	"programs": {
 		"grab": {"name": "GRAB", "len": 2, "text": "Copy the files worth taking."},
 		"wipe": {"name": "WIPE", "len": 2, "text": "Wipe the logs: trace down by a third."},
