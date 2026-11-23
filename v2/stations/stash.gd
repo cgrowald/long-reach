@@ -99,6 +99,8 @@ func _item_row(it: Dictionary) -> Control:
 	top.add_child(nl)
 	if ty == "intel":
 		top.add_child(Kit.label("%s, from %s" % [str(it.get("tag", "?")).to_upper(), it.get("source", "?")], Pal.DIM, 8))
+		if it.get("tag", "") == "plan":
+			top.add_child(Kit.button("Read", func() -> void: show_plan(it), game))
 	else:
 		var q := int(float(it.get("quality", 0)) * 100.0)
 		top.add_child(Kit.label("found" if q == 0 else ("%d%%%s" % [q, "" if it.get("hand", true) else " batch"]), Pal.DIM, 8))

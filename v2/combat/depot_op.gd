@@ -67,7 +67,7 @@ var _flash := 0.0
 func prepare(p_fight: Control, data: Dictionary) -> Dictionary:
 	f = p_fight
 	state = f.game.state
-	run = DepotRun.create(state, hash(str(state.world_seed) + "depot" + str(state.day) + str(int(state.flags.get("depot", {}).get("raids", 0)))))
+	run = DepotRun.create(state, DepotRun.seed_for(state))
 	var hinted := DepotRun.apply_hints(state, run)
 	var d := data.duplicate(true)
 	d["name"] = "Dobrev Freight - %s" % run["kind_name"]

@@ -143,6 +143,58 @@ static func _roll_door(state: RefCounted, rng: RandomNumberGenerator, run: Dicti
 	return c
 
 
+## Tonight's depot seed: the raid and the plan file roll the same depot (so the paper tells the truth).
+static func seed_for(state: RefCounted) -> int:
+	return hash(str(state.world_seed) + "depot" + str(state.day) + str(int(_d(state)["raids"])))
+
+
+## The plan files you hold (depot "plan" intel), newest last.
+static func plan_files(state: RefCounted) -> Array:
+	var out: Array = []
+	for it in state.items:
+		if it.get("type", "") == "intel" and it.get("tag", "") == "plan":
+			out.append(it)
+	return out
+
+
+## What the Bureau SERVICE FORM shows (v2/ui/paper.gd): tonight's layout, guard rotation, vault doors.
+## Rooms and doors come from the fight's level file; guards from the same roll as the raid.
+static func plan_sheet(state: RefCounted, item: Dictionary) -> Dictionary:
+	var run := create(state, seed_for(state))
+	apply_hints(state, run)
+	var lvl: Dictionary = Content.get_file("combat/depot")
+	var rooms: Array = []
+	for r in lvl.get("rooms", []):
+		var rr: Dictionary = r.duplicate(true)
+		if rr["id"] == "office":
+			rr["name"] = "SECURE STORE"
+		rooms.append(rr)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = int(run["seed"]) ^ 0x5f3
+	var guards: Array = []
+	var post_names := {}
+	for r in rooms:
+		post_names[r["id"]] = r["name"]
+	var posts: Array = data().get("posts", [])
+	for g in run["guards"]:
+		var post_room := "hall"
+		for p in posts:
+			if Vector2(p["pos"][0], p["pos"][1]).distance_to(Vector2(g["pos"][0], g["pos"][1])) < 0.01:
+				post_room = str(p.get("room", "hall"))
+		var start_h: int = [18, 20, 22][rng.randi() % 3]
+		guards.append({"name": str(g["person"]["first"]).substr(0, 1) + ". " + str(g["person"]["last"]).to_upper(),
+			"rank": str(g["person"].get("rank", "Guard")), "post": post_names.get(post_room, post_room),
+			"duty": "PATROL" if g.has("patrol") else "FIXED", "shift": "%02d:00-%02d:00" % [start_h, (start_h + 8) % 24],
+			"pos": g["pos"], "patrol": g.get("patrol", []), "armed": str(g["person"].get("weapon", "service_pistol"))})
+	var doors: Array = []
+	for i in 3:
+		doors.append(door_hint(run, i))
+	return {"site": "DOBREV FREIGHT", "kind": str(run["kind_name"]).to_upper(), "form_no": "S-14/%04d" % ((int(run["seed"]) & 0x7fff) % 10000),
+		"day": int(state.day), "rooms": rooms, "doors": lvl.get("doors", []), "guards": guards, "vault": doors,
+		"source": str(item.get("name", "")), "note": str(item.get("worth", "")), "got_day": int(item.get("day", state.day)), "locked": locked_for(state),
+		"alarm": [4.6, -13.6], "pc": [-1.9, -23.3]}     # same spots as v2/combat/depot_op.gd ALARM_BOX / PC_POS
+
+
 ## Intel before the raid: each depot "plan" file you hold reveals one door's tier (up to all three).
 static func apply_hints(state: RefCounted, run: Dictionary) -> int:
 	var n := 0

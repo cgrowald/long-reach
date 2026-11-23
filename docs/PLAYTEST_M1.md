@@ -1,4 +1,4 @@
-# M1 playtest: the depot raid, the whole loop (2026-11-23)
+# M1 playtest: the depot raid, the whole loop (2026-11-23, updated late 2026-11-23)
 
 Notes by number, like M0.
 
@@ -15,16 +15,23 @@ The bigger the shortcut, the less you test the real path. Use them when somethin
 1. **New game.** Do the post office, then the town hall (the code chain now has glyphs, a colour per program, the next useful cell glowing, and an arrow on the active row).
 2. **Hack the Dobrev Freight depot from Patchbay.** Run EYES (cameras) and GRAB (its files are "plan" intel).
    - Expect: each depot plan file you hold reveals one vault door's tier before you go.
+   - **Shelves: click Read on a plan file.** Expect: a Bureau SERVICE FORM on paper: tonight's floor plan (guard posts circled, patrols dashed, the alarm box, the PC, doors 01-03), the guard rotation table, and the vault doors (the ones your intel marked are typed, the rest blacked out). Click anywhere to put it down.
+   - Expect: the guards on the form are the guards you meet tonight (same names, same posts).
 3. **Post some files on Nod** until you get a recruit lead (or F1, +1 recruit lead). Then press **A LEAD WROTE BACK: MEET** in the Dead Drop app.
    - Expect: an ex-depot worker joins your people. They bring a depot layout sketch (another plan file).
-4. **Gear cage:** put rigs, guns and mags on your people (or F1, kit out the crew).
-   - Expect: their motive ("In it for: Family") under their face. Patches and two red shoulder stripes on their clothes.
+4. **Gear cage** (Shelves > Gear cage). New layout like art bible 17: the fighter stands in the cage under a bulb, eight slot tiles on lines around them, the STASH grid on the right, portraits along the bottom.
+   - Click a portrait to switch people. Click a stash tile to wear it. Click a slot to see only what fits it (and "take off"); right-click a slot to take it off.
+   - Click the RIG slot: the rig grid opens over the stash. Click a mag or med tile, then a cell, to pack it. Right-click a packed thing to take it out. "auto-pack" fills it.
+   - **The stick carrier:** pack the drop stick (USB tile, F1 +1 drop stick if you have none) into one fighter's rig (tech 1+). Expect: STICK CARRIER under their name, USB on their portrait and their RIG tile, a green cell in the grid.
+   - **Plan file** button (bottom right, if you hold one) shows the service form here too.
+   - Expect: their motive ("In it for: Family") under their name. Patches and two red shoulder stripes on their clothes.
    - Expect: up to 4 go (your 3 plus the recruit), and only people fit for duty.
 
 ## The raid
 5. **Send them.**
    - Expect: a new depot every raid. The title shows its kind (parcel depot, bulk depot, cold store or linen warehouse). Guards are in grey jackets and navy trousers with navy caps, and have poor pistols or SMGs.
-   - Expect: CCTV tiles only if you ran EYES on a depot.
+   - Expect: one main feed (a helmet cam). Switch by clicking a squad row, or 1-4. CCTV shows in the CAMERAS list under the squad only if you ran EYES on a depot.
+   - Expect: the ops map zooms with the wheel, pans by dragging, double-click fits it.
 6. **The first shot.**
    - Expect: "SHOTS FIRED. The neighbours will call it in", and a BACKUP clock (top right of the main feed).
    - Expect: one guard runs for the alarm box. Drop him before he gets there and there's no alarm. If he gets there, the clock drops to 75 seconds.
@@ -33,11 +40,12 @@ The bigger the shortcut, the less you test the real path. Use them when somethin
    - Expect: the point man calls the contact and the board marks them. The shout wheel's FOCUS still makes them target.
 9. **Give a deadly order, then repeat it.**
    - Expect: they refuse ("No. That's a grave, boss."). Their lives come first.
-10. **The vault PC (dispatch office).** Your carrier asks "Boss, I see the PC... want me to hit it?" Three choices:
-    - **HACK IT:** the squad hunkers down and you spell UNLOCK in the code chain while the backup clock runs.
-    - **STICK RUNS IT:** a chance, based on your best drop stick's stars.
-    - **LEAVE IT.**
+10. **A fighter runs dry.** Expect: "I'm dry, taking his!" They grab a downed guard's SMG and fight on with few rounds; HOLD stops it. The SMG comes home in their rig.
+10b. **The vault (secure store):** three steel doors with cables to a control PC. Your stick carrier says "Boss, I see the PC... want me to hit it?"
+    - Yes: a small terminal pops up (drag it by its title bar). Tell the carrier what to type (suggested commands are clickable). The typing takes their time and they're out of the fight meanwhile: cover them.
+    - Logged in: a vault-camera popup. Click a door on it and it swings open.
 11. **Pick ONE of the three doors.**
+    - Expect: the system grants only ONE door.
     - Expect: mostly junk, sometimes good. Very rarely a JACKPOT: a blueprint (new recipe) or a factory-new bench upgrade.
     - Doors your intel revealed show their tier.
 12. **The holding cell** (store room). Sometimes someone is in it, jailed for something tiny. A cuffed guard can come home too.
@@ -49,6 +57,7 @@ The bigger the shortcut, the less you test the real path. Use them when somethin
     - injuries in days, scars;
     - the haul.
 15. **The prisoner is tied to a chair under the bulb** (opens after the notes; **P** reopens it).
+    - Expect: their ID card shows first, on paper. A jailed civilian has a laminated CITIZEN CARD (grey photo, DETAINED stamp, what they're held for in pen, a tally of days held, a queue ticket). A captured guard has a black BUREAU card (chip, hologram, TAKEN stamp). Click their face or LOOK AT THEIR ID to see it again.
     - Play up to 4 approach cards: reason, threaten (words only), bargain, kindness, bluff, leverage (needs dirt on them from a hack).
     - Expect: BREAK at 60 makes them talk. TRUST sets the recruit chance.
     - Then **LET GO** (Krall comes closer), **RECRUIT** (a chance; thin loyalty; sometimes an informant), or **KILL** (off-screen; people whose motive can't stomach it lose loyalty).

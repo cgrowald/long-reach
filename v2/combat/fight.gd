@@ -234,6 +234,7 @@ func _cameras() -> void:
 		if op and not _has_eyes():
 			continue            # no EYES on this depot: no cameras
 		feeds.append({"kind": "cctv", "def": c, "label": "%s  %s" % [c["id"], c["label"]]})
+	main_i = clampi(main_i, 0, mini(squad.size(), feeds.size()) - 1)   # the last fighter's helmet (a crew of 3 has no CAM 04)
 	for f in feeds:
 		# no picture of its own any more (one chosen feed only): a marker that keeps the
 		# camera's place, so CCTV spotting still works off screen

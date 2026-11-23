@@ -28,7 +28,41 @@ func build() -> void:
 
 
 ## Esc / right-click. Return true if the screen handled it itself (e.g. closed an inner window).
+## Subclasses that override this call put_paper_down() first.
 func back() -> bool:
+	return put_paper_down()
+
+
+# ------------------------------------------------------------------ paper (v2/ui/paper.gd)
+
+var paper: Control
+
+
+## Look at a depot plan file (a Bureau SERVICE FORM).
+func show_plan(item: Dictionary) -> void:
+	var sheet: Dictionary = load("res://v2/sim/depot_run.gd").plan_sheet(game.state, item)
+	_new_paper().show_plan(sheet)
+
+
+## Look at someone's ID card (the prisoner's).
+func show_id(person: Dictionary) -> void:
+	_new_paper().show_id(person)
+
+
+func _new_paper() -> Control:
+	put_paper_down()
+	paper = load("res://v2/ui/paper.gd").new()
+	add_child(paper)
+	paper.size = size
+	return paper
+
+
+## Close the paper if one is up. True if it was.
+func put_paper_down() -> bool:
+	if paper and is_instance_valid(paper):
+		paper.put_down()
+		paper = null
+		return true
 	return false
 
 

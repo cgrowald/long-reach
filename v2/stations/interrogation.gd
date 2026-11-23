@@ -40,6 +40,9 @@ func build() -> void:
 	_model.add_child(lamp)
 	lamp.position = Vector3(0.0, 2.3, 0.5)            # the bulb over the chair
 	_last = "\"%s\"" % ["What do you want from me?", "You're making a mistake.", "...", "I just work there."][(hash(p["name"]) & 0x7fffffff) % 4]
+	if not p.get("id_seen", false):
+		p["id_seen"] = true          # first look: what was in their pockets
+		show_id.call_deferred(p)
 	game.sfx.play("drop_002", 0.6, -8.0)
 
 
@@ -64,6 +67,9 @@ func _press(id: String) -> void:
 	game.click()
 	if id == "close":
 		close()
+		return
+	if id == "id":
+		show_id(Interro.prisoner(game.state))
 		return
 	if id.begins_with("card:"):
 		var r := Interro.play(game.state, id.substr(5))
@@ -161,6 +167,8 @@ func _draw() -> void:
 		if k == 0:
 			draw_line(Vector2(br.position.x + br.size.x * 0.6, br.position.y - 2), Vector2(br.position.x + br.size.x * 0.6, br.end.y + 2), Pal.TEXT, 1.0)
 		draw_string(Pal.font(), Vector2(br.position.x, br.position.y - 2), lbl, HORIZONTAL_ALIGNMENT_LEFT, -1, 7, Pal.DIM)
+	_btn(Rect2(fr.position.x + 8, fr.end.y - 26, fr.size.x - 16, 18), "LOOK AT THEIR ID", "id", false)
+	_btns.append([face_r, "id"])
 	# middle bottom: what they said, and the endings
 	var mr := Rect2(196, size.y - 110, size.x - 196 - 210, 92)
 	draw_rect(mr, Color(0, 0, 0, 0.7))

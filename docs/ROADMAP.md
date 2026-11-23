@@ -7,10 +7,8 @@
 >   - gun swap: a dry fighter takes a downed guard's SMG (v2/combat/squad_ai.gd `_gun_swap`), it comes home in their rig.
 >   - stick carrier: pack the drop stick into one fighter's rig in the cage (tech 1+; v2/sim/loadout.gd `stick_carrier`).
 >   - the vault: 3D room (v2/combat/vault_room.gd), command hack in a small draggable terminal popup (v2/sim/vault_hack.gd, v2/ui/popup_win.gd): you tell the carrier what to type, the typing takes the time, they're out of the fight meanwhile. Then a vault-camera popup: click a door. User: "exactly what I wanted".
-> - **Next, in order:**
->   1. The plan file (Bureau SERVICE FORM with floor plan + guard rotation) and the prisoner's ID (laminated paper card) as 2D paper you look at (art bible 13).
->   2. The gear cage laid out like art bible 17 (fighter in the middle, slot icons on lines, stash right, portraits bottom; the rig grid opens from the RIG slot over the stash). Show the stick carrier there.
->   3. Update docs/PLAYTEST_M1.md, hand it over, open the game: the user plays M1 for real.
+> - **Done 2026-11-23 (later):** the plan file as a Bureau SERVICE FORM and the prisoner ID (people's laminated card, or a guard's black Bureau card) as paper (v2/ui/paper.gd; Shelves > Read, cage > Plan file, the interrogation chair); the plan shows tonight's real guards (DepotRun.seed_for). The gear cage rebuilt like bible 17. Fixed: a crew of 3 crashed the fight's main feed (CAM 04).
+> - **Now:** the user plays M1 for real (docs/PLAYTEST_M1.md). Fix their notes until sign-off.
 > - **Then ask the user (do not decide alone):** the user fears the game is boring; combat is great, but it needs a variety of maps, targets and reasons to hit them. Offer to move map/target variety (M4: generated buildings, more op types) ahead of M1b (benches). Also parked: things to do while an op or hack runs (maybe watch the op as a feed on your PC at night); blood splatter and ragdolls.
 > - **Process (user 2026-11-23):** small fixes = screenshots in chat, no playtests; full playtests only after big slices. Keep chats short to save usage: one milestone chunk per chat.
 > - **Look target:** docs/ART_BIBLE.md. **Design of record:** docs/DEPOT_SLICE.md (section 8 = this session's answers), docs/LOOK_BIBLE.md, docs/LOOP_RUNDOWN.md.
@@ -64,8 +62,9 @@ Nothing new is built. The user plays the unplayed builds, then Claude fixes bugs
   - ~~the gun swap mid-fight~~ (done 2026-11-23);
   - ~~the stick carrier, picked in the cage by tech~~ (done 2026-11-23);
   - ~~the vault room: three doors, cables, command-hack terminal popup, vault-cam popup~~ (done 2026-11-23);
-  - the plan file and ID drawn as documents;
-  - the art bible cage layout.
+  - ~~the plan file and ID drawn as documents~~ (done 2026-11-23: v2/ui/paper.gd);
+  - ~~the art bible cage layout~~ (done 2026-11-23: v2/stations/cage.gd).
+  - **Handed to the user for the real M1 playtest (docs/PLAYTEST_M1.md).**
 Design is in docs/DEPOT_SLICE.md (sections 1, 4, 5, 8).
 
 | # | Piece | Done when |
