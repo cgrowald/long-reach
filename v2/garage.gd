@@ -147,7 +147,7 @@ func _on_catcher_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion:
 		world.set_cursor(event.position, _catcher.size)
 		if screen == null and not world.is_moving():
-			_hover(world.pick(event.position))
+			_hover(world.pick(PixelView.to_3d(_catcher, world.camera, event.position)))
 	elif event is InputEventMouseButton and event.pressed:
 		if event.button_index == MOUSE_BUTTON_LEFT and screen == null and world.hovered != "":
 			hands.reach(event.position)
@@ -322,4 +322,4 @@ func _process(delta: float) -> void:
 	world.set_darken(0.35 if _overlay_open() else 0.0)
 	hud.visible = not _overlay_open() or debug_panel.visible
 	if world.hovered != "":
-		hud.hover_pos = world.station_screen_pos(world.hovered)
+		hud.hover_pos = PixelView.to_ui(hud, world.camera, world.station_screen_pos(world.hovered))

@@ -6,6 +6,7 @@ const Kit := preload("res://v2/ui/kit.gd")
 const Pal := preload("res://v2/ui/pal.gd")
 const Menus := preload("res://v2/ui/menus.gd")
 const Content := preload("res://v2/sim/content.gd")
+const JobCards := preload("res://v2/ui/job_cards.gd")
 
 
 static func _base(parent: Control, alpha := 0.6) -> Control:
@@ -34,8 +35,14 @@ static func _paper(v: VBoxContainer) -> VBoxContainer:
 
 ## Morning: the day number and the rule of the day. Click to start.
 static func day_card(parent: Control, game: Node, on_close: Callable) -> Control:
-	var o := _base(parent, 0.5)
 	var st = game.state
+	if st.job == "" and not st.job_offers.is_empty():
+		# a new game (or you got fired): three job cards, then the normal morning card
+		var econ0 = load("res://v2/sim/economy.gd")
+		return JobCards.open(parent, game, st.job_offers, func(offer: Dictionary) -> void:
+			econ0.take_job(st, offer)
+			day_card(parent, game, on_close))
+	var o := _base(parent, 0.5)
 	var center := CenterContainer.new()
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	o.add_child(center)
@@ -46,23 +53,7 @@ static func day_card(parent: Control, game: Node, on_close: Callable) -> Control
 	pv.add_child(Kit.label("%s. Your shift is over. Tonight you have %d big actions; small things are free." % [Content.world().get("town", ""), int(st.actions)], Pal.INK, 9, 230))
 	var econ = load("res://v2/sim/economy.gd")
 	var must_choose := false
-	if st.job == "" and not st.job_offers.is_empty():
-		# a new game (or you got fired): pick one of three offers
-		must_choose = true
-		pv.add_child(Kit.label("PICK YOUR DAY JOB", Color(0.5, 0.08, 0.06), 9))
-		for off in st.job_offers:
-			var offer: Dictionary = off
-			var jd: Dictionary = econ.job_def(offer["id"])
-			var b := Kit.button("%s, %s  (%d cr/day, %d-%d star stock)" % [jd.get("name", ""), jd.get("place", ""), int(jd.get("wage", 0)), int(offer["lo"]), int(offer["hi"])], func() -> void:
-				econ.take_job(st, offer)
-				game.sfx.play("confirmation_002", 1.0, -6.0)
-				o.queue_free()
-				day_card(parent, game, on_close), game)
-			b.alignment = HORIZONTAL_ALIGNMENT_LEFT
-			b.add_theme_font_size_override("font_size", 8)
-			pv.add_child(b)
-			pv.add_child(Kit.label("  + %s\n  - %s" % [jd.get("plus", ""), jd.get("minus", "")], Pal.INK.lightened(0.15), 8, 230))
-	elif st.job != "" and not st.steal_done:
+	if st.job != "" and not st.steal_done:
 		must_choose = true
 		var jd2: Dictionary = econ.job_def(st.job)
 		pv.add_child(Kit.label("AT %s TODAY  (suspicion %d)" % [str(jd2.get("place", "work")).to_upper(), int(st.suspicion)], Color(0.5, 0.08, 0.06), 9))

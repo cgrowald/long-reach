@@ -24,15 +24,28 @@ static var _font: Font
 static var _theme: Theme
 
 
+## The one font for the whole game (user, 2026-11-22: "I cannot read it"): DejaVu Sans Mono, bundled in
+## art/fonts (free licence), smoothed and drawn at full window resolution (see pixel_view.gd).
 static func font() -> Font:
 	if _font == null:
-		var f := SystemFont.new()
-		f.font_names = PackedStringArray(["Consolas", "Lucida Console", "Courier New", "monospace"])
-		f.antialiasing = TextServer.FONT_ANTIALIASING_NONE
-		f.hinting = TextServer.HINTING_NORMAL
-		f.subpixel_positioning = TextServer.SUBPIXEL_POSITIONING_DISABLED
+		var f: FontFile = load("res://art/fonts/DejaVuSansMono.ttf")
+		f.antialiasing = TextServer.FONT_ANTIALIASING_GRAY
+		f.hinting = TextServer.HINTING_LIGHT
+		f.subpixel_positioning = TextServer.SUBPIXEL_POSITIONING_AUTO
 		_font = f
 	return _font
+
+
+static var _bold: Font
+
+
+static func bold() -> Font:
+	if _bold == null:
+		var f: FontFile = load("res://art/fonts/DejaVuSansMono-Bold.ttf")
+		f.antialiasing = TextServer.FONT_ANTIALIASING_GRAY
+		f.hinting = TextServer.HINTING_LIGHT
+		_bold = f
+	return _bold
 
 
 static func theme() -> Theme:

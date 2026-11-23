@@ -393,8 +393,9 @@ func issue(id: String, label: String, say_line: String, target = null) -> void:
 ## What's under the mouse on the main feed, for the shout that's waiting.
 func _pick_target(needs: String) -> Dictionary:
 	var mp := view.ui.get_local_mouse_position() as Vector2
-	var o := main_cam.project_ray_origin(mp)
-	var dir := main_cam.project_ray_normal(mp)
+	var m3 := PixelView.to_3d(view.ui, main_cam, mp)
+	var o := main_cam.project_ray_origin(m3)
+	var dir := main_cam.project_ray_normal(m3)
 	var q := PhysicsRayQueryParameters3D.create(o, o + dir * 40.0)
 	q.collision_mask = 1
 	var hit := level.get_world_3d().direct_space_state.intersect_ray(q)
@@ -674,7 +675,7 @@ func _draw_hud() -> void:
 			else:
 				wp = v.chest_pos()
 			if not main_cam.is_position_behind(wp):
-				var sp := main_cam.unproject_position(wp)
+				var sp := PixelView.to_ui(hud, main_cam, main_cam.unproject_position(wp))
 				hud.draw_arc(sp, 9.0 + sin(t_op * 8.0) * 1.5, 0, TAU, 16, Color(1, 0.3, 0.85), 1.0)
 		hud.draw_rect(Rect2(mp + Vector2(10, -6), Vector2(tag.length() * 5 + 6, 11)), Color(0, 0, 0, 0.7))
 		Pal.text(hud, mp + Vector2(13, -5), tag, 8, Color(1, 0.3, 0.85) if ok else Color(0.8, 0.8, 0.8))

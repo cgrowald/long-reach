@@ -35,28 +35,17 @@ static var _font: Font
 static var _mono: Font
 
 
-## Tahoma: the Windows 2000 interface font, made to be read small. Crisp (no smoothing) to stay pixel.
-## (SystemFont: fine on Windows; bundle a font file before shipping.)
+## The game's one font (v2/ui/pal.gd): a smoothed monospace, like the user's concept sheets.
 static func font() -> Font:
 	if _font == null:
-		var f := SystemFont.new()
-		f.font_names = PackedStringArray(["Tahoma", "Verdana", "DejaVu Sans", "Arial", "sans-serif"])
-		f.antialiasing = TextServer.FONT_ANTIALIASING_NONE
-		f.hinting = TextServer.HINTING_NORMAL
-		f.subpixel_positioning = TextServer.SUBPIXEL_POSITIONING_DISABLED
-		_font = f
+		_font = Pal.font()
 	return _font
 
 
-## The terminal keeps a monospace font (it's a terminal), one size up from before.
+## The terminal uses the same monospace.
 static func mono() -> Font:
 	if _mono == null:
-		var f := SystemFont.new()
-		f.font_names = PackedStringArray(["Lucida Console", "Consolas", "Courier New", "monospace"])
-		f.antialiasing = TextServer.FONT_ANTIALIASING_NONE
-		f.hinting = TextServer.HINTING_NORMAL
-		f.subpixel_positioning = TextServer.SUBPIXEL_POSITIONING_DISABLED
-		_mono = f
+		_mono = Pal.font()
 	return _mono
 
 

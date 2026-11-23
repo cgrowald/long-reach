@@ -9,6 +9,7 @@ const Economy := preload("res://v2/sim/economy.gd")
 const BenchWork := preload("res://v2/world/bench_work.gd")
 const GarageWorld := preload("res://v2/world/garage_world.gd")
 const Fx := preload("res://v2/ui/fx.gd")
+const PixelView := preload("res://v2/ui/pixel_view.gd")
 
 var _grade := -1.0                # average material grade used for the craft in progress
 var _list: Control
@@ -132,7 +133,7 @@ func _on_popup(text: String, world_pos: Vector3, good: bool) -> void:
 	var cam: Camera3D = garage.world.camera
 	if cam.is_position_behind(world_pos):
 		return
-	Fx.float_text(self, cam.unproject_position(world_pos), text, Pal.GREEN if good else Pal.MULT, 10)
+	Fx.float_text(self, PixelView.to_ui(self, cam, cam.unproject_position(world_pos)), text, Pal.GREEN if good else Pal.MULT, 10)
 
 
 func _finish() -> void:
@@ -256,11 +257,11 @@ func _gui_input(event: InputEvent) -> void:
 	if _work == null or _result != null:
 		return
 	if event is InputEventMouseMotion:
-		_work.pointer(event.position)
+		_work.pointer(PixelView.to_3d(self, garage.world.camera, event.position))
 		garage.hands.cursor = event.position
 		garage.world.set_cursor(size * 0.5, size)
 	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
-		_work.pointer(event.position)
+		_work.pointer(PixelView.to_3d(self, garage.world.camera, event.position))
 		if event.pressed:
 			_work.press()
 		else:
@@ -309,10 +310,10 @@ func _draw_cue() -> void:
 	var wp: Vector3 = _work.to_global(p0)
 	if cam.is_position_behind(wp):
 		return
-	var sp := cam.unproject_position(wp)
+	var sp := PixelView.to_ui(self, cam, cam.unproject_position(wp))
 	var col := Color(1.0, 0.3, 0.85)
 	if c.has("drag"):
-		var ep := cam.unproject_position(_work.to_global(p0 + (c["drag"] as Vector3)))
+		var ep := PixelView.to_ui(self, cam, cam.unproject_position(_work.to_global(p0 + (c["drag"] as Vector3))))
 		_arrow(sp, ep, col)
 		if c.get("both", false):
 			_arrow(sp, sp - (ep - sp), col)

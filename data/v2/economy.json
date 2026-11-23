@@ -12,21 +12,30 @@
 			"yields": {"alcohol": [1, 2], "shirt": [1, 2], "tape": [0, 1]},
 			"plus": "Medical supplies, and field dressings are unlocked from day one.",
 			"minus": "Night shifts: some nights you only get one action.",
-			"perk": {"unlock": "field_dressing"}, "night_shift_chance": 0.33
+			"perk": {"unlock": "field_dressing"}, "night_shift_chance": 0.33,
+			"card": {"title": "HOSPITAL", "tag": "MEDICAL", "photo": "res://art/jobs/hospital.png",
+				"gives": ["Alcohol, rags and tape", "Field dressings from day one"],
+				"costs": ["Night shifts: 1 in 3 nights, one action"]}
 		},
 		"steel": {
 			"name": "Steel mill hand", "place": "Varga Steelworks", "wage": 44, "family": "metal",
 			"yields": {"alu": [1, 2], "pins": [1, 2]},
 			"plus": "Metal stock, and the mill's old drill press goes home with you (the gun bench works better).",
 			"minus": "The floor is watched: suspicion builds faster.",
-			"perk": {"tool": "drill_press"}, "suspicion_mult": 1.4
+			"perk": {"tool": "drill_press"}, "suspicion_mult": 1.4,
+			"card": {"title": "STEEL MILL", "tag": "METAL", "photo": "res://art/jobs/steel.png",
+				"gives": ["Aluminium and pins", "A drill press comes home", "Best pay of the three"],
+				"costs": ["Watched floor: suspicion x1.4"]}
 		},
 		"textile": {
 			"name": "Textile mill weaver", "place": "Lindqvist Textiles", "wage": 28, "family": "cloth",
 			"yields": {"bag": [1, 1], "strap": [1, 2], "buckle": [0, 1], "shirt": [0, 1]},
 			"plus": "Cloth and webbing, and a cast-off sewing machine (rigs come out better).",
 			"minus": "Low pay.",
-			"perk": {"tool": "sewing_machine"}
+			"perk": {"tool": "sewing_machine"},
+			"card": {"title": "TEXTILE MILL", "tag": "CLOTH", "photo": "res://art/jobs/textile.png",
+				"gives": ["Cloth, straps, buckles", "A sewing machine comes home", "Better rigs early"],
+				"costs": ["Lowest pay"]}
 		}
 	},
 	"steal": {

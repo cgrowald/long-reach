@@ -4,6 +4,7 @@ extends "res://v2/stations/station.gd"
 ## unplug. Jobs themselves run from the PC (Jobs app). Plugged gadgets: state.os["box"] = {slot: item id}.
 
 const GarageWorld := preload("res://v2/world/garage_world.gd")
+const PixelView := preload("res://v2/ui/pixel_view.gd")
 const SLOTS := ["scan", "crack", "net"]
 const SLOT_B := {"scan": [0.33, 1.3, 1.0], "crack": [0.5, 1.3, 1.0], "net": [0.67, 1.3, 1.0]}
 const DESK_Z := 0.767
@@ -185,7 +186,7 @@ func _refresh_lamps() -> void:
 # ------------------------------------------------------------------ input
 
 func _screen(p: Vector3) -> Vector2:
-	return _cam.unproject_position(p)
+	return PixelView.to_ui(self, _cam, _cam.unproject_position(p))
 
 
 func _gui_input(e: InputEvent) -> void:
@@ -220,8 +221,9 @@ func _gui_input(e: InputEvent) -> void:
 			close()
 		accept_event()
 	elif e is InputEventMouseMotion and _held >= 0:
-		var o := _cam.project_ray_origin(e.position)
-		var d := _cam.project_ray_normal(e.position)
+		var p3 := PixelView.to_3d(self, _cam, e.position)
+		var o := _cam.project_ray_origin(p3)
+		var d := _cam.project_ray_normal(p3)
 		var hit = Plane(Vector3.UP, (_slot_pos["scan"] as Vector3).y + 0.03).intersects_ray(o, d)
 		if hit != null:
 			(_gadgets[_held]["mesh"] as Node3D).global_position = hit
