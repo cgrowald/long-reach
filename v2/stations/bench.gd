@@ -39,25 +39,38 @@ func _show_list() -> void:
 	add_child(_list)
 	var pc := PanelContainer.new()
 	pc.position = Vector2(10, 10)
-	pc.custom_minimum_size = Vector2(230, 0)
+	pc.size = Vector2(260, size.y - 20)
 	_list.add_child(pc)
-	var v := VBoxContainer.new()
-	pc.add_child(v)
-	var bar := Kit.row(v)
-	var t := Kit.label(def.get("name", "").to_upper(), Pal.PHOS, 12)
-	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	bar.add_child(t)
+	var outer := VBoxContainer.new()
+	pc.add_child(outer)
+	var bar := Kit.row(outer)
+	bar.add_child(Kit.title_tag(def.get("name", "")))
+	var sp := Control.new()
+	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bar.add_child(sp)
 	bar.add_child(Kit.button("X", close, game))
-	v.add_child(HSeparator.new())
+	outer.add_child(HSeparator.new())
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	outer.add_child(scroll)
+	var pad := MarginContainer.new()
+	pad.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pad.add_theme_constant_override("margin_right", 12)
+	scroll.add_child(pad)
+	var v := VBoxContainer.new()
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	v.add_theme_constant_override("separation", 2)
+	pad.add_child(v)
 	var st = game.state
 	for r in Crafting.recipes_for(def.get("bench", "")):
 		var rec: Dictionary = r
 		var m := Crafting.mastery(st, rec["id"])
 		var head := Kit.row(v)
-		var name_l := Kit.label("%s  T%d" % [rec["name"], int(rec.get("tier", 1))], Pal.AMBER, 10)
+		var name_l := Kit.label("%s" % str(rec["name"]).replace(" (gadget)", ""), Pal.TEXT, 10)
 		name_l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		head.add_child(name_l)
-		head.add_child(Kit.label("1 night action" if Economy.action_cost(float(rec.get("hours", 1.0))) > 0 else "free", Pal.DIM, 8))
+		head.add_child(Kit.label("T%d  %s" % [int(rec.get("tier", 1)), "1 ACTION" if Economy.action_cost(float(rec.get("hours", 1.0))) > 0 else "FREE"], Pal.BRASS, 7))
 		if not Crafting.unlocked(st, rec):
 			var after := Crafting.recipe(rec.get("after", ""))
 			v.add_child(Kit.label("Locked: make a good %s first (3 stars+)." % after.get("name", "?"), Pal.DIM, 8, 220))
@@ -65,23 +78,23 @@ func _show_list() -> void:
 			continue
 		var needs: Array = []
 		for k in rec.get("needs", {}):
-			needs.append("%s %d/%d %s" % [Crafting.material_name(k), int(st.materials.get(k, 0)), int(rec["needs"][k]), Materials.stars(Materials.best(st, k))])
+			needs.append("%s %d/%d" % [Crafting.material_name(k), int(st.materials.get(k, 0)), int(rec["needs"][k])])
 		var miss := Crafting.missing(st, rec)
-		v.add_child(Kit.label(", ".join(PackedStringArray(needs)), Pal.MULT if not miss.is_empty() else Pal.TEXT, 8, 220))
+		v.add_child(Kit.label("Needs " + ", ".join(PackedStringArray(needs)) + "  (have/need)", Pal.MULT if not miss.is_empty() else Pal.DIM, 8, 240))
 		if miss.is_empty():
 			var bg := Crafting.best_grade(st, rec)
-			var gtxt := "Material %.1f stars: x%.2f" % [bg, Materials.grade_mult(bg)]
+			var gtxt := "Best stock %d stars: x%.2f" % [int(round(bg)), Materials.grade_mult(bg)]
 			var gbg: Dictionary = rec.get("grid_by_grade", {})
 			if not gbg.is_empty() and gbg.has(str(clampi(int(round(bg)), 1, 5))):
 				var gg: Array = gbg[str(clampi(int(round(bg)), 1, 5))]
 				gtxt += "   rig grid %dx%d" % [int(gg[0]), int(gg[1])]
-			v.add_child(Kit.label(gtxt, Pal.GREEN.darkened(0.2), 8, 220))
+			v.add_child(Kit.label(gtxt, Pal.GREEN.darkened(0.2), 8, 240))
 		var tool := Crafting.tool_def(rec.get("tool", "hands"))
 		var avg := float(m["sum"]) / maxf(1.0, float(m["made"]))
 		var mastery_text := "made %d, good %d/%d" % [int(m["made"]), int(m["good"]), Crafting.BATCH_AFTER]
 		if int(m["made"]) > 0:
 			mastery_text += ", avg %d%%" % int(avg * 100.0)
-		v.add_child(Kit.label("%s x%.2f   %s" % [tool.get("name", "?"), Crafting.tool_mult(st, rec), mastery_text], Pal.DIM, 8, 220))
+		v.add_child(Kit.label("%s x%.2f.  %s" % [tool.get("name", "?"), Crafting.tool_mult(st, rec), mastery_text], Pal.DIM, 8, 240))
 		var r2 := Kit.row(v)
 		var make := Kit.button("Make by hand", func() -> void: _make(rec), game)
 		make.disabled = not miss.is_empty()
@@ -91,7 +104,7 @@ func _show_list() -> void:
 			b.disabled = not miss.is_empty()
 			r2.add_child(b)
 		v.add_child(HSeparator.new())
-	v.add_child(Kit.label("Shelves (west wall) hold what you make. F1 > +materials.", Pal.DIM, 8, 220))
+	outer.add_child(Kit.label("Made things go to the shelves (west wall).", Pal.DIM, 8, 240))
 
 
 # ------------------------------------------------------------------ making it
@@ -311,7 +324,7 @@ func _draw_cue() -> void:
 	if cam.is_position_behind(wp):
 		return
 	var sp := PixelView.to_ui(self, cam, cam.unproject_position(wp))
-	var col := Color(1.0, 0.3, 0.85)
+	var col := Pal.AMBER
 	if c.has("drag"):
 		var ep := PixelView.to_ui(self, cam, cam.unproject_position(_work.to_global(p0 + (c["drag"] as Vector3))))
 		_arrow(sp, ep, col)
@@ -320,13 +333,14 @@ func _draw_cue() -> void:
 	var text: String = c.get("text", "")
 	if text == "":
 		return
-	var w := float(text.length()) * 5.0 + 8.0
-	var pos := sp + Vector2(14, -26)
+	# the GPT sheets' "FIT COMPONENT" look: amber corner brackets on the spot, a boxed callout with a leader
+	var pulse := 1.0 + sin(_t * 5.0) * 0.08
+	Pal.brackets(self, Rect2(sp - Vector2(14, 14) * pulse, Vector2(28, 28) * pulse), col, 7.0, 2.0)
+	var w := float(text.length()) * 5.6 + 12.0
+	var pos := sp + Vector2(22, -40)
 	pos.x = clampf(pos.x, 4.0, size.x - w - 4.0)
-	draw_line(sp + Vector2(4, -6), pos + Vector2(0, 11), col, 1.0)
-	draw_rect(Rect2(pos, Vector2(w, 13)), Color(0.05, 0.02, 0.05, 0.85))
-	draw_rect(Rect2(pos, Vector2(w, 13)), col, false, 1.0)
-	Pal.text(self, pos + Vector2(4, 1), text, 8, col)
+	pos.y = maxf(pos.y, 48.0)
+	Pal.callout(self, sp + Vector2(10, -10), text.to_upper(), pos)
 
 
 func _arrow(a: Vector2, b: Vector2, col: Color) -> void:
@@ -349,20 +363,19 @@ func _draw() -> void:
 	var verb = _work.verb
 	var steps: Array = _recipe["steps"]
 	var s: Dictionary = steps[_step]
-	var bar := Rect2(Vector2(10, 8), Vector2(size.x - 20, 34))
-	draw_rect(bar, Color(0.04, 0.03, 0.04, 0.85))
-	draw_rect(bar, Pal.METAL_L, false, 1.0)
-	Pal.text(self, bar.position + Vector2(6, 3), "STEP %d/%d  %s" % [_step + 1, steps.size(), str(s.get("verb", "")).to_upper()], 10, Pal.AMBER)
-	Pal.text(self, bar.position + Vector2(110, 3), str(s.get("text", "")), 10, Pal.TEXT)
-	Pal.text(self, bar.position + Vector2(6, 18), verb.hint, 8, Pal.TEXT)
+	var bar := Rect2(Vector2(10, 8), Vector2(size.x - 20, 36))
+	draw_rect(bar, Color(0.075, 0.058, 0.045, 0.94))
+	draw_rect(bar, Pal.BRASS, false, 1.0)
+	var tr := Pal.tag(self, bar.position + Vector2(5, 4), str(def.get("name", "")).to_upper(), 10)
+	Pal.text(self, Vector2(tr.end.x + 10, bar.position.y + 4), str(_recipe.get("name", "")), 9, Pal.TEXT)
+	Pal.text(self, Vector2(tr.end.x + 10, bar.position.y + 20), str(s.get("text", "")) + ".  " + str(verb.hint), 8, Pal.DIM, HORIZONTAL_ALIGNMENT_LEFT, bar.size.x - tr.size.x - 180)
+	Pal.text(self, Vector2(bar.end.x - 150, bar.position.y + 4), "STEP %d/%d  %s" % [_step + 1, steps.size(), str(s.get("verb", "")).to_upper()], 9, Pal.AMBER)
 	_draw_cue()
 	var prog: String = verb.progress()
 	if prog != "":
-		Pal.text(self, Vector2(bar.end.x - 60, bar.position.y + 18), prog, 8, Pal.TEXT, HORIZONTAL_ALIGNMENT_RIGHT, 54)
-	# Step pips.
-	for i in steps.size():
-		var c := Vector2(bar.end.x - 12 - (steps.size() - 1 - i) * 12, bar.position.y + 9)
-		Pal.lamp(self, c, 3.5, i <= _step, Pal.GREEN if i < _step else Pal.AMBER)
+		Pal.text(self, Vector2(bar.end.x - 70, bar.position.y + 20), prog, 8, Pal.TEXT, HORIZONTAL_ALIGNMENT_RIGHT, 62)
+	# step dots, like the sheets
+	Pal.dots(self, Vector2(bar.end.x - 8, bar.position.y + 6), steps.size(), _step + 1)
 	var g: Dictionary = verb.gauge()
 	if not g.is_empty():
 		var gr := Rect2(Vector2(size.x - 30, 60), Vector2(14, 160))

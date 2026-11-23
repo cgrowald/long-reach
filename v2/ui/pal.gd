@@ -1,17 +1,18 @@
 extends RefCounted
-## v2 look: White Knuckle darkness (bruise purple, red CRT) + Iron Nest panels (green-grey metal, brass, lamps).
+## v2 look: White Knuckle darkness + the user's GPT sheets (2026-11-22 face-lift): warm near-black panels,
+## thin amber frames, cream caps, boxed title tags, amber step dots, corner brackets and callouts.
 
 const BG := Color(0.05, 0.035, 0.06)
 const DESK := Color(0.09, 0.07, 0.09)
 const SCREEN := Color(0.075, 0.03, 0.04)
 const SCREEN_LINE := Color(0.45, 0.1, 0.09)
 const PHOS := Color(1.0, 0.36, 0.26)
-const TEXT := Color(0.93, 0.87, 0.78)
-const DIM := Color(0.55, 0.48, 0.46)
-const METAL := Color(0.29, 0.33, 0.31)
-const METAL_D := Color(0.16, 0.18, 0.17)
-const METAL_L := Color(0.43, 0.48, 0.45)
-const BRASS := Color(0.8, 0.63, 0.3)
+const TEXT := Color(0.94, 0.88, 0.76)
+const DIM := Color(0.62, 0.55, 0.46)
+const METAL := Color(0.2, 0.16, 0.12)
+const METAL_D := Color(0.12, 0.095, 0.075)
+const METAL_L := Color(0.42, 0.33, 0.22)
+const BRASS := Color(0.86, 0.6, 0.26)
 const CHIPS := Color(0.32, 0.64, 1.0)
 const MULT := Color(1.0, 0.32, 0.26)
 const LAMP_OFF := Color(0.18, 0.1, 0.08)
@@ -123,3 +124,45 @@ static func fmt_mult(m: float) -> String:
 static func wrap(ci: CanvasItem, pos: Vector2, s: String, size: int, col: Color, width: float, max_lines := -1) -> void:
 	var f := font()
 	ci.draw_multiline_string(f, Vector2(pos.x, pos.y + f.get_ascent(size)).round(), s, HORIZONTAL_ALIGNMENT_LEFT, width, size, max_lines, col)
+
+
+# ------------------------------------------------------------------ the sheet look (2026-11-22 face-lift)
+
+## Amber corner brackets round a rect (the "INSPECT" / "FIT COMPONENT" frames on the GPT sheets).
+static func brackets(ci: CanvasItem, r: Rect2, col := AMBER, k := 8.0, w := 2.0) -> void:
+	for c in [[r.position, Vector2(1, 1)], [Vector2(r.end.x, r.position.y), Vector2(-1, 1)], [r.end, Vector2(-1, -1)], [Vector2(r.position.x, r.end.y), Vector2(1, -1)]]:
+		var p: Vector2 = c[0]
+		var d: Vector2 = c[1]
+		ci.draw_line(p, p + Vector2(d.x * k, 0), col, w)
+		ci.draw_line(p, p + Vector2(0, d.y * k), col, w)
+
+
+## A boxed label with a leader line to `at` (the "CUT PANEL" / "FIT COMPONENT" callouts).
+static func callout(ci: CanvasItem, at: Vector2, s: String, box_pos: Vector2, size := 8) -> void:
+	var f := font()
+	var tw := f.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+	var r := Rect2(box_pos, Vector2(tw + 10, size + 7))
+	var edge := Vector2(clampf(at.x, r.position.x, r.end.x), r.end.y if at.y > r.end.y else r.position.y)
+	ci.draw_line(edge, at, AMBER, 1.0)
+	ci.draw_circle(at, 2.0, AMBER)
+	ci.draw_rect(r, Color(0.07, 0.05, 0.04, 0.92))
+	ci.draw_rect(r, AMBER, false, 1.0)
+	text(ci, r.position + Vector2(5, 3), s, size, TEXT)
+
+
+## Step dots (filled amber = done or current).
+static func dots(ci: CanvasItem, right_top: Vector2, n: int, on: int, rad := 3.0) -> void:
+	for i in n:
+		var c := right_top + Vector2(-(n - 1 - i) * (rad * 2 + 3) - rad, rad)
+		ci.draw_circle(c, rad, AMBER if i < on else Color(0.25, 0.18, 0.12))
+		ci.draw_arc(c, rad, 0, TAU, 10, Color(0, 0, 0, 0.6), 1.0)
+
+
+## A boxed title tag (the "DESK" / "BENCHES" tags on the sheets).
+static func tag(ci: CanvasItem, pos: Vector2, s: String, size := 10) -> Rect2:
+	var f := font()
+	var r := Rect2(pos, Vector2(f.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x + 12, size + 8))
+	ci.draw_rect(r, Color(0.07, 0.05, 0.04, 0.95))
+	ci.draw_rect(r, BRASS, false, 1.0)
+	text(ci, r.position + Vector2(6, 4), s, size, TEXT)
+	return r

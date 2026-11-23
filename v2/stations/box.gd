@@ -248,12 +248,12 @@ func _process(delta: float) -> void:
 
 
 func _draw() -> void:
-	var top := Rect2(Vector2(10, 8), Vector2(size.x - 20, 30))
-	draw_rect(top, Color(0.04, 0.03, 0.04, 0.85))
-	draw_rect(top, Pal.METAL_L, false, 1.0)
-	Pal.text(self, top.position + Vector2(6, 3), "THE BOX", 10, Pal.AMBER)
-	Pal.text(self, top.position + Vector2(70, 3), "External. HEARTH can't see it. Jobs run from the PC (Jobs app).", 9, Pal.TEXT)
-	Pal.text(self, top.position + Vector2(6, 17), "Drag a gadget onto its slot. Right-click a slot to unplug.", 8, Pal.DIM)
+	var top := Rect2(Vector2(10, 8), Vector2(size.x - 20, 36))
+	draw_rect(top, Color(0.075, 0.058, 0.045, 0.94))
+	draw_rect(top, Pal.BRASS, false, 1.0)
+	var tg := Pal.tag(self, top.position + Vector2(5, 4), "THE BOX", 10)
+	Pal.text(self, Vector2(tg.end.x + 10, top.position.y + 4), "External. HEARTH can't see it. Jobs run from the PC (Jobs app).", 9, Pal.TEXT)
+	Pal.text(self, Vector2(tg.end.x + 10, top.position.y + 20), "Drag a gadget onto its slot. Right-click a slot to unplug.", 8, Pal.DIM)
 	for slot in SLOTS:
 		var sp := _screen(_slot_pos[slot])
 		var i := _gadget_in(slot)

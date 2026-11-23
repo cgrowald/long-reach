@@ -51,9 +51,10 @@ func frame(title: String, margin := Vector2(18, 16)) -> Control:
 	pc.add_child(v)
 	var bar := HBoxContainer.new()
 	v.add_child(bar)
-	var t := Kit.label(title, Pal.PHOS, 12)
-	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	bar.add_child(t)
+	bar.add_child(Kit.title_tag(title))
+	var spacer := Control.new()
+	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bar.add_child(spacer)
 	if def.get("hours", 0.0) > 0.0:
 		bar.add_child(Kit.label("%sh" % _h(def["hours"]), Pal.DIM, 8))
 	bar.add_child(Kit.button("X", close, game))

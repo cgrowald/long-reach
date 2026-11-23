@@ -252,6 +252,61 @@ box("Coat", (-2.3, -2.58, 1.25), (0.32, 0.12, 0.65), "tarp", rot=(0, j(3), 0))
 cyl("Chair_Base", (0, 0, 0.05), 0.3, 0.04, "metal_d", verts=5)
 cyl("Chair_Post", (0, 0, 0.25), 0.03, 0.4, "metal_d")
 
+# --- touch-up pass (2026-11-22, docs/refs/polish/garage_touchup_study.webp + POLISH.md) -------
+# Wear where use causes it, a few deliberate repairs, one personal detail, clutter grouped by task.
+# Bench tops keep their centres clear: the hands-on work happens there (v2/world/bench_work.gd).
+PAL.update({"tape": (0.82, 0.76, 0.58), "olive": (0.30, 0.33, 0.20), "mat": (0.24, 0.30, 0.20),
+	"scorch": (0.08, 0.06, 0.05), "ring": (0.24, 0.15, 0.10), "shade": (0.20, 0.22, 0.18), "amber_glow": (1.0, 0.66, 0.30)})
+
+# Desk: tape on the CRT's corner, a taped photo beside it, a coffee ring, overlapped papers and a pencil,
+# a chip on the desk edge by the keyboard, a cable from the box taped down.
+box("PC_Tape_A", (-0.56, 1.238, 1.19), (0.09, 0.006, 0.03), "tape", rot=(0, 35, 0))
+box("PC_Tape_B", (-0.13, 1.238, 0.82), (0.08, 0.006, 0.03), "tape", rot=(0, -30, 0))
+box("Desk_Photo", (0.04, 1.62, 1.12), (0.12, 0.006, 0.15), "paper", rot=(0, 6, 0))
+box("Desk_Photo_Img", (0.04, 1.615, 1.13), (0.10, 0.004, 0.10), "photo", rot=(0, 6, 0))
+box("Desk_Photo_Tape", (0.04, 1.612, 1.205), (0.06, 0.004, 0.02), "tape", rot=(0, 6, 0))
+cyl("Desk_Ring", (0.27, 1.16, 0.7655), 0.042, 0.002, "ring", verts=14)
+cyl("Desk_Ring_In", (0.27, 1.16, 0.7662), 0.034, 0.002, "wood", verts=14)
+box("Papers_2", (-0.78, 1.0, 0.768), (0.2, 0.28, 0.006), "paper", rot=(0, 0, -8))
+cyl("Pencil", (-0.62, 0.98, 0.772), 0.006, 0.17, "lamp_amber", rot=(0, 90, 25), verts=6)
+box("Desk_Chip", (-0.35, 0.93, 0.745), (0.12, 0.02, 0.03), "wood_d")
+box("Rig_Cable", (0.95, 1.5, 0.767), (0.5, 0.015, 0.008), "cable", rot=(0, 0, 70))
+for i, (x, y) in enumerate(((0.9, 1.35), (1.03, 1.7))):
+	box("Rig_Cable_Tape_%d" % i, (x, y, 0.772), (0.05, 0.04, 0.004), "tape", rot=(0, 0, 70))
+# a replacement knob that doesn't match the others
+cyl("Rig_Dial_Odd", (0.58, 1.152, 0.86), 0.028, 0.022, "lamp_red", rot=(90, 0, 0), verts=6)
+
+# Hacking bench: a cutting mat, a solder scorch, a spool, the iron's stand; a stool and boxes below.
+box("Bench_Hack_Mat", (2.38, 0.9, 0.932), (0.62, 0.8, 0.004), "mat")
+cyl("Bench_Hack_Scorch", (2.25, 0.55, 0.9345), 0.035, 0.002, "scorch", verts=9)
+cyl("Bench_Hack_Spool", (2.55, 0.42, 0.96), 0.035, 0.05, "metal_l", verts=10)
+cyl("Bench_Hack_Spool_Hub", (2.55, 0.42, 0.987), 0.015, 0.004, "cable", verts=8)
+box("Stool_Seat", (1.95, 0.75, 0.45), (0.32, 0.32, 0.04), "wood")
+for dx in (-0.12, 0.12):
+	for dy in (-0.12, 0.12):
+		box("Stool_Leg", (1.95 + dx, 0.75 + dy, 0.22), (0.035, 0.035, 0.44), "wood_d")
+box("Under_Box_0", (2.45, 1.25, 0.16), (0.42, 0.32, 0.3), "olive", rot=(0, 0, j(6)))
+box("Under_Box_1", (2.5, 0.55, 0.13), (0.36, 0.3, 0.24), "cardboard", rot=(0, 0, j(8)))
+
+# Gun bench: a cloth on the top, a parts tray and an oil can at the edges, a drawer, a shim under a leg.
+box("Bench_Gun_Cloth", (2.38, -0.95, 0.932), (0.66, 0.9, 0.006), "olive", rot=(0, 0, 4))
+box("Bench_Gun_Tray", (2.62, -0.35, 0.95), (0.22, 0.16, 0.03), "metal_l")
+box("Bench_Gun_Tray_In", (2.62, -0.35, 0.962), (0.19, 0.13, 0.02), "metal_d")
+cyl("Bench_Gun_Oil", (2.66, -1.5, 0.99), 0.04, 0.12, "olive", verts=8)
+box("Bench_Gun_Drawer", (2.08, -1.05, 0.78), (0.04, 0.45, 0.14), "olive")
+box("Bench_Gun_Drawer_Pull", (2.05, -1.05, 0.79), (0.02, 0.1, 0.02), "metal_l")
+box("Bench_Gun_Shim", (2.4, -1.6, 0.012), (0.75, 0.1, 0.025), "cardboard")
+
+# The amber lamp hanging over the benches (the warm pool of light the study shows).
+cyl("Lamp_Bench_Cord", (2.3, 0.0, 2.33), 0.006, 0.4, "cable")
+box("Lamp_Bench_Shade", (2.3, 0.0, 2.1), (0.58, 0.2, 0.09), "shade")
+box("Lamp_Bench_Glow", (2.3, 0.0, 2.058), (0.46, 0.1, 0.008), "amber_glow", emission=1.2)
+
+# Med table: a folded towel with red stripes, a basin.
+box("Bench_Med_Towel", (-2.0, 1.95, 0.83), (0.2, 0.16, 0.025), "paper")
+box("Bench_Med_Towel_Stripe", (-2.0, 1.95, 0.8435), (0.2, 0.02, 0.002), "lamp_red")
+cyl("Bench_Med_Basin", (-1.72, 2.25, 0.86), 0.1, 0.06, "mug", verts=12)
+
 # --- export ---------------------------------------------------------------------------------
 bpy.ops.wm.save_as_mainfile(filepath=os.path.join(HERE, "garage_v2.blend"))
 bpy.ops.export_scene.gltf(filepath=os.path.join(ART, "garage_v2.glb"), export_format="GLB", export_apply=True, export_yup=True)

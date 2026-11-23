@@ -471,7 +471,7 @@ class Fit extends Verb:
 				Vector3(-0.2, 0.006, -0.07 + i * 0.045), self)
 			parts.append(p)
 			slots.append(Vector3(-0.07 + i * (0.14 / maxf(1, count - 1)) if count > 1 else 0.0, h + 0.006, 0.0))
-		marker = work.box(Vector3(0.036, 0.002, 0.026), Color(1.0, 0.3, 0.85), slots[0] - Vector3(0, 0.005, 0), self, true)
+		marker = work.box(Vector3(0.036, 0.002, 0.026), Color(1.0, 0.72, 0.22), slots[0] - Vector3(0, 0.005, 0), self, true)
 		marker.visible = false
 
 	func cue() -> Dictionary:

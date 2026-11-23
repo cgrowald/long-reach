@@ -117,7 +117,7 @@ func _lights() -> void:
 	e.background_mode = Environment.BG_COLOR
 	e.background_color = Color(0.02, 0.01, 0.025)
 	e.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	e.ambient_light_color = Color(0.32, 0.22, 0.42)
+	e.ambient_light_color = Color(0.36, 0.26, 0.32)     # was bruise purple; warmer per the touch-up study
 	e.ambient_light_energy = 0.22
 	e.tonemap_mode = Environment.TONE_MAPPER_LINEAR
 	e.tonemap_exposure = 1.0
@@ -125,7 +125,7 @@ func _lights() -> void:
 	e.glow_intensity = 0.6
 	e.glow_bloom = 0.05
 	e.fog_enabled = true
-	e.fog_light_color = Color(0.09, 0.05, 0.1)
+	e.fog_light_color = Color(0.1, 0.06, 0.07)
 	e.fog_density = 0.06
 	e.volumetric_fog_enabled = false
 	env.environment = e
@@ -149,6 +149,26 @@ func _lights() -> void:
 	add_child(street)
 	street.position = b2g([1.6, 3.6, 2.6])
 	street.look_at(b2g([0.6, 0.6, 0.2]))
+	# Touch-up pass (garage_touchup_study): localized amber pools at the desk and the benches, dim corners.
+	var bench_lamp := SpotLight3D.new()
+	bench_lamp.light_color = Color(1.0, 0.68, 0.34)
+	bench_lamp.light_energy = 5.0
+	bench_lamp.spot_range = 3.2
+	bench_lamp.spot_angle = 52.0
+	bench_lamp.spot_attenuation = 1.2
+	bench_lamp.shadow_enabled = true
+	add_child(bench_lamp)
+	bench_lamp.position = b2g([2.3, 0.0, 2.02])
+	bench_lamp.look_at(b2g([2.4, 0.0, 0.9]))
+	var desk_lamp := SpotLight3D.new()
+	desk_lamp.light_color = Color(1.0, 0.72, 0.4)
+	desk_lamp.light_energy = 3.0
+	desk_lamp.spot_range = 1.6
+	desk_lamp.spot_angle = 48.0
+	desk_lamp.shadow_enabled = true
+	add_child(desk_lamp)
+	desk_lamp.position = b2g([-0.95, 1.42, 1.12])
+	desk_lamp.look_at(b2g([-0.5, 1.05, 0.76]))
 	# The CRT's red glow.
 	_omni(Color(1.0, 0.3, 0.2), 1.2, 1.4, [-0.35, 1.05, 1.0])
 	# The scope on the hacking bench.

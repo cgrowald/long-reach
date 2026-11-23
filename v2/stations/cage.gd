@@ -30,23 +30,23 @@ var _t := 0.0
 
 func build() -> void:
 	var st = game.state
-	var title := Kit.label("THE GEAR CAGE", Pal.AMBER, 12)
-	title.position = Vector2(12, 8)
+	var title := Kit.title_tag("The gear cage", 12)
+	title.position = Vector2(12, 6)
 	add_child(title)
 	var back_b := Kit.button("< Shelves", func() -> void: garage.open_screen("stash"), game)
 	add_child(back_b)
-	back_b.position = Vector2(size.x - 160, 8)
+	back_b.position = Vector2(size.x - 150, 8)
 	var x_b := Kit.button("X", close, game)
 	add_child(x_b)
 	x_b.position = Vector2(size.x - 28, 8)
 	# your people
 	_people_box = VBoxContainer.new()
-	_people_box.position = Vector2(12, 30)
-	_people_box.custom_minimum_size.x = 104
+	_people_box.position = Vector2(12, 34)
+	_people_box.custom_minimum_size.x = 120
 	add_child(_people_box)
 	# the 3D stand
 	_vp = SubViewport.new()
-	_vp.size = Vector2i(140, 190)
+	_vp.size = Vector2i(150, 206)
 	_vp.own_world_3d = true
 	_vp.transparent_bg = false
 	_vp.msaa_3d = Viewport.MSAA_DISABLED
@@ -56,27 +56,27 @@ func build() -> void:
 	_make_stage()
 	_tex = TextureRect.new()
 	_tex.texture = _vp.get_texture()
-	_tex.position = Vector2(124, 30)
-	_tex.size = Vector2(140, 190)
+	_tex.position = Vector2(142, 40)
+	_tex.size = Vector2(150, 206)
 	_tex.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	add_child(_tex)
 	# slots, grid, packing
 	_slots_box = VBoxContainer.new()
-	_slots_box.position = Vector2(274, 30)
-	_slots_box.custom_minimum_size.x = 150
+	_slots_box.position = Vector2(304, 34)
+	_slots_box.custom_minimum_size.x = 190
 	_slots_box.add_theme_constant_override("separation", 1)
 	add_child(_slots_box)
 	_pack_box = VBoxContainer.new()
-	_pack_box.position = Vector2(size.x - 100, 30)
-	_pack_box.custom_minimum_size.x = 96
+	_pack_box.position = Vector2(size.x - 138, 34)
+	_pack_box.custom_minimum_size.x = 130
 	_pack_box.add_theme_constant_override("separation", 1)
 	add_child(_pack_box)
-	_stats_l = Kit.label("", Pal.TEXT, 8, 250)
-	_stats_l.position = Vector2(124, 224)
+	_stats_l = Kit.label("", Pal.TEXT, 8, 300)
+	_stats_l.position = Vector2(142, 252)
 	add_child(_stats_l)
 	var send := Kit.button("Send them: depot raid", _send, game)
 	add_child(send)
-	send.position = Vector2(size.x - 150, size.y - 28)
+	send.position = Vector2(size.x - 180, size.y - 28)
 	if st.people.is_empty():
 		_msg = "Nobody yet. (Older save: start a new game.)"
 	_refresh()
@@ -155,7 +155,7 @@ func _refresh() -> void:
 	var st = game.state
 	for c in _people_box.get_children():
 		c.queue_free()
-	_people_box.add_child(Kit.label("YOUR PEOPLE", Pal.DIM, 8))
+	_people_box.add_child(Kit.heading("Your people"))
 	for i in st.people.size():
 		var p: Dictionary = st.people[i]
 		var b := Kit.button(("> " if i == sel else "  ") + str(p["name"]).split(" ")[0] + ("" if p.get("alive", true) else "  (KIA)"), func() -> void:
@@ -178,7 +178,7 @@ func _refresh() -> void:
 	# slots
 	for c in _slots_box.get_children():
 		c.queue_free()
-	_slots_box.add_child(Kit.label("WEARING  (click to change)", Pal.DIM, 8))
+	_slots_box.add_child(Kit.heading("Wearing  (click to change)"))
 	if not p.is_empty():
 		for slot in SLOT_NAMES:
 			var it := Loadout.worn(st, p, slot)
@@ -194,7 +194,8 @@ func _refresh() -> void:
 	# what can be packed
 	for c in _pack_box.get_children():
 		c.queue_free()
-	_pack_box.add_child(Kit.label("PACK  (pick, then a cell)", Pal.DIM, 8))
+	_pack_box.add_child(Kit.heading("Pack"))
+	_pack_box.add_child(Kit.label("pick, then a cell", Pal.DIM, 7))
 	for gid in st.supplies:
 		var n := int(st.supplies[gid])
 		if n <= 0:
@@ -309,7 +310,7 @@ func _hold(h: Dictionary) -> void:
 
 func _grid_rect() -> Rect2:
 	var gs := Loadout.grid_size(game.state, _person()) if not _person().is_empty() else Vector2i.ZERO
-	return Rect2(Vector2(274, 182), Vector2(gs.x, gs.y) * CELL)
+	return Rect2(Vector2(304, 212), Vector2(gs.x, gs.y) * CELL)
 
 
 func _auto_pack() -> void:
@@ -387,13 +388,14 @@ func _process(delta: float) -> void:
 func _draw() -> void:
 	var st = game.state
 	var p := _person()
-	draw_rect(Rect2(Vector2.ZERO, size), Color(0.05, 0.04, 0.045, 0.92))
-	draw_rect(Rect2(_tex.position - Vector2(1, 1), _tex.size + Vector2(2, 2)), Pal.METAL_L, false, 1.0)
+	draw_rect(Rect2(Vector2.ZERO, size), Color(0.06, 0.045, 0.035, 0.95))
+	draw_rect(Rect2(Vector2(4, 4), size - Vector2(8, 8)), Pal.BRASS, false, 1.0)
+	Pal.brackets(self, Rect2(_tex.position - Vector2(3, 3), _tex.size + Vector2(6, 6)), Pal.AMBER, 8.0, 2.0)
 	if not p.is_empty():
-		Pal.text(self, Vector2(124, 19), str(p["name"]), 9, Pal.TEXT, HORIZONTAL_ALIGNMENT_CENTER, 140)
+		Pal.text(self, Vector2(142, 26), str(p["name"]).to_upper(), 9, Pal.TEXT, HORIZONTAL_ALIGNMENT_CENTER, 150)
 	# the rig grid
 	var r := _grid_rect()
-	Pal.text(self, Vector2(274, 172), "RIG GRID" + ("  (no rig: they carry only what's loaded)" if r.size.x == 0 else "  right-click = take out"), 8, Pal.DIM)
+	Pal.text(self, Vector2(304, 200), "RIG GRID" + ("  (no rig: they carry only what's loaded)" if r.size.x == 0 else "  right-click = take out"), 8, Pal.DIM)
 	if r.size.x > 0 and not p.is_empty():
 		var gs := Loadout.grid_size(st, p)
 		for y in gs.y:

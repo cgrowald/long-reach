@@ -22,8 +22,10 @@ static func _base(parent: Control, alpha := 0.6) -> Control:
 static func _paper(v: VBoxContainer) -> VBoxContainer:
 	var paper := PanelContainer.new()
 	var sb := StyleBoxFlat.new()
-	sb.bg_color = Pal.PAPER
-	sb.set_content_margin_all(10)
+	sb.bg_color = Color(0.075, 0.058, 0.045, 0.97)
+	sb.border_color = Pal.BRASS
+	sb.set_border_width_all(1)
+	sb.set_content_margin_all(12)
 	sb.shadow_color = Color(0, 0, 0, 0.6)
 	sb.shadow_size = 6
 	paper.add_theme_stylebox_override("panel", sb)
@@ -49,14 +51,14 @@ static func day_card(parent: Control, game: Node, on_close: Callable) -> Control
 	var v := VBoxContainer.new()
 	center.add_child(v)
 	var pv := _paper(v)
-	pv.add_child(Kit.label("DAY %d" % st.day, Pal.INK, 20))
-	pv.add_child(Kit.label("%s. Your shift is over. Tonight you have %d big actions; small things are free." % [Content.world().get("town", ""), int(st.actions)], Pal.INK, 9, 230))
+	pv.add_child(Kit.title_tag("DAY %d" % st.day, 16))
+	pv.add_child(Kit.label("%s. Your shift is over. Tonight you have %d big actions; small things are free." % [Content.world().get("town", ""), int(st.actions)], Pal.TEXT, 9, 230))
 	var econ = load("res://v2/sim/economy.gd")
 	var must_choose := false
 	if st.job != "" and not st.steal_done:
 		must_choose = true
 		var jd2: Dictionary = econ.job_def(st.job)
-		pv.add_child(Kit.label("AT %s TODAY  (suspicion %d)" % [str(jd2.get("place", "work")).to_upper(), int(st.suspicion)], Color(0.5, 0.08, 0.06), 9))
+		pv.add_child(Kit.label("AT %s TODAY  (suspicion %d)" % [str(jd2.get("place", "work")).to_upper(), int(st.suspicion)], Pal.BRASS, 9))
 		var row := HBoxContainer.new()
 		pv.add_child(row)
 		var steal: Dictionary = econ.data().get("steal", {})
@@ -72,14 +74,14 @@ static func day_card(parent: Control, game: Node, on_close: Callable) -> Control
 			row.add_child(b2)
 	if game.has_meta("work_lines"):
 		for ln in game.get_meta("work_lines"):
-			pv.add_child(Kit.label(str(ln), Color(0.45, 0.1, 0.06) if str(ln).begins_with("AUDIT") or str(ln).begins_with("FIRED") else Pal.INK, 8, 230))
+			pv.add_child(Kit.label(str(ln), Pal.MULT if str(ln).begins_with("AUDIT") or str(ln).begins_with("FIRED") else Pal.TEXT, 8, 230))
 		game.remove_meta("work_lines")
 	var picking_job: bool = st.job == "" and not st.job_offers.is_empty()
 	var rule: Dictionary = st.rule()
 	if not picking_job:
-		pv.add_child(Kit.label("RULE OF THE DAY", Color(0.5, 0.08, 0.06), 9))
-		pv.add_child(Kit.label(str(rule.get("title", "")), Pal.INK, 12, 230))
-		pv.add_child(Kit.label(str(rule.get("text", "")), Pal.INK.lightened(0.2), 8, 230))
+		pv.add_child(Kit.label("RULE OF THE DAY", Pal.BRASS, 9))
+		pv.add_child(Kit.label(str(rule.get("title", "")), Pal.TEXT, 12, 230))
+		pv.add_child(Kit.label(str(rule.get("text", "")), Pal.DIM, 8, 230))
 	var go := Kit.button("Into the garage", func() -> void:
 		o.queue_free()
 		on_close.call(), game)

@@ -11,8 +11,8 @@ static func theme() -> Theme:
 		return _theme
 	var t: Theme = Pal.theme().duplicate()
 	var panel := StyleBoxFlat.new()
-	panel.bg_color = Color(0.07, 0.065, 0.075, 0.96)
-	panel.border_color = Pal.METAL_L
+	panel.bg_color = Color(0.075, 0.058, 0.045, 0.97)
+	panel.border_color = Pal.BRASS
 	panel.set_border_width_all(1)
 	panel.set_content_margin_all(6)
 	panel.shadow_color = Color(0, 0, 0, 0.5)
@@ -21,6 +21,8 @@ static func theme() -> Theme:
 	t.set_color("font_color", "Label", Pal.TEXT)
 	t.set_font_size("font_size", "Label", 10)
 	var n: StyleBoxFlat = t.get_stylebox("normal", "Button").duplicate()
+	n.bg_color = Color(0.13, 0.1, 0.075)
+	n.border_color = Color(0.55, 0.4, 0.2)
 	n.set_content_margin_all(3)
 	n.content_margin_left = 6
 	n.content_margin_right = 6
@@ -28,7 +30,9 @@ static func theme() -> Theme:
 	h.content_margin_left = 6
 	h.content_margin_right = 6
 	h.border_color = Pal.AMBER
+	h.bg_color = Color(0.22, 0.16, 0.1)
 	var p: StyleBoxFlat = t.get_stylebox("pressed", "Button").duplicate()
+	p.bg_color = Pal.BRASS
 	p.content_margin_left = 6
 	p.content_margin_right = 6
 	var d := n.duplicate() as StyleBoxFlat
@@ -67,6 +71,18 @@ static func theme() -> Theme:
 	t.set_icon("unchecked", "CheckButton", _toggle(false))
 	t.set_constant("separation", "VBoxContainer", 3)
 	t.set_constant("separation", "HBoxContainer", 4)
+	var sc_track := StyleBoxFlat.new()
+	sc_track.bg_color = Color(0.1, 0.075, 0.055)
+	sc_track.content_margin_left = 3
+	sc_track.content_margin_right = 3
+	var sc_grab := StyleBoxFlat.new()
+	sc_grab.bg_color = Color(0.55, 0.4, 0.2)
+	var sc_hot := sc_grab.duplicate() as StyleBoxFlat
+	sc_hot.bg_color = Pal.BRASS
+	t.set_stylebox("scroll", "VScrollBar", sc_track)
+	t.set_stylebox("grabber", "VScrollBar", sc_grab)
+	t.set_stylebox("grabber_highlight", "VScrollBar", sc_hot)
+	t.set_stylebox("grabber_pressed", "VScrollBar", sc_hot)
 	var sep := StyleBoxLine.new()
 	sep.color = Pal.METAL_D
 	t.set_stylebox("separator", "HSeparator", sep)
@@ -107,9 +123,31 @@ static func panel(parent: Control, title: String, min_size := Vector2(180, 0)) -
 	var v := VBoxContainer.new()
 	pc.add_child(v)
 	if title != "":
-		v.add_child(label(title, Pal.PHOS, 14))
+		v.add_child(title_tag(title))
 		v.add_child(HSeparator.new())
 	return v
+
+
+## A boxed caps title (the sheets' "DESK" / "GEAR BENCH" tags).
+static func title_tag(text: String, size := 11) -> Control:
+	var pc := PanelContainer.new()
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.1, 0.075, 0.055)
+	sb.border_color = Pal.BRASS
+	sb.set_border_width_all(1)
+	sb.content_margin_left = 6
+	sb.content_margin_right = 6
+	sb.content_margin_top = 2
+	sb.content_margin_bottom = 2
+	pc.add_theme_stylebox_override("panel", sb)
+	pc.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	pc.add_child(label(text.to_upper(), Pal.TEXT, size))
+	return pc
+
+
+## A section heading: amber caps.
+static func heading(text: String) -> Label:
+	return label(text.to_upper(), Pal.BRASS, 9)
 
 
 static func label(text: String, col := Pal.TEXT, size := 10, wrap_width := 0.0) -> Label:

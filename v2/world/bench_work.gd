@@ -21,7 +21,7 @@ var _arrow: MeshInstance3D
 var _bt := 0.0
 
 ## The one colour that always means "you act here", on every bench (reads on green boards, grey metal, blue cloth).
-const CUE := Color(1.0, 0.3, 0.85)
+const CUE := Color(1.0, 0.72, 0.22)     # amber, like the GPT sheets (was pink)
 
 
 ## anchor: bench top point (Godot coords). cam_pos: where the camera will sit (to orient the frame).
