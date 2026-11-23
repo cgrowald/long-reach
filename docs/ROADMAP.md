@@ -1,5 +1,16 @@
 # Roadmap (agreed process, 2026-11-23)
 
+> **START HERE (next chat, written 2026-11-23):**
+> - **M0** (play the backlog): round-1 fixes are done; not signed off yet.
+> - **M1** (the depot raid): built and playable, not played yet. The user wants polish before playing.
+> - **Next, in order:**
+>   1. The combat screen clean-up: drop the bottom camera tiles, keep the operator list, show one chosen camera, zoom on the ops map.
+>   2. The rest of M1's "still to do".
+>   3. Hand over PLAYTEST_M1.md and open the game.
+> - **Then M1b**, the bench face-lift.
+> - **Look target:** docs/ART_BIBLE.md.
+> - **Design of record:** docs/DEPOT_SLICE.md (all answers), docs/LOOK_BIBLE.md, docs/LOOP_RUNDOWN.md.
+
 The user asked for this to stop us creating more and more new work before finishing what we were talking about.
 
 ## How we work
@@ -40,7 +51,12 @@ Nothing new is built. The user plays the unplayed builds, then Claude fixes bugs
 ## M1. The depot raid, the whole loop (the proof the game is playable). One big build.
 **Status: started 2026-11-23, in parallel with M0 fixes (user's request).** **In playtest** (work list: docs/PLAYTEST_M1.md).
 - **Built:** pieces 1-8, 10-16. Piece 9: the stores are limited by rig space. Piece 17: guard uniforms and patched clothes with the red stripes.
+- **User notes 2026-11-23 (not played yet: "polish first"):**
+  - The combat screen is too cluttered during combat.
+  - The combat (ops) map needs zoom in and out.
+  - Drop the bottom camera tiles and keep the operator list. You only see the one camera angle you've chosen (click an operator, or a CCTV entry, to switch).
 - **Still to do in M1:**
+  - **The combat screen clean-up above (do this first).**
   - the gun swap mid-fight (take a guard's SMG when dry);
   - choosing the stick carrier by tech level (now it's whoever reaches the PC);
   - the vault room's three door models and cables (the vault is a screen for now);
