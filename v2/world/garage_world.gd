@@ -36,6 +36,7 @@ var _time := 0.0
 var _post: ShaderMaterial
 var _hover_mat: StandardMaterial3D
 var _bulb: OmniLight3D
+var _bench_lights := {}          # station id -> {spot, omni, glow}: each bench's own lamp, bright while you work there
 
 
 static func b2g(a: Array) -> Vector3:
@@ -53,6 +54,7 @@ func setup() -> void:
 	add_child(garage)
 	_materials(garage)
 	_lights()
+	_bench_lamps(garage)
 	_clickables(garage)
 	camera = Camera3D.new()
 	camera.near = 0.03
@@ -171,8 +173,8 @@ func _lights() -> void:
 	desk_lamp.look_at(b2g([-0.5, 1.05, 0.76]))
 	# The CRT's red glow.
 	_omni(Color(1.0, 0.3, 0.2), 1.2, 1.4, [-0.35, 1.05, 1.0])
-	# The scope on the hacking bench.
-	_omni(Color(0.4, 1.0, 0.35), 0.5, 0.9, [2.2, 1.35, 1.1])
+	# The laptop on the hacking bench.
+	_omni(Color(0.4, 1.0, 0.35), 0.4, 0.8, [2.6, 1.3, 1.1])
 	# Warm light under the house door.
 	_omni(Color(1.0, 0.7, 0.4), 0.8, 1.3, [-1.7, -2.4, 0.1])
 	# Street glow under the roller door.
@@ -406,9 +408,65 @@ func _process(delta: float) -> void:
 	if _lean_dir < 0:
 		lean_k = 1.0 - _ease(_lean_t)
 	camera.fov = base_fov - 8.0 * lean_k
+	_bench_lamp_tick(delta)
 	# The bulb flickers now and then.
 	_bulb.light_energy = 2.4 * (0.55 if fmod(_time, 7.3) < 0.08 else 1.0)
 
 
 static func _ease(x: float) -> float:
 	return x * x * (3.0 - 2.0 * x)
+
+
+# ------------------------------------------------------------------ bench lamps
+
+const LAMP_IDLE := 0.7
+const LAMP_WORK := 6.0
+
+
+## Every bench has its own desk lamp (art/src/make_garage_v2.py "bench pass 2"). A warm spot from the shade
+## onto the work point: dim while you're in the chair, a bright orange pool while you work at that bench.
+func _bench_lamps(root: Node) -> void:
+	for id in _stations:
+		var s: Dictionary = _stations[id]
+		if not s.has("bench"):
+			continue
+		var prefix: String = (s.get("objects", [""]) as Array)[0]
+		var glow := root.find_child(prefix + "Lamp_Glow*", true, false) as MeshInstance3D
+		if glow == null:
+			continue
+		var gm := StandardMaterial3D.new()
+		gm.albedo_color = Color(1.0, 0.8, 0.5)
+		gm.emission_enabled = true
+		gm.emission = Color(1.0, 0.7, 0.35)
+		gm.emission_energy_multiplier = 1.5
+		glow.material_override = gm
+		var spot := SpotLight3D.new()
+		spot.light_color = Color(1.0, 0.64, 0.32)
+		spot.light_energy = LAMP_IDLE
+		spot.spot_range = 1.6
+		spot.spot_angle = 55.0
+		spot.spot_attenuation = 0.9
+		spot.shadow_enabled = true
+		add_child(spot)
+		spot.global_position = glow.global_position
+		spot.look_at(b2g(s.get("work", s["look"])), Vector3.UP)
+		var omni := OmniLight3D.new()
+		omni.light_color = Color(1.0, 0.6, 0.28)
+		omni.light_energy = 0.25
+		omni.omni_range = 0.6
+		add_child(omni)
+		omni.global_position = glow.global_position
+		_bench_lights[id] = {"spot": spot, "omni": omni, "glow": gm}
+
+
+func _bench_lamp_tick(delta: float) -> void:
+	for id in _bench_lights:
+		var L: Dictionary = _bench_lights[id]
+		var on: bool = leaning == id
+		var k := 1.0 - exp(-delta * 4.0)
+		var spot: SpotLight3D = L["spot"]
+		spot.light_energy = lerpf(spot.light_energy, LAMP_WORK if on else LAMP_IDLE, k)
+		var omni: OmniLight3D = L["omni"]
+		omni.light_energy = lerpf(omni.light_energy, 0.9 if on else 0.25, k)
+		var gm: StandardMaterial3D = L["glow"]
+		gm.emission_energy_multiplier = lerpf(gm.emission_energy_multiplier, 4.0 if on else 1.5, k)

@@ -1,0 +1,41 @@
+{
+	"_note": "Spending money (user 2026-11-23, docs/LITERATURE.md section 4). Three markets. ShopNet = the legal online shop: basic stuff only, grades 1-2, arrives overnight, and every 'logged' buy is tied to your ID (heat = Bureau attention). Lantern = the black market on the PC: a short pricey list, delivered to a dead drop overnight, sometimes a scam. The curfew market = in person after curfew, reached by the sneak dash: the most stock and the best grades, takes barter, prices swing, and one stall may be a Bureau sting (the 'tell' text hints). Stock rerolls every day. Numbers are first guesses; text is placeholder the user may rewrite.",
+	"markets": {
+		"shopnet": {"name": "ShopNet", "sub": "Official goods for grateful citizens", "price_mult": 1.0, "grades": [1, 2], "stock": 99, "wobble": 0.05,
+			"delivery": "overnight"},
+		"lantern": {"name": "Lantern", "sub": "nobody here, nobody there", "price_mult": 1.45, "grades": [2, 4], "stock": 5, "wobble": 0.2,
+			"delivery": "drop", "scam": 0.1, "heat_mult": 0.006, "unlock_trust": 3},
+		"curfew": {"name": "The Tram Yard", "sub": "after curfew, under the old tram sheds", "price_mult": 1.15, "grades": [2, 5], "stock": 9, "wobble": 0.3,
+			"delivery": "carry", "heat_mult": 0.004, "unlock_trust": 5, "sting": 0.25, "sting_cut": 0.55, "barter": 0.75,
+			"barter_bonus": {"smokes": 1.8, "alcohol": 1.3}, "sting_attention": 20, "sting_money": 0.5, "hours": 2.0}
+	},
+	"tells": ["Too cheap. You've never seen this one before.", "New face. Clean boots.", "He keeps looking at the shed door.", "Half price, no haggling. Nobody does that."],
+	"stall_names": ["Old Marta", "The twins", "Lame Jozef", "A man in a railway coat", "Kettle's cousin", "A girl with a pram", "Two soldiers off duty", "The tram driver", "A nurse, still in uniform"],
+	"catalog": [
+		{"id": "shirt", "kind": "material", "qty": 3, "price": 6, "in": ["shopnet", "curfew"]},
+		{"id": "tape", "kind": "material", "qty": 2, "price": 5, "in": ["shopnet", "curfew"]},
+		{"id": "alcohol", "kind": "material", "qty": 2, "price": 9, "in": ["shopnet", "curfew"]},
+		{"id": "bag", "kind": "material", "qty": 1, "price": 4, "in": ["shopnet", "curfew"]},
+		{"id": "strap", "kind": "material", "qty": 2, "price": 8, "in": ["shopnet", "curfew"]},
+		{"id": "buckle", "kind": "material", "qty": 2, "price": 6, "in": ["shopnet", "lantern", "curfew"]},
+		{"id": "board", "kind": "material", "qty": 2, "price": 14, "in": ["shopnet", "lantern", "curfew"], "logged": 3},
+		{"id": "chips", "kind": "material", "qty": 2, "price": 18, "in": ["shopnet", "lantern", "curfew"], "logged": 4},
+		{"id": "smokes", "kind": "material", "qty": 2, "price": 10, "in": ["shopnet", "curfew"]},
+		{"id": "alu", "kind": "material", "qty": 1, "price": 22, "in": ["lantern", "curfew"]},
+		{"id": "pins", "kind": "material", "qty": 2, "price": 14, "in": ["lantern", "curfew"]},
+		{"id": "picks", "kind": "supply", "qty": 3, "price": 15, "in": ["lantern", "curfew"]},
+		{"id": "clip_5", "kind": "supply", "qty": 2, "price": 12, "in": ["lantern", "curfew"]},
+		{"id": "shells", "kind": "supply", "qty": 2, "price": 9, "in": ["curfew"]},
+		{"id": "mag_pistol", "kind": "supply", "qty": 1, "price": 15, "in": ["curfew"]},
+		{"id": "mag_30", "kind": "supply", "qty": 1, "price": 30, "in": ["curfew"]},
+		{"id": "flash", "kind": "supply", "qty": 1, "price": 60, "in": ["curfew"]},
+		{"id": "service_pistol", "kind": "gear", "qty": 1, "price": 140, "in": ["lantern", "curfew"]},
+		{"id": "pump_shotgun", "kind": "gear", "qty": 1, "price": 150, "in": ["curfew"]},
+		{"id": "gasmask", "kind": "gear", "qty": 1, "price": 70, "in": ["lantern", "curfew"]},
+		{"id": "rig_chest", "kind": "gear", "qty": 1, "price": 110, "in": ["curfew"]},
+		{"id": "plate_soft", "kind": "gear", "qty": 1, "price": 120, "in": ["curfew"]},
+		{"id": "helmet", "kind": "gear", "qty": 1, "price": 380, "in": ["curfew"]},
+		{"id": "sewing_machine", "kind": "tool", "qty": 1, "price": 140, "in": ["shopnet"]},
+		{"id": "drill_press", "kind": "tool", "qty": 1, "price": 190, "in": ["curfew"]}
+	]
+}

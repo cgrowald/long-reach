@@ -23,6 +23,8 @@ var _knob_drag := -1
 var _flash := 0.0
 var _msg := ""
 var _msg_t := 0.0
+var _guide_next := 0              # tutorial: the next kettle line to show during the inject
+var _last_stage := ""
 var _t := 0.0
 
 
@@ -276,6 +278,7 @@ func press(id: String) -> void:
 				_say("Logged in as %s. Straight to the inject." % t["owner"])
 			else:
 				_say("Route the signal from IN to OUT. Click a piece, click a slot, click again to turn it.")
+			_guide(t, 1)
 			sel_tray = _next_free_tray()
 		"onsite":
 			var stick := _drop_stick()
@@ -327,6 +330,14 @@ func _say(m: String) -> void:
 	_msg_t = 4.0
 
 
+## Tutorial targets: kettle's line for this stage, shown longer.
+func _guide(t: Dictionary, i: int) -> void:
+	var g: Array = t.get("guide", [])
+	if t.get("tutorial", false) and i < g.size():
+		_say(str(g[i]))
+		_msg_t = 9.0
+
+
 func _process(delta: float) -> void:
 	_t += delta
 	_flash = maxf(0.0, _flash - delta * 2.0)
@@ -338,8 +349,15 @@ func _process(delta: float) -> void:
 			_flash = 1.0
 			os.game.sfx.play("confirmation_002", 1.0, -6.0)
 			_say("LOCKED ON. Upload before the patrol comes round.")
+		if s.stage == "inject" and _last_stage != "inject":
+			_guide(s.target, 2)
+			_guide_next = 3
+		elif _guide_next > 0 and _msg_t < 0.5:
+			_guide(s.target, _guide_next)
+			_guide_next = _guide_next + 1 if _guide_next < 4 else 0
 		if s.stage == "done":
 			_end()
+		_last_stage = s.stage
 	queue_redraw()
 
 
@@ -374,9 +392,10 @@ func _draw() -> void:
 		P.text(self, r.position + Vector2(0, 4), bs[i][0], P.FACE_L if prim else P.INK, HORIZONTAL_ALIGNMENT_CENTER, r.size.x)
 	if _msg_t > 0.0 and _msg != "":
 		var a := minf(1.0, _msg_t)
-		var mr := Rect2(m.position.x, m.end.y - 40, m.size.x, 16)
-		draw_rect(mr, Color(P.PETROL_D, 0.85 * a))
-		P.text(self, mr.position + Vector2(6, 3), P.fit(_msg, mr.size.x - 12), Color(P.FACE_L, a))
+		var two := P.font().get_string_size(_msg, HORIZONTAL_ALIGNMENT_LEFT, -1, P.FS).x > m.size.x - 12
+		var mr := Rect2(m.position.x, m.end.y - (52 if two else 40), m.size.x, 28 if two else 16)
+		draw_rect(mr, Color(P.PETROL_D, 0.9 * a))
+		draw_multiline_string(P.font(), mr.position + Vector2(6, 11), _msg, HORIZONTAL_ALIGNMENT_LEFT, mr.size.x - 12, P.FS, 2, Color(P.FACE_L, a))
 	if _flash > 0.0:
 		draw_rect(m, Color(P.COPPER, _flash * 0.25))
 
@@ -492,13 +511,19 @@ func _draw_brief() -> void:
 	if Hack.has_key(state(), t):
 		y += _mid_text(Vector2(x, y), "You have %s's password (from their dirt): you can skip the connect." % t["owner"], P.SAGE)
 		y += 6
+	if t.get("tutorial", false):
+		for ln in t.get("guide", []).slice(0, 1):
+			y += _mid_text(Vector2(x, y), str(ln), P.COPPER) + 4
+		y += _mid_text(Vector2(x, y), "Clean exit = you keep these programs for good. Cut out = just try again.", P.SAGE) + 6
 	P.text(self, Vector2(x, y), "PROGRAMS YOU CAN UPLOAD HERE", Color(P.FACE_L, 0.6))
 	y += 13
 	for pid in t.get("programs", []):
 		var pd := Hack.program(pid)
-		var known := Hack.knows(state(), pid)
+		var known := Hack.usable(state(), t, pid)
 		P.text(self, Vector2(x, y), "%s %s" % ["+" if known else "x", pd.get("name", pid)], P.FACE_L if known else Color(P.FACE_L, 0.35))
 		var tx := "%s" % pd.get("text", "") if known else "Locked: you don't know how yet."
+		if known and not Hack.knows(state(), pid):
+			tx = "LEARN IT HERE. " + tx
 		_mid_text(Vector2(x + 70, y - 1), tx, Color(P.FACE_L, 0.7 if known else 0.3), P.FS - 1)
 		y += 22
 	P.text(self, Vector2(x, m.end.y - 34), "Costs 1 night action.", Color(P.FACE_L, 0.6))

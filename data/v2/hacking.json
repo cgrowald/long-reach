@@ -2,14 +2,50 @@
 	"_note": "Hacking (docs/HACKING.md). Targets: the fixed specials in os.json plus places generated from the town (kinds below). One hack = CONNECT (route the signal, PATCHBAY) then INJECT (code chain: spell program codes). On site (air gap): TUNE (match the signal) then INJECT against a patrol clock. Text here is placeholder flavour; the user may rewrite any of it. Numbers are first guesses: tune here.",
 	"symbols": ["1C", "55", "BD", "E9", "7A", "FF"],
 	"programs": {
-		"grab": {"name": "GRAB", "len": 2, "known": true, "text": "Copy the files worth taking."},
-		"wipe": {"name": "WIPE", "len": 2, "known": true, "text": "Wipe the logs: trace down by a third."},
+		"grab": {"name": "GRAB", "len": 2, "text": "Copy the files worth taking."},
+		"wipe": {"name": "WIPE", "len": 2, "text": "Wipe the logs: trace down by a third."},
 		"dirt": {"name": "DIRT", "len": 3, "text": "Dig through the owner's mail: dirt on them, and their password for next time."},
 		"camera": {"name": "EYES", "len": 3, "text": "Link the building's cameras: you'll see them in a raid there."},
 		"redirect": {"name": "REROUTE", "len": 3, "text": "Redirect a delivery: a crate waits at a drop tomorrow morning."},
 		"payroll": {"name": "PAYDAY", "len": 4, "text": "Skim the payroll: money now, more heat."}
 	},
-	"knowledge_note": "Programs without known:true are locked until learned (state.os.know). How you learn them is decided later (user 2026-11-22: build it all first). Debug: F1 panel or Hack.learn_all().",
+	"knowledge_note": "Every program is learned in the two tutorial hacks (\"tutorial\" below: the post office teaches GRAB, REROUTE, WIPE; the town hall teaches DIRT, EYES, PAYDAY). Debug: F1 panel or Hack.learn_all().",
+	"tutorial_note": "The guided first hacks (user 2026-11-23). Shown one at a time before anything else in Patchbay; finishing one cleanly teaches its programs for good. Getting cut out just means try again (no lock). The post office follows Michael Collins reading Dublin Castle's mail (docs/LITERATURE.md). guide = kettle's lines in the briefing. Placeholder text: the user may rewrite it.",
+	"tutorial": [
+		{
+			"id": "post_office", "name": "Post Office No. 4", "what": "the parcel sorting server", "kind": "office", "tier": 1,
+			"owner": "Milan Hruby", "owner_line": "Milan Hruby, postmaster", "family": "parts", "hours": 1.5,
+			"teaches": ["grab", "redirect", "wipe"], "buffer": 7, "chain": 5, "trace_rate": 0.6,
+			"clue": "Someone was in the post office's parcel server after closing.",
+			"files": [
+				{"name": "parcel_manifest.csv", "tag": "plan", "worth": "Every parcel this week, and who it's for. Three go to the Bureau."},
+				{"name": "flagged_mail.txt", "tag": "names", "worth": "Letters the Bureau asked the post office to open. Your street is on it."}
+			],
+			"guide": [
+				"kettle: start small. the post office. everyone's mail goes through one dumb server.",
+				"kettle: CONNECT first. drag pieces from the tray, click to turn them, until the signal reaches OUT.",
+				"kettle: then the code chain. pick a code from the lit row, then the column, then the row... spell a program's code and it runs.",
+				"kettle: GRAB copies the files. REROUTE sends a parcel to our drop. WIPE cleans the logs. try to run all three.",
+				"kettle: watch the trace bar. JACK OUT before it fills. get cut out here and you just try again."
+			]
+		},
+		{
+			"id": "town_hall", "name": "Town Hall Records Office", "what": "the municipal records server", "kind": "office", "tier": 1,
+			"owner": "Irena Zeman", "owner_line": "Irena Zeman, deputy registrar", "family": "electronics", "hours": 1.5,
+			"teaches": ["dirt", "camera", "payroll"], "buffer": 10, "chain": 6, "trace_rate": 0.7,
+			"clue": "The town hall's records server was opened at night.",
+			"files": [
+				{"name": "council_minutes.txt", "tag": "plan", "worth": "What the council promised the Bureau, block by block."},
+				{"name": "housing_list.csv", "tag": "names", "worth": "Who gets a flat and who gets moved. Bribes noted in the margin."}
+			],
+			"guide": [
+				"kettle: good. now the town hall. bigger fish, same pond.",
+				"kettle: DIRT reads the owner's mail. you get dirt on them AND their password, so next time you skip the connect.",
+				"kettle: EYES links the building cameras. PAYDAY skims their payroll: money now, but they notice.",
+				"kettle: longer codes this time. plan the route before you start picking."
+			]
+		}
+	],
 	"tiers": {
 		"1": {"grid": [5, 4], "fixed": 0.45, "blocked": 0.25, "chain": 5, "trace_rate": 1.0, "hours": 2.0},
 		"2": {"grid": [6, 4], "fixed": 0.35, "blocked": 0.3, "chain": 5, "trace_rate": 1.25, "hours": 2.0},

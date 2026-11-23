@@ -152,6 +152,11 @@ func _on_popup(text: String, world_pos: Vector3, good: bool) -> void:
 func _finish() -> void:
 	var f := Crafting.formula(game.state, _recipe, _scores, _grade)
 	var item := Crafting.finish(game.state, _recipe, f["quality"], true, _grade)
+	var model: String = _recipe.get("model", "")
+	if _recipe.has("model_good") and int(item.get("stars", 0)) >= 4:
+		model = _recipe["model_good"]
+	if _work:
+		_work.show_item(model)
 	_show_result(item, f)
 
 

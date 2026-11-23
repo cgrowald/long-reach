@@ -67,9 +67,13 @@ func sell(it: Dictionary) -> void:
 	var cr := Market.sell(state(), it)
 	os.game.sfx.play("confirmation_002", 1.1, -6.0)
 	_say("The fixer paid %d cr for %s." % [cr, it["name"]])
+	var tr := int(Market.summary(state())["trust"])
+	if tr >= 3 and not state().flags.get("lantern_told", false):
+		state().flags["lantern_told"] = true
+		_say("The fixer slips you an address: lantern://. A black market on the PC (Lantern app).")
 	if Market.market_open(state()) and not state().flags.get("market_told", false):
 		state().flags["market_told"] = true
-		_say("The fixer trusts you now. He mentions a market behind the market. (Coming later.)")
+		_say("The fixer trusts you now: the Tram Yard, after curfew. Go out through the roller door.")
 
 
 func post(it: Dictionary) -> void:

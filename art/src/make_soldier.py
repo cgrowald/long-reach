@@ -25,6 +25,7 @@ PAL = {
 	"black": (0.08, 0.08, 0.08), "skin": (0.62, 0.47, 0.37), "glove": (0.16, 0.15, 0.13),
 	"lens": (0.85, 0.95, 1.0), "red": (0.65, 0.08, 0.06), "metal": (0.25, 0.26, 0.27),
 	"strap": (0.2, 0.2, 0.17), "tan": (0.6, 0.52, 0.38), "wood": (0.36, 0.22, 0.12), "woven": (0.22, 0.38, 0.48),
+	"cream": (0.82, 0.77, 0.62), "yellow": (0.82, 0.6, 0.2), "olive": (0.36, 0.36, 0.2), "field": (0.42, 0.38, 0.24), "patch": (0.25, 0.4, 0.5),
 }
 _mats = {}
 
@@ -171,9 +172,18 @@ mb.chunk((0, -0.285, 0.25), (0.11, 0.008, 0.035), "red", cuts=0, rnd=0.0, jit=0.
 mb.chunk((0, -0.285, 0.25), (0.035, 0.008, 0.11), "red", cuts=0, rnd=0.0, jit=0.0)
 mb.build()
 
-pk = Part("Gear_Pack")
-pk.chunk((0, -0.215, 0.24), (0.28, 0.13, 0.35), "coyote", rnd=0.25)
-pk.chunk((0, -0.29, 0.18), (0.2, 0.03, 0.12), "coyote", cuts=0, rnd=0.2)
+pk = Part("Gear_Pack")               # GEAR 02 / UTILITY PACK: flap, two buckle straps, front pocket, a bottle
+pk.chunk((0, -0.215, 0.24), (0.28, 0.13, 0.35), "field", rnd=0.25, taper=(1.05, 0.9))
+pk.chunk((0, -0.255, 0.38), (0.27, 0.1, 0.1), "field", cuts=0, rnd=0.2)                   # top flap
+pk.chunk((0, -0.29, 0.14), (0.18, 0.04, 0.12), "field", cuts=0, rnd=0.2)                  # front pocket
+for sx in (-1, 1):
+	pk.chunk((sx * 0.07, -0.288, 0.29), (0.03, 0.012, 0.2), "field", cuts=0, rnd=0.0)
+	pk.chunk((sx * 0.07, -0.296, 0.25), (0.034, 0.012, 0.03), "black", cuts=0, rnd=0.0)
+pk.chunk((0.05, -0.3, 0.405), (0.06, 0.006, 0.04), "yellow", cuts=0, rnd=0.0, jit=0.0)    # patch on the flap
+pk.chunk((0.07, -0.312, 0.11), (0.04, 0.006, 0.03), "patch", cuts=0, rnd=0.0, jit=0.0)
+pk.chunk((0.155, -0.2, 0.16), (0.04, 0.08, 0.12), "field", cuts=0, rnd=0.15)              # bottle pocket
+pk.cyl((0.16, -0.2, 0.26), 0.026, 0.1, "metal")
+pk.chunk((0.17, -0.25, 0.25), (0.01, 0.025, 0.045), "red", cuts=0, rnd=0.1)
 pk.build()
 
 hy = Part("Gear_Hydration")
@@ -221,27 +231,49 @@ s.build()
 
 # ------------------------------------------------------------------ rigs (joint = waist, on the chest part)
 
-m = Part("Gear_RigMarket")           # a striped woven market bag, cut and sewn into pouches (docs/refs/polish/market_rig_01)
+m = Part("Gear_RigMarket")           # GEAR 01 / RECLAIMED TOTE (starter rig): woven blue bag with a cream stripe,
+                                     # three pouches, a side pouch with a red loop, olive straps, yellow tabs, X back
 m.chunk((0, 0.165, 0.2), (0.34, 0.09, 0.2), "woven", cuts=1, rnd=0.12, jit=0.03)
-for i in range(3):
-	m.chunk((-0.11 + i * 0.11, 0.215, 0.16), (0.095, 0.04, 0.13), "woven", cuts=0, rnd=0.15)        # pouches
-	m.chunk((-0.11 + i * 0.11, 0.236, 0.225), (0.09, 0.012, 0.04), "woven", cuts=0, rnd=0.0)       # flaps
+for i, (x, w, h) in enumerate(((-0.12, 0.085, 0.12), (0.0, 0.115, 0.14), (0.12, 0.085, 0.12))):
+	m.chunk((x, 0.218, 0.16), (w, 0.045, h), "woven", cuts=0, rnd=0.12)                 # pouches
+	m.chunk((x, 0.24, 0.225), (w * 0.95, 0.014, 0.045), "woven", cuts=0, rnd=0.0)       # flaps
+	m.chunk((x, 0.242, 0.15), (w * 1.01, 0.006, 0.028), "cream", cuts=0, rnd=0.0, jit=0.0)   # the stripe
+m.chunk((0.195, 0.17, 0.17), (0.05, 0.07, 0.12), "woven", cuts=0, rnd=0.15)               # side pouch
+m.chunk((0.225, 0.17, 0.25), (0.012, 0.03, 0.05), "red", cuts=0, rnd=0.1)                  # pull loop
+m.chunk((0, 0.245, 0.095), (0.05, 0.006, 0.035), "yellow", cuts=0, rnd=0.0, jit=0.0)       # patch
 for sx in (-1, 1):
-	m.chunk((sx * 0.11, 0.06, 0.4), (0.05, 0.3, 0.025), "ranger", cuts=0, rnd=0.0)                # salvaged straps
-	m.chunk((sx * 0.11, 0.175, 0.31), (0.05, 0.02, 0.04), "black", cuts=0, rnd=0.0)               # buckles
-	m.chunk((sx * 0.11, -0.13, 0.25), (0.05, 0.025, 0.3), "ranger", cuts=0, rnd=0.0)
-m.chunk((0, 0.165, 0.32), (0.05, 0.02, 0.05), "tan", cuts=0, rnd=0.1)                             # handle stub
-m.chunk((0.19, 0.17, 0.2), (0.015, 0.03, 0.05), "red", cuts=0, rnd=0.1)                           # pull loop
+	m.chunk((sx * 0.11, 0.06, 0.4), (0.05, 0.3, 0.025), "olive", cuts=0, rnd=0.0)          # salvaged straps
+	m.chunk((sx * 0.11, 0.2, 0.3), (0.05, 0.018, 0.05), "olive", cuts=0, rnd=0.0)
+	m.chunk((sx * 0.11, 0.212, 0.335), (0.052, 0.016, 0.03), "black", cuts=0, rnd=0.0)     # buckles
+	m.chunk((sx * 0.11, 0.21, 0.29), (0.045, 0.014, 0.04), "yellow", cuts=0, rnd=0.0)      # tote handle tabs
+	m.chunk((sx * 0.06, -0.13, 0.25), (0.045, 0.022, 0.36), "olive", cuts=0, rnd=0.0, rot=(0, sx * 32, 0))   # X on the back
+m.chunk((0, -0.12, 0.08), (0.34, 0.025, 0.04), "olive", cuts=0, rnd=0.0)                   # waist strap
+m.chunk((0, -0.135, 0.08), (0.05, 0.012, 0.035), "black", cuts=0, rnd=0.0)
 m.build()
 
-w = Part("Gear_RigChest")
-w.chunk((0, 0.16, 0.2), (0.36, 0.08, 0.18), "ranger", cuts=1, rnd=0.12, jit=0.03)
-for i in range(4):
-	w.chunk((-0.135 + i * 0.09, 0.21, 0.17), (0.08, 0.05, 0.14), "ranger", cuts=0, rnd=0.12)
-	w.chunk((-0.135 + i * 0.09, 0.215, 0.245), (0.06, 0.03, 0.02), "black", cuts=0, rnd=0.0)
+w = Part("Gear_RigChest")            # GEAR 02 / FIELD HARNESS: three mag pouches, radio left, med pouch right
+w.chunk((0, 0.16, 0.2), (0.36, 0.08, 0.18), "field", cuts=1, rnd=0.12, jit=0.03)
+for i in range(3):
+	x = -0.09 + i * 0.09
+	w.chunk((x, 0.212, 0.165), (0.08, 0.05, 0.13), "field", cuts=0, rnd=0.12)
+	w.chunk((x, 0.214, 0.255), (0.06, 0.035, 0.05), "black", cuts=0, rnd=0.05)            # mags out the top
+	w.chunk((x, 0.24, 0.2), (0.025, 0.008, 0.06), "field", cuts=0, rnd=0.0)               # retention tab
+w.chunk((0.06, 0.24, 0.13), (0.045, 0.006, 0.035), "patch", cuts=0, rnd=0.0, jit=0.0)     # blue patch
+w.chunk((-0.19, 0.19, 0.17), (0.05, 0.06, 0.13), "field", cuts=0, rnd=0.1)               # radio pouch
+w.chunk((-0.19, 0.19, 0.26), (0.035, 0.04, 0.07), "black", cuts=0, rnd=0.05)
+w.cyl((-0.2, 0.19, 0.33), 0.006, 0.1, "black")                                            # antenna
+w.chunk((0.19, 0.19, 0.17), (0.06, 0.07, 0.12), "field", cuts=0, rnd=0.12)               # med pouch
+w.chunk((0.19, 0.228, 0.18), (0.035, 0.006, 0.012), "tan", cuts=0, rnd=0.0, jit=0.0)     # the cross
+w.chunk((0.19, 0.228, 0.18), (0.012, 0.006, 0.035), "tan", cuts=0, rnd=0.0, jit=0.0)
+w.chunk((0.225, 0.19, 0.26), (0.012, 0.03, 0.05), "red", cuts=0, rnd=0.1)
 for sx in (-1, 1):
-	w.chunk((sx * 0.12, 0.0, 0.41), (0.055, 0.32, 0.03), "ranger", cuts=0, rnd=0.0)
-	w.chunk((sx * 0.12, -0.14, 0.24), (0.055, 0.03, 0.34), "ranger", cuts=0, rnd=0.0)
+	w.chunk((sx * 0.12, 0.0, 0.41), (0.055, 0.32, 0.03), "field", cuts=0, rnd=0.0)
+	w.chunk((sx * 0.12, -0.14, 0.24), (0.055, 0.03, 0.34), "field", cuts=0, rnd=0.0)
+	w.chunk((sx * 0.12, 0.2, 0.3), (0.05, 0.02, 0.04), "black", cuts=0, rnd=0.0)            # buckles
+	w.chunk((sx * 0.12, 0.2, 0.26), (0.05, 0.012, 0.04), "tan", cuts=0, rnd=0.0)           # stitched X tabs
+w.chunk((0, 0.21, 0.31), (0.24, 0.016, 0.03), "field", cuts=0, rnd=0.0)                   # chest strap
+w.chunk((0, 0.222, 0.31), (0.05, 0.012, 0.035), "black", cuts=0, rnd=0.0)
+w.chunk((0, -0.15, 0.34), (0.26, 0.022, 0.04), "field", cuts=0, rnd=0.0)                  # back yoke
 w.build()
 
 bn = Part("Gear_Beanie")

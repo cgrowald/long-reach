@@ -1,0 +1,9 @@
+{
+	"_note": "Locks for the lockpicking minigame (v2/sim/lockpick.gd). pins = how many; window = half-width of each pin's sweet spot (smaller = harder); band = the tension that works [low, high]; spools = pins that false-set (ease the tension off to set them); show_band = draw the good tension on the gauge (training locks only). Names are placeholder.",
+	"locks": {
+		"padlock": {"name": "Rusty padlock", "pins": 3, "window": 0.07, "band": [0.25, 0.65], "spools": 0, "show_band": true},
+		"yard_gate": {"name": "Yard gate padlock", "pins": 4, "window": 0.055, "band": [0.3, 0.6], "spools": 0, "show_band": false},
+		"shed_door": {"name": "Shed door deadbolt", "pins": 5, "window": 0.045, "band": [0.35, 0.6], "spools": 1, "show_band": false},
+		"office": {"name": "Office door", "pins": 6, "window": 0.035, "band": [0.38, 0.58], "spools": 2, "show_band": false}
+	}
+}

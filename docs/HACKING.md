@@ -75,3 +75,17 @@ Build the hacking window in the new look (GPT's petrol / ivory / copper, the lef
 - **DEAD DROP app** (`v2/os/apps/drop.gd`, the dock's Drop button): every intel file has SELL (the fixer; price drops per kind) and POST (Nod; followers, recruit leads, account heat; burned at 100 = new account). Fixer trust 5 = "market behind the market" (not built).
 - **OS face-lift:** petrol desktop with a factory line drawing, ivory windows with flat petrol title bars, copper selection, a top bar (HEARTH, Applications, Files, Session, OFFLINE, clock), a left dock (Files, Mail, Jobs, Drop, Tools, Shell), window tabs at the bottom, the LOCAL SESSION login. Old Jobs/job windows and hack_job.gd deleted.
 - **Tested:** rules bot (30 checks), and a bot driving the real PC (login, brief, connect by clicks, inject, report, on-site tuning, Dead Drop) with screenshots. Not tested by a person: whether it's fun, the knob feel, the difficulty.
+
+## 9. The tutorial teaches the programs (user, 2026-11-23)
+Every program now starts locked. Patchbay shows only the guided hacks until they're done, one at a time:
+- **Post Office No. 4** teaches GRAB, REROUTE, WIPE.
+- **Town Hall Records Office** teaches DIRT, EYES, PAYDAY.
+
+The post office follows Michael Collins reading the enemy's mail (docs/LITERATURE.md).
+
+How they play:
+- kettle's lines show in the briefing and as tips at each stage (`guide` in data/v2/hacking.json "tutorial").
+- The buffers are big enough to run every taught program, and the trace is slower.
+- A clean exit teaches the programs for good. Getting cut out has no lock: just try again.
+
+Code: `Hack.tutorial_next`, `Hack.usable`; the patchbay's `_guide`.

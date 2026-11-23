@@ -31,6 +31,29 @@ static func program(id: String) -> Dictionary:
 	return data().get("programs", {}).get(id, {})
 
 
+## Usable at this target: known, or this is the tutorial target that teaches it.
+static func usable(state: RefCounted, t: Dictionary, prog: String) -> bool:
+	return knows(state, prog) or (t.get("teaches", []) as Array).has(prog)
+
+
+## The guided first hacks (data/v2/hacking.json "tutorial"): the first one not done yet, or {}.
+static func tutorial_next(state: RefCounted) -> Dictionary:
+	var done: Array = state.os.get("jobs_done", [])
+	for t in data().get("tutorial", []):
+		if not done.has(t["id"]):
+			return _tutorial(t)
+	return {}
+
+
+static func _tutorial(t: Dictionary) -> Dictionary:
+	var d := t.duplicate(true)
+	d["special"] = true
+	d["tutorial"] = true
+	d["programs"] = (t.get("teaches", []) as Array).duplicate()
+	d["hours"] = float(t.get("hours", 1.5))
+	return d
+
+
 static func knows(state: RefCounted, prog: String) -> bool:
 	if program(prog).get("known", false):
 		return true
@@ -66,6 +89,8 @@ static func plugged(state: RefCounted, slot: String) -> Dictionary:
 ## Every place you could ever hack this run: the specials, then the town roster (same every load).
 static func all_targets(state: RefCounted) -> Array:
 	var out: Array = []
+	for t in data().get("tutorial", []):
+		out.append(_tutorial(t))
 	for t in Content.get_file("os").get("targets", []):
 		out.append(_special(t))
 	out.append_array(_roster(state))
@@ -82,9 +107,12 @@ static func find(state: RefCounted, id: String) -> Dictionary:
 ## Tonight's list: the specials you've opened up, plus a few town places (rotates every night).
 static func tonight(state: RefCounted) -> Array:
 	var out: Array = []
+	var tut := tutorial_next(state)
+	if not tut.is_empty():
+		return [tut]           # the guided hacks come first, one at a time
 	var done: Array = state.os.get("jobs_done", [])
 	for t in all_targets(state):
-		if t.get("special", false) and (not t.has("after") or done.has(t["after"])):
+		if t.get("special", false) and not t.get("tutorial", false) and (not t.has("after") or done.has(t["after"])):
 			out.append(t)
 	var ros := _roster(state)
 	var rng := RandomNumberGenerator.new()
@@ -239,6 +267,12 @@ func _setup(state: RefCounted, t: Dictionary, p_seed: int, p_onsite: bool) -> vo
 	gh = int(g[1])
 	chain_n = int(td.get("chain", 5))
 	buf_max = int(data().get("buffer", 5)) + int(gadgets.get("crack", {}).get("stars", 0)) / 2
+	if t.has("buffer"):
+		buf_max = maxi(buf_max, int(t["buffer"]))
+	if t.has("chain"):
+		chain_n = int(t["chain"])
+	if t.has("trace_rate"):
+		rate *= float(t["trace_rate"])
 	_make_patchbay(float(td.get("fixed", 0.4)), float(td.get("blocked", 0.25)), int(gadgets.get("scan", {}).get("stars", 0)))
 	_make_programs(state)
 	_make_chain()
@@ -453,7 +487,7 @@ func _make_programs(state: RefCounted) -> void:
 		var code: Array = []
 		for i in int(pd.get("len", 2)):
 			code.append(syms[_rng.randi() % syms.size()])
-		programs.append({"id": pid, "name": pd.get("name", pid), "code": code, "known": knows(state, pid), "done": false, "text": pd.get("text", "")})
+		programs.append({"id": pid, "name": pd.get("name", pid), "code": code, "known": usable(state, target, pid), "done": false, "text": pd.get("text", "")})
 
 
 func _make_chain() -> void:
@@ -477,14 +511,14 @@ func _make_chain() -> void:
 		plan_path.append(pos)
 		chain[pos.y][pos.x] = plan[i]
 		# next pick: in the column of this one (a new row), then in that row (a new column)...
-		var nxt := pos
-		for attempt in 20:
-			if along_row:
-				nxt = Vector2i(pos.x, _rng.randi_range(0, chain_n - 1))
-			else:
-				nxt = Vector2i(_rng.randi_range(0, chain_n - 1), pos.y)
-			if not seen.has(nxt):
-				break
+		var options: Array = []
+		for k in chain_n:
+			var c := Vector2i(pos.x, k) if along_row else Vector2i(k, pos.y)
+			if not seen.has(c):
+				options.append(c)
+		if options.is_empty():
+			break               # boxed in: the rest of the plan just isn't guaranteed
+		var nxt: Vector2i = options[_rng.randi() % options.size()]
 		along_row = not along_row
 		pos = nxt
 
@@ -630,6 +664,11 @@ func finish(state: RefCounted) -> Dictionary:
 				lines.append("A delivery from %s is rerouted. The crate waits at the drop tomorrow." % target["name"])
 			"wipe":
 				lines.append("Logs wiped.")
+	if not cut and target.has("teaches"):
+		for pid in target["teaches"]:
+			if not knows(state, pid):
+				learn(state, pid)
+				lines.append("You learned %s. It works anywhere now." % program(pid).get("name", pid))
 	if cut:
 		var clue := str(target.get("clue", "Someone broke in tonight."))
 		var clues: Array = state.flags.get("clues", [])
@@ -637,11 +676,11 @@ func finish(state: RefCounted) -> Dictionary:
 		state.flags["clues"] = clues
 		state.attention = minf(100.0, state.attention + float(D.get("onsite_caught_attention" if onsite else "caught_attention", 8)))
 		var locks: Dictionary = state.os.get("locked", {})
-		locks[target["id"]] = int(state.day) + int(D.get("lock_nights", 3))
+		locks[target["id"]] = int(state.day) + (0 if target.get("tutorial", false) else int(D.get("lock_nights", 3)))
 		state.os["locked"] = locks
 		lines.append("CUT OUT. They saw you. %s is locked for %d nights, and the Bureau has a new clue." % [target["name"], int(D.get("lock_nights", 3))])
 	var done: Array = state.os.get("jobs_done", [])
-	if not done.has(target["id"]):
+	if not done.has(target["id"]) and not (cut and target.get("tutorial", false)):
 		done.append(target["id"])
 	state.os["jobs_done"] = done
 	if lines.is_empty():

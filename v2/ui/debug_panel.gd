@@ -48,6 +48,10 @@ func setup(p_garage: Node) -> void:
 		for r in load("res://v2/sim/crafting.gd").data().get("recipes", []):
 			game.state.mastery[r["id"]] = {"made": 3, "good": 3, "sum": 2.4}
 		garage.toast("Every recipe mastered (batching on)."))
+	add.call("Open all markets", func() -> void:
+		game.state.flags["markets_open"] = true
+		game.state.supplies["picks"] = int(game.state.supplies.get("picks", 0)) + 5
+		garage.toast("ShopNet, Lantern and the Tram Yard are open. +5 picks."))
 	add.call("Learn all hacks", func() -> void:
 		load("res://v2/sim/hack.gd").learn_all(game.state)
 		garage.toast("Every hacking program learned (DIRT, EYES, REROUTE, PAYDAY)."))

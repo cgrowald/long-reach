@@ -21,6 +21,8 @@ const FLAT := {
 	"skin": Color(0.5, 0.38, 0.3), "glove": Color(0.15, 0.14, 0.12), "red": Color(0.6, 0.09, 0.07),
 	"metal": Color(0.26, 0.27, 0.28), "strap": Color(0.2, 0.2, 0.17), "tan": Color(0.6, 0.52, 0.38),
 	"wood": Color(0.34, 0.21, 0.12), "woven": Color(0.2, 0.36, 0.46),
+	"cream": Color(0.78, 0.74, 0.6), "yellow": Color(0.78, 0.56, 0.18), "olive": Color(0.3, 0.31, 0.17),
+	"field": Color(0.36, 0.33, 0.2), "patch": Color(0.22, 0.36, 0.46),
 }
 
 static var _src := {}           # part name -> original Mesh from the glb
@@ -208,8 +210,6 @@ static func painted(part: String, camo: String) -> Mesh:
 				col = pal[idx]
 			else:
 				col = FLAT.get(mname, Color(0.4, 0.4, 0.4))
-				if mname == "woven" and absf(c.y - 0.19) < 0.028:
-					col = Color(0.78, 0.74, 0.6)          # the market bag's cream stripe
 			col = col * rng.randf_range(0.9, 1.08)
 			col.a = 1.0
 			for k in 3:

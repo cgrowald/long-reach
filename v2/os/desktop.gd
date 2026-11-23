@@ -23,6 +23,8 @@ const APPS := {
 	"alert": preload("res://v2/os/apps/alert.gd"),
 	"jobs": preload("res://v2/os/apps/patchbay.gd"),
 	"drop": preload("res://v2/os/apps/drop.gd"),
+	"shop": preload("res://v2/os/apps/shop.gd"),
+	"lantern": preload("res://v2/os/apps/shop.gd"),
 }
 const TASKBAR_H := 16.0
 const TOPBAR_H := 14.0
@@ -227,7 +229,7 @@ func launch(id: String, a := "") -> Control:
 		alert("HEARTH", "No application is registered for '%s'." % id, "warn")
 		return null
 	# Single-instance apps just come to the front.
-	if id in ["mail", "software", "monitor", "settings", "jobs"]:
+	if id in ["mail", "software", "monitor", "settings", "jobs", "drop", "shop", "lantern"]:
 		for w in windows():
 			if w.app_id == id:
 				focus_window(w)

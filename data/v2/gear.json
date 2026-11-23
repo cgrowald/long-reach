@@ -39,10 +39,11 @@
 		"bandage": {"name": "Torn-shirt bandage", "cells": [1, 1], "med": 1, "price": 0},
 		"dressing": {"name": "Field dressing", "cells": [1, 1], "med": 1, "price": 0},
 		"flash": {"name": "Flashbang", "cells": [1, 1], "flash": 1, "price": 25},
-		"charge": {"name": "Door charge", "cells": [1, 2], "charge": 1, "price": 40}
+		"charge": {"name": "Door charge", "cells": [1, 2], "charge": 1, "price": 40},
+		"picks": {"name": "Lock pick", "price": 5}
 	},
 	"start_stash": ["bolt_rifle", "pump_shotgun", "pipe", "pipe", "beanie", "cap", "street", "street", "street"],
-	"start_supplies": {"clip_5": 6, "shells": 5, "mag_pistol": 0, "flash": 0, "charge": 0},
+	"start_supplies": {"picks": 4, "clip_5": 6, "shells": 5, "mag_pistol": 0, "flash": 0, "charge": 0},
 	"start_people": [
 		{"name": "VIKTOR DANE", "role": "point", "trait": "steady", "line": "Pavel's old foreman at the truck yard. Still has the keys."},
 		{"name": "ADA LIND", "role": "breacher", "trait": "cocky", "line": "Locksmith's daughter. Pavel owed her money; she came for it and stayed."},

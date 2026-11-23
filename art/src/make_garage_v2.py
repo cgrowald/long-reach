@@ -158,8 +158,6 @@ for y in (0.28, 1.52):
 box("Bench_Hack_Board", (2.84, 0.9, 1.5), (0.03, 1.4, 0.9), "cardboard")
 for i in range(6):
 	box("Bench_Hack_Tool_%d" % i, (2.81, 0.35 + i * 0.22, 1.5 + j(0.1) * 0.5), (0.02, 0.03, 0.2 + random.random() * 0.15), "metal_d")
-box("Bench_Hack_Scope", (2.5, 1.35, 1.05), (0.35, 0.3, 0.24), "metal")
-box("Bench_Hack_Scope_Screen", (2.32, 1.35, 1.07), (0.01, 0.2, 0.14), "scope", emission=1.5)
 box("Bench_Hack_Iron", (2.4, 0.5, 0.97), (0.18, 0.14, 0.09), "metal_d")
 box("Bench_Hack_PCB", (2.3, 0.9, 0.94), (0.22, 0.16, 0.01), "green_pcb", rot=(0, 0, 10))
 box("Bench_Hack_Parts", (2.55, 0.85, 0.95), (0.16, 0.24, 0.04), "plastic_d")
@@ -179,13 +177,11 @@ for x in (-1.17, -0.47):
 	box("Bench_Sew_Leg", (x, -2.28, 0.37), (0.04, 0.55, 0.74), "metal_d")
 box("Bench_Sew_Spool", (-0.5, -2.45, 0.82), (0.05, 0.05, 0.08), "lamp_red")
 box("Bench_Sew_Scraps", (-1.05, -2.42, 0.79), (0.25, 0.15, 0.03), "tarp", rot=(0, 0, 12))
-box("Bench_Sew_Lamp", (-1.12, -2.5, 1.05), (0.08, 0.08, 0.5), "metal_d")
 
 # Med table (meds) against the north wall, left of the desk, under the clock.
 box("Bench_Med_Top", (-1.65, 2.08, 0.8), (0.95, 0.6, 0.04), "metal_l")
 for x in (-2.07, -1.23):
 	box("Bench_Med_Leg", (x, 2.08, 0.39), (0.04, 0.5, 0.78), "metal_d")
-box("Bench_Med_Bottle", (-1.95, 2.25, 0.92), (0.07, 0.07, 0.2), "scope", emission=0.3)
 box("Bench_Med_Box", (-1.4, 2.28, 0.86), (0.25, 0.14, 0.08), "paper")
 box("Bench_Med_Cross", (-1.4, 2.2, 0.87), (0.06, 0.01, 0.05), "lamp_red")
 
@@ -292,7 +288,6 @@ box("Under_Box_1", (2.5, 0.55, 0.13), (0.36, 0.3, 0.24), "cardboard", rot=(0, 0,
 box("Bench_Gun_Cloth", (2.38, -0.95, 0.932), (0.66, 0.9, 0.006), "olive", rot=(0, 0, 4))
 box("Bench_Gun_Tray", (2.62, -0.35, 0.95), (0.22, 0.16, 0.03), "metal_l")
 box("Bench_Gun_Tray_In", (2.62, -0.35, 0.962), (0.19, 0.13, 0.02), "metal_d")
-cyl("Bench_Gun_Oil", (2.66, -1.5, 0.99), 0.04, 0.12, "olive", verts=8)
 box("Bench_Gun_Drawer", (2.08, -1.05, 0.78), (0.04, 0.45, 0.14), "olive")
 box("Bench_Gun_Drawer_Pull", (2.05, -1.05, 0.79), (0.02, 0.1, 0.02), "metal_l")
 box("Bench_Gun_Shim", (2.4, -1.6, 0.012), (0.75, 0.1, 0.025), "cardboard")
@@ -306,6 +301,131 @@ box("Lamp_Bench_Glow", (2.3, 0.0, 2.058), (0.46, 0.1, 0.008), "amber_glow", emis
 box("Bench_Med_Towel", (-2.0, 1.95, 0.83), (0.2, 0.16, 0.025), "paper")
 box("Bench_Med_Towel_Stripe", (-2.0, 1.95, 0.8435), (0.2, 0.02, 0.002), "lamp_red")
 cyl("Bench_Med_Basin", (-1.72, 2.25, 0.86), 0.1, 0.06, "mug", verts=12)
+
+
+# --- bench pass 2 (2026-11-23, the "WORKSTATIONS / STARTER TO UPGRADED" sheet) ---------------------
+# Every bench gets its own desk lamp with an orange shade (Godot puts a light in each head that brightens
+# while you work there: v2/world/garage_world.gd bench lamps). Then the starter props from the sheet.
+# Names keep the bench prefix so the props belong to the station (clicks, hover).
+from mathutils import Vector
+
+PAL.update({
+	"shade_or": (0.78, 0.42, 0.18), "shade_in": (1.0, 0.82, 0.5), "lamp_arm": (0.55, 0.32, 0.16),
+	"tote_blue": (0.2, 0.44, 0.52), "tote_cream": (0.84, 0.78, 0.62), "tote_yel": (0.86, 0.62, 0.2),
+	"glass_g": (0.18, 0.34, 0.18), "corkc": (0.6, 0.44, 0.26), "rust": (0.48, 0.22, 0.1), "water": (0.42, 0.52, 0.56),
+	"tan": (0.64, 0.52, 0.34), "gun_blk": (0.11, 0.11, 0.12), "perf": (0.58, 0.34, 0.16), "pcb_b": (0.14, 0.26, 0.56),
+	"batt": (0.72, 0.72, 0.74), "batt_y": (0.9, 0.72, 0.22), "lcd": (0.55, 0.78, 0.38), "sponge": (0.86, 0.7, 0.26),
+	"cloth_c": (0.86, 0.82, 0.7), "steel": (0.58, 0.6, 0.62), "olive_l": (0.42, 0.42, 0.22),
+})
+
+
+def seg(name, p0, p1, thick, color):
+	"""A thin box from p0 to p1 (an arm, a strap, a handle)."""
+	a, b = Vector(p0), Vector(p1)
+	d = b - a
+	bpy.ops.mesh.primitive_cube_add(size=1, location=(a + b) / 2)
+	o = bpy.context.active_object
+	o.scale = (thick, thick, d.length)
+	bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+	o.rotation_mode = "QUATERNION"
+	o.rotation_quaternion = d.normalized().to_track_quat("Z", "Y")
+	o.name = name
+	o.data.materials.append(mat(color))
+	return o
+
+
+def cone_at(name, at, toward, r1, r2, depth, color, emission=0.0):
+	d = (Vector(toward) - Vector(at)).normalized()
+	bpy.ops.mesh.primitive_cone_add(vertices=10, radius1=r1, radius2=r2, depth=depth, location=Vector(at) + d * depth * 0.5)
+	o = bpy.context.active_object
+	o.rotation_mode = "QUATERNION"
+	o.rotation_quaternion = (-d).to_track_quat("Z", "Y")
+	o.name = name
+	o.data.materials.append(mat(color, emission))
+	return o
+
+
+def disc_at(name, at, toward, r, color, emission=0.0):
+	d = (Vector(toward) - Vector(at)).normalized()
+	bpy.ops.mesh.primitive_cylinder_add(vertices=10, radius=r, depth=0.004, location=at)
+	o = bpy.context.active_object
+	o.rotation_mode = "QUATERNION"
+	o.rotation_quaternion = d.to_track_quat("Z", "Y")
+	o.name = name
+	o.data.materials.append(mat(color, emission))
+	return o
+
+
+def desk_lamp(prefix, base, elbow, head, target):
+	"""Base on the bench, two arms, an orange cone shade with a glowing mouth aimed at target."""
+	cyl(prefix + "Lamp_Base", base, 0.055, 0.025, "lamp_arm", verts=10)
+	b = Vector(base) + Vector((0, 0, 0.02))
+	seg(prefix + "Lamp_Arm_A", b, elbow, 0.016, "lamp_arm")
+	cyl(prefix + "Lamp_Joint", elbow, 0.018, 0.03, "metal_d", rot=(90, 0, 0), verts=8)
+	seg(prefix + "Lamp_Arm_B", elbow, head, 0.014, "lamp_arm")
+	cone_at(prefix + "Lamp_Shade", head, target, 0.075, 0.03, 0.1, "shade_or")
+	d = (Vector(target) - Vector(head)).normalized()
+	disc_at(prefix + "Lamp_Glow", Vector(head) + d * 0.098, target, 0.066, "shade_in", emission=2.5)
+
+
+# hacking bench (electronics): lamp at the back-left, laptop instead of the scope, the starter gadget,
+# a note and a pencil, the iron's sponge
+desk_lamp("Bench_Hack_", (2.72, 1.5, 0.95), (2.74, 1.38, 1.32), (2.5, 1.12, 1.38), (2.3, 0.85, 0.93))
+box("Bench_Hack_Laptop", (2.58, 1.3, 0.945), (0.24, 0.32, 0.02), "olive_l", rot=(0, 0, 0))
+box("Bench_Hack_Laptop_Keys", (2.56, 1.3, 0.956), (0.14, 0.26, 0.004), "plastic_d")
+box("Bench_Hack_Laptop_Lid", (2.71, 1.3, 1.06), (0.016, 0.32, 0.22), "olive_l", rot=(0, -14, 0))
+box("Bench_Hack_Laptop_Screen", (2.7, 1.3, 1.065), (0.006, 0.27, 0.17), "scope", rot=(0, -14, 0), emission=1.2)
+box("Bench_Hack_Laptop_Tape", (2.705, 1.42, 1.15), (0.01, 0.06, 0.03), "tape", rot=(0, -14, 30))
+box("Bench_Hack_Gadget_Case", (2.6, 0.48, 0.955), (0.2, 0.12, 0.045), "olive", rot=(0, 0, -6))
+box("Bench_Hack_Gadget_Perf", (2.59, 0.46, 0.98), (0.12, 0.09, 0.006), "perf", rot=(0, 0, -6))
+box("Bench_Hack_Gadget_MCU", (2.57, 0.45, 0.987), (0.07, 0.035, 0.008), "pcb_b", rot=(0, 0, -6))
+box("Bench_Hack_Gadget_Batt", (2.66, 0.49, 0.99), (0.04, 0.07, 0.03), "batt", rot=(0, 0, -6))
+box("Bench_Hack_Gadget_Batt_Cap", (2.66, 0.52, 0.99), (0.042, 0.02, 0.032), "batt_y", rot=(0, 0, -6))
+box("Bench_Hack_Note", (2.12, 0.32, 0.934), (0.12, 0.1, 0.002), "paper", rot=(0, 0, 12))
+cyl("Bench_Hack_Pencil", (2.12, 0.44, 0.938), 0.005, 0.14, "lamp_amber", rot=(90, 0, 20), verts=6)
+box("Bench_Hack_Sponge", (2.33, 0.47, 0.94), (0.06, 0.05, 0.012), "sponge")
+
+# gun bench: lamp at the front-right corner, the carbine on the cloth along the wall, the oil can moved
+desk_lamp("Bench_Gun_", (2.74, -1.58, 0.95), (2.76, -1.42, 1.3), (2.52, -1.2, 1.38), (2.3, -0.95, 0.93))
+GX, GZ = 2.64, 0.948
+box("Bench_Gun_Rifle_Receiver", (GX, -0.9, GZ + 0.03), (0.05, 0.22, 0.06), "gun_blk")
+box("Bench_Gun_Rifle_Stock", (GX, -1.12, GZ + 0.025), (0.045, 0.2, 0.05), "tan")
+box("Bench_Gun_Rifle_Stock_Hole", (GX, -1.12, GZ + 0.028), (0.047, 0.08, 0.02), "gun_blk")
+box("Bench_Gun_Rifle_Guard", (GX, -0.68, GZ + 0.03), (0.045, 0.2, 0.045), "tan")
+for k in range(3):
+	box("Bench_Gun_Rifle_Slot_%d" % k, (GX - 0.023, -0.74 + k * 0.05, GZ + 0.035), (0.002, 0.03, 0.012), "gun_blk")
+cyl("Bench_Gun_Rifle_Barrel", (GX, -0.5, GZ + 0.032), 0.009, 0.2, "steel", rot=(90, 0, 0), verts=6)
+box("Bench_Gun_Rifle_Mag", (GX + 0.05, -0.86, GZ + 0.012), (0.08, 0.035, 0.02), "gun_blk", rot=(0, 0, 8))
+box("Bench_Gun_Rifle_Grip", (GX + 0.045, -0.98, GZ + 0.012), (0.05, 0.025, 0.02), "gun_blk")
+cyl("Bench_Gun_Oil_2", (2.5, -1.58, 0.99), 0.035, 0.11, "olive", verts=8)
+cyl("Bench_Gun_Oil_Spout", (2.5, -1.58, 1.07), 0.006, 0.07, "steel", verts=6, rot=(20, 0, 0))
+
+# sewing table (gear): lamp in the back-left corner, the tote laid flat, thread, scissors, a seam ripper
+desk_lamp("Bench_Sew_", (-1.14, -2.5, 0.79), (-1.18, -2.38, 1.12), (-0.98, -2.34, 1.16), (-0.82, -2.22, 0.78))
+box("Bench_Sew_Tote", (-1.0, -2.18, 0.785), (0.3, 0.24, 0.012), "tote_blue", rot=(0, 0, 6))
+box("Bench_Sew_Tote_Stripe", (-1.0, -2.18, 0.7915), (0.3, 0.05, 0.002), "tote_cream", rot=(0, 0, 6))
+for k, x in enumerate((-1.07, -0.93)):
+	seg("Bench_Sew_Tote_Handle_%d" % k, (x, -2.06, 0.792), (x + 0.01, -1.98, 0.792), 0.02, "tote_yel")
+cyl("Bench_Sew_Thread", (-0.56, -2.42, 0.81), 0.025, 0.06, "tote_cream", verts=10)
+for k, (dy, rz) in enumerate(((0.0, 25), (0.03, -10))):
+	box("Bench_Sew_Scissor_Blade_%d" % k, (-0.6, -2.1 + dy, 0.783), (0.12, 0.012, 0.004), "steel", rot=(0, 0, rz))
+for k, dy in enumerate((-0.03, 0.03)):
+	cyl("Bench_Sew_Scissor_Loop_%d" % k, (-0.68, -2.08 + dy, 0.784), 0.018, 0.006, "lamp_red", verts=8)
+seg("Bench_Sew_Ripper", (-0.55, -2.3, 0.785), (-0.46, -2.26, 0.785), 0.012, "lamp_red")
+
+# med table: lamp at the left, the bottle in green glass with a cork and a label, water in the basin,
+# a steel tray under it, a stack of cloth and torn strips
+desk_lamp("Bench_Med_", (-2.06, 2.3, 0.83), (-2.1, 2.2, 1.18), (-1.88, 2.08, 1.24), (-1.65, 2.0, 0.82))
+cyl("Bench_Med_Bottle_Glass", (-1.84, 2.3, 0.9), 0.04, 0.16, "glass_g", verts=8)
+cyl("Bench_Med_Bottle_Cork", (-1.84, 2.3, 0.995), 0.018, 0.03, "corkc", verts=8)
+box("Bench_Med_Bottle_Label", (-1.84, 2.258, 0.9), (0.05, 0.004, 0.05), "paper")
+box("Bench_Med_Tray", (-1.72, 2.25, 0.824), (0.26, 0.2, 0.008), "steel")
+cyl("Bench_Med_Basin_Water", (-1.72, 2.25, 0.893), 0.088, 0.004, "water", verts=12)
+cyl("Bench_Med_Basin_Rim", (-1.72, 2.25, 0.89), 0.1, 0.006, "rust", verts=12)
+for k in range(3):
+	box("Bench_Med_Cloth_%d" % k, (-1.3, 1.92, 0.828 + k * 0.012), (0.16, 0.13, 0.01), "cloth_c", rot=(0, 0, j(6)))
+for k in range(2):
+	box("Bench_Med_Strip_%d" % k, (-1.95, 1.86 - k * 0.04, 0.824), (0.16, 0.025, 0.003), "cloth_c", rot=(0, 0, j(8)))
 
 # --- export ---------------------------------------------------------------------------------
 bpy.ops.wm.save_as_mainfile(filepath=os.path.join(HERE, "garage_v2.blend"))

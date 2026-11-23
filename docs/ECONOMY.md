@@ -115,3 +115,30 @@ echo ok
 - **Tested** (bot): offers, perks, steal yields in the grade range, warning, audit, firing, grade effects, minimum grades, actions, wage and upkeep maths, walking out, saves.
 - **Combat fix the same day** (user: "if their eyes can see it, their guns can"): fighters now see about 15 m in the dark (22 m with a light on the target), so the hall guard is the first contact every time.
 - **Next in the economy:** selling intel (the fixer, the black market), lockpicking, exploiting people, the easy first mission.
+
+## 11. Spending money: three markets (built 2026-11-23)
+Data is in data/v2/markets.json, rules in v2/sim/markets.gd. Stock rerolls daily, and prices wobble and rise with Bureau attention.
+
+| Market | Where | Stock | Delivery | Risk |
+|---|---|---|---|---|
+| **ShopNet** | PC app "Shop" | basic, grades 1-2 | overnight | buys of boards and chips are LOGGED (Bureau attention) |
+| **Lantern** | PC app "Lantern", opens at fixer trust 3 | 5 items, x1.45 price, grades 2-4 | a dead drop overnight | 10% of orders are scams |
+| **The Tram Yard** | the roller door, after curfew, opens at fixer trust 5 | 9 stalls, grades 2-5, guns, ammo, armor, a drill press | you carry it home | the sneak dash, maybe a Bureau sting (too cheap, with a tell) |
+
+How the pieces work:
+- **Barter:** at the Tram Yard you can trade your materials for credits. Cigarettes (a new material) and vodka fetch extra (Sarajevo: cigarettes were money).
+- **The trip:** costs 1 night action. A top-down night map (v2/sim/curfew_map.gd):
+  - patrols carry torch cones and there is a searchlight;
+  - lamps make you easier to see, dark corners hide you;
+  - Shift runs, which is loud.
+- **The gate:** a padlocked gate is a shortcut you can lockpick (lock picks are a supply; you start with 4).
+- **Caught:** bribe (30% of your money, it may fail) or let them search you (you lose the bag, +8 attention).
+
+## 12. Lockpicking (built 2026-11-23)
+Rules are in v2/sim/lockpick.gd, the screen in v2/ui/lockpick_view.gd, and the locks in data/v2/locks.json. It mixes Skyrim's turn-and-feel with pin-by-pin picking.
+- **The basic move:** tension comes from the mouse wheel. You move the pick under a pin, then hold left and lift.
+- **Binding pins:** one pin binds at a time. The pick shakes harder as that pin nears its sweet spot.
+- **Wrong tension:** too much tension bends and then snaps the pick. Too little and set pins slip back down.
+- **Overset:** pushing a pin past its sweet spot jams it. SPACE lets go and resets.
+- **Spool pins** (harder locks) false-set: you ease off the tension to get them to set.
+- **Where it is used now:** the yard gate on the curfew trip. There is also a "Lockpick toy" on the title screen with four locks.

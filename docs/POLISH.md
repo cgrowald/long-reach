@@ -70,3 +70,37 @@ Read as: the bench is machining a part into shape by hand-feeding a tool, then a
 - **Stash** as real columns: materials with grade pips, the day job's grade range, tools with multipliers, every item with a type chip, grade pips and its notes. **Gear cage** re-laid for the wider text (no spill), with the stand framed in brackets. **Morning card, ledger, pause** in the dark framed style; **the box** header uses the tag.
 - **3D garage** (`art/src/make_garage_v2.py` "touch-up pass", `v2/world/garage_world.gd`): tape on the CRT, a taped photo by the monitor, a coffee ring, overlapped papers and a pencil, a chipped desk edge, the box's cable taped down, one odd replacement knob; a cutting mat, solder scorch and spool on the hacking bench; a cloth, parts tray, oil can, drawer and a shim on the gun bench; a stool and boxes under the benches; a towel and basin on the med table; a hanging amber lamp over the benches. Lighting: an amber pool at the benches and the desk lamp now lights the desk; the ambient moved from purple toward warm brown.
 - **Not done (later):** woven / worn-metal / polymer material textures; the gun bench as drill press (design change); the market-bag rig model; two-handed tearing; the OS's sticky note on the login is still the old style; minor bugs the user will find.
+
+## The model sheets (user via GPT, 2026-11-23): concept art for MODELS, not only for the screens
+The user pasted these five sheets in chat (2026-11-23). They are not saved in the repo yet: drop them in docs/refs/polish/.
+1. GEAR 01 / RECLAIMED TOTE: open the seam; the starter rig; rear X straps; side view; woven plastic; bound edge.
+2. CLOTH / PREPARATION + SUPPLIES: tear, dip; starter cloth rolls; the upgraded medical pouch.
+3. ELECTRONICS / TWO TIERS: the olive gadget case. Starter: perfboard, blue controller, battery. Upgraded: green board, a screen in the lid, connectors.
+4. GEAR 02 / FIELD HARNESS + PACK: three mag pouches, radio, med pouch; a utility pack with a flap, buckles and a bottle.
+5. WORKSTATIONS / STARTER TO UPGRADED: electronics, gear and medical benches, each with its own desk lamp. Upgraded: magnifier lamp, fume fan, sewing machine, strap rack, a shelf of kits.
+
+## Built: models from the sheets (2026-11-23)
+- **Bench lamps** (user: "each SHOULD have their own light like this, a nice orange glow when you work"):
+  - Every bench has an articulated desk lamp with an orange shade (art/src/make_garage_v2.py "bench pass 2").
+  - Godot puts a warm spot plus a glow in each head (garage_world.gd `_bench_lamps`): dim from the chair, bright orange while you work there.
+  - The bench task light is warm now too.
+- **Starter props from the workstation sheet:**
+  - Hacking bench: a laptop instead of the scope, the starter gadget, a note, a sponge.
+  - Gun bench: the tan and black carbine on the cloth, and a second oil can.
+  - Sewing table: the tote laid flat, thread, scissors, a seam ripper.
+  - Med table: a green bottle with cork and label, water in the basin, a steel tray, a cloth stack, strips.
+- **Worn gear** (art/src/make_soldier.py, colours in soldier.gd FLAT):
+  - The market-bag rig rebuilt as the reclaimed tote: cream stripe, three pouches, side pouch, yellow tabs, X back straps.
+  - The chest rig rebuilt as the field harness: mags out the top, radio and antenna, med pouch with a cross.
+  - The pack rebuilt as the utility pack.
+- **Crafted items** (new art/src/make_items.py, art/items.glb): the finished item drops onto the bench under the lamp and turns while the result shows (recipes' "model" / "model_good" when 4+ stars).
+  - The gadget case in two tiers (starter, upgraded).
+  - The drop stick.
+  - A tied cloth roll and strips.
+  - The med pouch in two tiers.
+  - The tote rig and the harness as bench pieces.
+  - The rough upper.
+- **Not yet:**
+  - The upgraded bench versions (magnifier lamp, fume fan, sewing machine, shelves) as tool tiers.
+  - Fabric textures (the woven plastic, bound edges).
+  - The seam-opening hands-on step.

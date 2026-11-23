@@ -10,7 +10,8 @@
 		"alu": {"name": "Aluminium block"},
 		"pins": {"name": "Pins and springs"},
 		"board": {"name": "Scrap circuit board"},
-		"chips": {"name": "Salvaged chips"}
+		"chips": {"name": "Salvaged chips"},
+		"smokes": {"name": "Cigarettes (pack)"}
 	},
 	"start_materials": {"shirt": 4, "alcohol": 3, "tape": 3, "bag": 2, "strap": 3, "buckle": 1, "alu": 2, "pins": 2, "board": 3, "chips": 3},
 	"tools": {
@@ -24,7 +25,7 @@
 	"start_tools": ["hands", "hand_drill", "kitchen_scissors", "cheap_iron"],
 	"recipes": [
 		{
-			"id": "bandage", "name": "Torn-shirt bandage", "bench": "meds", "tier": 1, "hours": 0.5,
+			"id": "bandage", "name": "Torn-shirt bandage", "bench": "meds", "tier": 1, "hours": 0.5, "model": "Item_Roll_Tied",
 			"needs": {"shirt": 1, "alcohol": 1}, "tool": "hands", "material_mult": 0.9, "piece": "cloth",
 			"steps": [
 				{"verb": "tear", "count": 3, "text": "Tear the shirt into strips"},
@@ -35,7 +36,7 @@
 			"perks": [{"min": 0.7, "text": "Sterile: +5 heal"}, {"min": 0.9, "text": "Tight roll: stops bleeding faster"}]
 		},
 		{
-			"id": "field_dressing", "name": "Field dressing", "bench": "meds", "tier": 2, "hours": 1.0, "after": "bandage",
+			"id": "field_dressing", "name": "Field dressing", "bench": "meds", "tier": 2, "hours": 1.0, "after": "bandage", "model": "Item_MedPouch", "model_good": "Item_MedPouch_Upgraded",
 			"needs": {"shirt": 1, "alcohol": 1, "tape": 1}, "tool": "kitchen_scissors", "material_mult": 1.0, "piece": "cloth",
 			"steps": [
 				{"verb": "cut", "text": "Cut a clean pad along the line"},
@@ -47,7 +48,7 @@
 			"perks": [{"min": 0.75, "text": "Pressure pad: +10 heal"}, {"min": 0.92, "text": "Field-grade: usable mid-fight"}]
 		},
 		{
-			"id": "ikea_rig", "name": "Shopping-bag rig", "bench": "armor", "tier": 1, "hours": 1.5,
+			"id": "ikea_rig", "name": "Shopping-bag rig", "bench": "armor", "tier": 1, "hours": 1.5, "model": "Item_Tote_Rig",
 			"needs": {"bag": 1, "tape": 1, "strap": 1}, "tool": "kitchen_scissors", "material_mult": 0.8, "piece": "bag",
 			"steps": [
 				{"verb": "cut", "text": "Cut the front panel out of the bag"},
@@ -61,7 +62,7 @@
 			"perks": [{"min": 0.7, "text": "Doesn't rattle: quieter"}, {"min": 0.9, "text": "Quick-release: drop it and run"}]
 		},
 		{
-			"id": "chest_rig", "name": "Webbing chest rig", "bench": "armor", "tier": 2, "hours": 2.0, "after": "ikea_rig",
+			"id": "chest_rig", "name": "Webbing chest rig", "bench": "armor", "tier": 2, "hours": 2.0, "after": "ikea_rig", "model": "Item_Harness",
 			"needs": {"strap": 2, "buckle": 1, "tape": 1}, "tool": "kitchen_scissors", "material_mult": 1.0, "piece": "bag",
 			"steps": [
 				{"verb": "cut", "text": "Cut the webbing to length"},
@@ -74,7 +75,7 @@
 			"perks": [{"min": 0.8, "text": "Balanced: no speed penalty"}]
 		},
 		{
-			"id": "receiver_rough", "name": "Rough upper (part)", "bench": "weapons", "tier": 1, "hours": 2.0,
+			"id": "receiver_rough", "name": "Rough upper (part)", "bench": "weapons", "tier": 1, "hours": 2.0, "model": "Item_Upper",
 			"needs": {"alu": 1, "pins": 1}, "tool": "hand_drill", "material_mult": 1.0, "piece": "metal",
 			"steps": [
 				{"verb": "drill", "count": 3, "text": "Drill the marked holes to depth"},
@@ -85,7 +86,7 @@
 			"perks": [{"min": 0.75, "text": "True: +accuracy"}, {"min": 0.92, "text": "Smooth: +reliability"}]
 		},
 		{
-			"id": "port_scanner", "name": "Port scanner (gadget)", "bench": "electronics", "tier": 1, "hours": 1.0,
+			"id": "port_scanner", "name": "Port scanner (gadget)", "bench": "electronics", "tier": 1, "hours": 1.0, "model": "Item_Gadget_Starter", "model_good": "Item_Gadget_Upgraded",
 			"needs": {"board": 1, "chips": 1}, "tool": "cheap_iron", "material_mult": 0.9, "piece": "board",
 			"steps": [
 				{"verb": "fit", "parts": ["chip", "chip", "antenna"], "text": "Place the parts on the board"},
@@ -95,7 +96,7 @@
 			"perks": [{"min": 0.8, "text": "Clean signal: wider pings"}]
 		},
 		{
-			"id": "wordlist_drive", "name": "Wordlist drive (gadget)", "bench": "electronics", "tier": 1, "hours": 1.0,
+			"id": "wordlist_drive", "name": "Wordlist drive (gadget)", "bench": "electronics", "tier": 1, "hours": 1.0, "model": "Item_Gadget_Starter", "model_good": "Item_Gadget_Upgraded",
 			"needs": {"board": 1, "chips": 1}, "tool": "cheap_iron", "material_mult": 0.9, "piece": "board",
 			"steps": [
 				{"verb": "fit", "parts": ["memory chip", "connector"], "text": "Place the memory and the plug"},
@@ -105,7 +106,7 @@
 			"perks": [{"min": 0.8, "text": "Big list: crosses out more wrong guesses"}]
 		},
 		{
-			"id": "signal_damper", "name": "Signal damper (gadget)", "bench": "electronics", "tier": 1, "hours": 1.0,
+			"id": "signal_damper", "name": "Signal damper (gadget)", "bench": "electronics", "tier": 1, "hours": 1.0, "model": "Item_Gadget_Starter", "model_good": "Item_Gadget_Upgraded",
 			"needs": {"board": 1, "chips": 1}, "tool": "cheap_iron", "material_mult": 0.9, "piece": "board",
 			"steps": [
 				{"verb": "fit", "parts": ["coil", "chip", "shield"], "text": "Place the coil, chip and shield"},
@@ -115,7 +116,7 @@
 			"perks": [{"min": 0.8, "text": "Quiet: trace climbs even slower"}]
 		},
 		{
-			"id": "drop_stick", "name": "Drop stick", "bench": "electronics", "tier": 1, "hours": 1.0,
+			"id": "drop_stick", "name": "Drop stick", "bench": "electronics", "tier": 1, "hours": 1.0, "model": "Item_Drop_Stick",
 			"needs": {"board": 1, "chips": 1}, "tool": "cheap_iron", "material_mult": 0.9, "piece": "board",
 			"steps": [
 				{"verb": "fit", "parts": ["memory chip", "plug"], "text": "Place the memory and the plug"},

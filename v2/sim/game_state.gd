@@ -105,6 +105,7 @@ func end_day() -> Array:
 	lines.append("Suspect pool: %d (-%d)." % [pool, drop])
 	lines.append_array(Economy.end_of_day(self))
 	lines.append_array(load("res://v2/sim/hack.gd").deliver_drops(self))
+	lines.append_array(load("res://v2/sim/markets.gd").deliver(self))
 	ledger.append({"day": day, "lines": lines})
 	if ledger.size() > 30:
 		ledger.pop_front()

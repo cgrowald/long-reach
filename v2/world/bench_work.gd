@@ -32,8 +32,8 @@ func setup(p_camera: Camera3D, anchor: Vector3, cam_pos: Vector3, kind: String) 
 	away = away.normalized()
 	global_transform = Transform3D(Basis.looking_at(away, Vector3.UP), anchor)
 	_light = SpotLight3D.new()
-	_light.light_color = Color(1.0, 0.86, 0.66)
-	_light.light_energy = 1.8
+	_light.light_color = Color(1.0, 0.74, 0.46)      # warm, like the bench lamp it sits under
+	_light.light_energy = 2.2
 	_light.spot_range = 1.6
 	_light.spot_angle = 40.0
 	_light.shadow_enabled = true
@@ -213,3 +213,43 @@ func cyl(r: float, h: float, col: Color, pos: Vector3, parent: Node = null, glow
 	mi.position = pos
 	(parent if parent else self).add_child(mi)
 	return mi
+
+
+# ------------------------------------------------------------------ the finished item
+
+static var _items_scene: Node3D
+
+
+## The finished thing appears on the bench under the lamp and turns slowly (models: art/items.glb,
+## made by art/src/make_items.py). name = an Item_* object; unknown names keep the work piece.
+func show_item(model: String) -> void:
+	if model == "":
+		return
+	if _items_scene == null:
+		var ps: PackedScene = load("res://art/items.glb")
+		if ps == null:
+			return
+		_items_scene = ps.instantiate()
+	var src := _items_scene.find_child(model, true, false) as Node3D
+	if src == null:
+		return
+	if verb:
+		verb.queue_free()
+		verb = null
+	if _beacon:
+		_beacon.visible = false
+	if piece:
+		piece.queue_free()
+	piece = Node3D.new()
+	add_child(piece)
+	var m := src.duplicate() as Node3D
+	m.transform = Transform3D.IDENTITY
+	piece.add_child(m)
+	piece.position = Vector3(0, 0.12, 0)
+	piece.scale = Vector3.ONE * 1.6
+	var tw := piece.create_tween()
+	tw.tween_property(piece, "position", Vector3(0, 0.01, 0), 0.35).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
+	var spin := piece.create_tween().set_loops()
+	spin.tween_property(piece, "rotation:y", TAU, 9.0).from(0.0)
+	if _light:
+		_light.light_energy = 3.2

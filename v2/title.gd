@@ -66,6 +66,7 @@ func _build() -> void:
 	v.add_child(Kit.button("Settings", func() -> void: Menus.settings(ui, game), game))
 	v.add_child(Kit.button("Combat: depot raid", func() -> void: game.goto("res://v2/combat/fight.tscn"), game))
 	v.add_child(Kit.button("Combat look test", func() -> void: game.goto("res://v2/combat/look_test.tscn"), game))
+	v.add_child(Kit.button("Lockpick toy", func() -> void: _lock_toy(0), game))
 	v.add_child(Kit.button("Quit", func() -> void: game.quit_game(), game))
 	for b in v.get_children():
 		if b is Button:
@@ -91,3 +92,17 @@ func _process(delta: float) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("v2_pause"):
 		Menus.back_top(view.ui)
+
+
+## The lockpicking minigame on its own: four locks, easiest first. Esc / right-click backs out.
+func _lock_toy(i: int) -> void:
+	var ids := ["padlock", "yard_gate", "shed_door", "office"]
+	var lv: Control = load("res://v2/ui/lockpick_view.gd").new()
+	lv.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	view.ui.add_child(lv)
+	lv.start(ids[i % ids.size()], null, randi())
+	lv.grab_focus()
+	lv.finished.connect(func(r: String) -> void:
+		lv.queue_free()
+		if r == "open":
+			_lock_toy(i + 1))

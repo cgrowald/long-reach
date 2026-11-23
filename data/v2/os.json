@@ -31,6 +31,8 @@
 		{"name": "Mail", "icon": "mail", "app": "mail"},
 		{"name": "Jobs", "icon": "target", "app": "jobs"},
 		{"name": "Drop", "icon": "drop", "app": "drop"},
+		{"name": "Shop", "icon": "package", "app": "shop"},
+		{"name": "Lantern", "icon": "globe", "app": "lantern"},
 		{"name": "Tools", "icon": "package", "app": "software"},
 		{"name": "Shell", "icon": "terminal", "app": "terminal"}
 	],
@@ -45,6 +47,8 @@
 		{"id": "settings", "name": "Preferences", "icon": "gear", "size": [270, 170], "keys": "settings control panel wallpaper appearance"},
 		{"id": "jobs", "name": "Patchbay", "icon": "target", "size": [600, 300], "keys": "hack hacking targets missions box jobs patchbay"},
 		{"id": "drop", "name": "Dead Drop", "icon": "drop", "size": [420, 240], "keys": "sell post fixer nod intel files followers"},
+		{"id": "shop", "name": "ShopNet", "icon": "package", "size": [440, 250], "keys": "shop buy market store order parts"},
+		{"id": "lantern", "name": "Lantern", "icon": "globe", "size": [440, 250], "keys": "black market lantern buy guns ammo"},
 		{"id": "war", "name": "War room", "icon": "war", "locked": true, "keys": "map squads"}
 	],
 	"commands_note": "THINGS KETTLE TOLD ME (keep this hidden)\n\npassword: hearth123  (everyone's is)\n\nin the Terminal:\n  ls          what's in this folder\n  cd NAME     go into a folder\n  cd ..       back out\n  cat FILE    read a file\n  ps          what's running\n  pkg list    programs you can get\n  help        everything else\n\nTab finishes a name. Up arrow = last command.\nNever type kill on hearthd. Just don't.",
