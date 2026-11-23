@@ -257,3 +257,16 @@ The other ideas (a work audit, a checkpoint) all go in too. At first the consequ
 - The vault doors push you forward, like Dungeon Crawler Carl's system AI.
 - They are NOT generated to give you what you need: there's a real chance it isn't great, but you still try because it can be amazing.
 - The vault isn't the main reason for the hit. It sits in the room with the main supplies you came for (meds, guns, materials).
+
+## 7. Answers, round 4 (user, 2026-11-23)
+- **C1. The code chain makes more sense (f):**
+  - cells that continue a program's code glow;
+  - each program has its own colour, and matching cells take its tint;
+  - an arrow shows the row → column → row rule.
+  - The art bible's van screen shows glyph symbols instead of hex codes.
+- **C2. The interrogation is in 3D (a):** the prisoner on a chair in the garage under the bulb, you pick approaches from cards, and their face reacts.
+- **C3. Up to 4 fighters:** your 3 plus the depot recruit.
+- **C4. Krall's clock is on both the corkboard and the HUD for now.**
+- **C5. The cage shows only what each fighter carried home.**
+- **C6. The bench face-lift comes right after M1.**
+- **The art bible** (docs/ART_BIBLE.md) is the look target.

@@ -3,6 +3,8 @@
 The user asked for this to stop us creating more and more new work before finishing what we were talking about.
 
 ## How we work
+**The look target is docs/ART_BIBLE.md** (user: "the game HAS TO LOOK LIKE THIS AT SOME POINT OR WE ARE FAILING"). Every playtest asks: does it look like the bible yet?
+
 1. **One milestone at a time, in this order.** Claude builds the whole milestone.
 2. **Claude checks it** with bot tests and screenshots.
 3. **Claude hands over a playtest work list** (numbered steps: what to try, what should happen) **and opens the game.**
@@ -60,6 +62,9 @@ Design is in docs/DEPOT_SLICE.md (sections 1, 4, 5).
 | 17 | **The look of this milestone** (face-lift piece) | Our people's clothes (Wolverines mismatch plus the movement colour), the guards' uniforms, the plan file and the prisoner's ID as documents. |
 
 **Playtest question at sign-off:** what did you make, who used it, what did you learn on the PC that changed the raid, and what will you do tomorrow because of Krall?
+
+## M1b. The bench face-lift (decided C6: right after M1)
+Each bench redone step by step, with defining questions before building. Repairs with sound, worn and mended states, colourful patches and armbands (art bible 06, 12, 14, 19). Crisp animations from games the user finds. Fixes: the sewing table's fabric blocking the view, the gun bench parts hard to pick up. Better models, with a Blender walkthrough together and GPT decals ("stickers").
 
 ## M2. Your people grow
 Recruits from Nod, prisoners and coworkers; motives and loyalty reacting to your choices; leaders (after N ops, when your organisation can support a new squad); your own squad always stays yours.
