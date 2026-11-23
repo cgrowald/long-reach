@@ -56,10 +56,14 @@ func _draw() -> void:
 	if st.flags.get("night_shift", false):
 		Pal.text(self, r.position + Vector2(70, 17), "shift", 8, Pal.DIM)
 	# Money, suspects, attention.
-	var r2 := Rect2(w - 120, 4, 116, 30)
+	var r2 := Rect2(w - 164, 4, 160, 42)
 	Pal.plate(self, r2, Pal.METAL_D)
 	Pal.text(self, r2.position + Vector2(5, 3), "%d cr" % st.money, 10, Pal.TEXT)
 	Pal.text(self, r2.position + Vector2(5, 16), "SUSPECTS %d" % st.pool, 8, Pal.DIM)
+	if st.flags.has("prisoner"):
+		Pal.text(self, Vector2(0, 22), "PRISONER IN THE CHAIR  (P)", 8, Color(1.0, 0.6, 0.3), HORIZONTAL_ALIGNMENT_CENTER, w)
+	var ks: String = load("res://v2/sim/krall.gd").summary(st)
+	Pal.text(self, r2.position + Vector2(5, 27), ks, 8, Color(1.0, 0.5, 0.35) if "SEARCH" in ks else Pal.DIM)
 	var att: float = st.attention
 	var blink := att > 60.0 and fmod(_t, 0.8) < 0.4
 	Pal.lamp(self, Vector2(r2.end.x - 12, r2.position.y + 11), 5.0, att > 5.0 and not blink, Pal.MULT if att > 50.0 else Pal.AMBER)

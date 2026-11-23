@@ -69,6 +69,12 @@ func order(kind: String, target = null, who: Array = [], skip_check := false) ->
 	# the same shout again while they're objecting = do it anyway (they go, but shaken)
 	if not objection.is_empty() and objection["kind"] == kind and _same(objection["target"], target) and _t - float(objection["t"]) < 12.0:
 		var by = objection["by"]
+		# their lives come first (user 2026-11-23): a deadly order is refused even when you repeat it
+		if float(objection.get("risk", 0.0)) > threshold(by) + 0.45 if by else false:
+			by.say(["No. That's a grave, boss. Not doing it.", "Negative. We'd all die in there.", "I won't send us in to die. Find another way."][rng.randi() % 3], true)
+			log_line.emit("%s REFUSED: too deadly" % _first(by))
+			objection["t"] = _t
+			return
 		if by and by.alive():
 			by.say(["Copy... going.", "Your call, boss.", "Fine. Going in."][rng.randi() % 3], true)
 		log_line.emit("YOU overruled %s: %s anyway" % [_first(by), kind.to_upper()])
@@ -79,7 +85,7 @@ func order(kind: String, target = null, who: Array = [], skip_check := false) ->
 		var dz := danger(kind, target)
 		var by = dz["by"]
 		if by != null and float(dz["risk"]) > threshold(by):
-			objection = {"kind": kind, "target": target, "who": who, "by": by, "reason": dz["reason"],
+			objection = {"kind": kind, "target": target, "who": who, "by": by, "reason": dz["reason"], "risk": float(dz["risk"]),
 				"suggest": dz["suggest"], "suggest_label": dz["suggest_label"], "t": _t}
 			by.say("%s %s" % [dz["reason"], dz["suggest_line"]], true)
 			return
@@ -714,10 +720,13 @@ func _tick_grab(delta: float) -> void:
 		return
 	have_objective = true
 	g.remove_meta("grabbing")
-	g.say("Got the manifests. We're done here.", true)
-	log_line.emit("Objective: manifests secured")
+	var obj: Dictionary = level.data.get("objective", {})
+	g.say(str(obj.get("grab_line", "Got the manifests. We're done here.")), true)
+	log_line.emit(str(obj.get("grab_log", "Objective: manifests secured")))
 	objective_done.emit()
-	if auto:
+	if obj.get("hold_after", false):
+		task = {"type": "hold"}            # wait for the boss (the vault prompt)
+	elif auto:
 		_next_doctrine()
 	else:
 		task = {"type": "hold"}

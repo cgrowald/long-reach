@@ -15,6 +15,7 @@ const EnemyAI := preload("res://v2/combat/enemy_ai.gd")
 const Audio := preload("res://v2/combat/combat_audio.gd")
 const FEED := preload("res://v2/combat/feedcam.gdshader")
 const Loadout := preload("res://v2/sim/loadout.gd")
+const DepotOp := preload("res://v2/combat/depot_op.gd")
 
 const SHOUTS := [
 	{"id": "stack", "label": "STACK", "needs": "door", "say": "Stack up on that door."},
@@ -65,6 +66,7 @@ var _title_r := Rect2()
 var _env: Environment
 var _look_drag := false
 var board: Control
+var op: RefCounted = null          # the depot raid layer (v2/combat/depot_op.gd) when sent from the garage
 const OpsBoard := preload("res://v2/combat/ops_board.gd")
 
 
@@ -72,6 +74,9 @@ func _ready() -> void:
 	game = get_node_or_null("/root/Game")
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	data = Content.get_file("combat/depot")
+	if game and game.state != null and game.has_meta("op_team"):
+		op = DepotOp.new()
+		data = op.prepare(self, data)
 	view = PixelView.new()
 	add_child(view)
 	world = Node3D.new()
@@ -99,9 +104,13 @@ func _ready() -> void:
 	hud.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	view.ui.add_child(hud)
 	hud.draw.connect(_draw_hud)
+	if op:
+		hud.draw.connect(func() -> void: op.draw(hud))
 	board = OpsBoard.new()
 	view.ui.add_child(board)
 	board.setup(self, _have_blueprint())
+	if op:
+		op.start()
 	_event("In position. %s." % str(data.get("objective", {}).get("text", "")))
 
 
@@ -223,6 +232,8 @@ func _cameras() -> void:
 	for a in squad:
 		feeds.append({"kind": "helmet", "actor": a, "label": "CAM %02d  %s" % [feeds.size() + 1, a.fighter_name]})
 	for c in data.get("cctv", []):
+		if op and not _has_eyes():
+			continue            # no EYES on this depot: no cameras
 		feeds.append({"kind": "cctv", "def": c, "label": "%s  %s" % [c["id"], c["label"]]})
 	for f in feeds:
 		var vp := SubViewport.new()
@@ -295,6 +306,8 @@ func _process(delta: float) -> void:
 		t_op += delta
 		en.tick(delta)
 		sq.tick(delta)
+		if op:
+			op.tick(delta)
 		_separate()
 		if squad.all(func(a) -> bool: return a.state != "ok"):
 			_end("failed")
@@ -461,6 +474,8 @@ func _input(e: InputEvent) -> void:
 				_leave()
 		elif e is InputEventKey and e.pressed and e.keycode == KEY_ESCAPE:
 			_leave()
+		return
+	if op and op.input(e, view.ui.get_local_mouse_position()):
 		return
 	if e is InputEventMouseButton:
 		if board and Rect2(board.position, board.size).has_point(view.ui.get_local_mouse_position()) and not wheel_open:
@@ -1012,7 +1027,7 @@ func _draw_report() -> void:
 	var r := Rect2(Vector2(40, 30), Vector2(w - 80, h - 60))
 	_panel(r)
 	var good := outcome == "success"
-	var head := "OP REPORT  -  " + ("THE MANIFESTS ARE OURS" if good else "FAILED")
+	var head := "OP REPORT  -  " + (("WE GOT OUT" if op else "THE MANIFESTS ARE OURS") if good else "FAILED")
 	Pal.text(hud, r.position + Vector2(10, 8), head, 12, Color(0.55, 0.9, 0.55) if good else UI_RED)
 	Pal.text(hud, r.position + Vector2(10, 24), "%s   elapsed %s" % [data.get("name", ""), _elapsed()], 8, UI_DIM)
 	# your people: a card each, with their face (greyed if they didn't come home)
@@ -1117,6 +1132,8 @@ func _return_home() -> void:
 		var start_meds := int(a.st["meds"])
 		results.append({"id": a.id, "state": a.state,
 			"used": {"mags": used_mags, "meds": maxi(0, start_meds - a.meds), "flash": maxi(0, int(a.st["flash"]) - a.flashes), "charges": maxi(0, int(a.st["charges"]) - a.charges)}})
+		if op:
+			results[-1].merge(op.fighter_result(a))
 	var loot: Array = []
 	var loot_map := {"smg": "guard_smg", "carbine": "bureau_carbine", "pistol": "service_pistol"}
 	for e in (enemies if outcome == "success" else []):          # you only strip the fallen if you held the field
@@ -1129,7 +1146,9 @@ func _return_home() -> void:
 				else:
 					st.supplies["mag_pistol"] = int(st.supplies.get("mag_pistol", 0)) + 1
 	var notes := Loadout.apply_op(st, results, loot)
-	if sq.have_objective:
+	if op:
+		notes.append_array(op.results(outcome))
+	if sq.have_objective and op == null:
 		st.items.append({"id": st.next_item_id, "name": "Shipping manifests", "type": "intel", "tag": "plan",
 			"worth": "Which trucks carry what, and when.", "source": data.get("name", ""), "day": st.day, "stars": 0, "quality": 0.0, "hand": true, "perks": []})
 		st.next_item_id += 1
@@ -1139,3 +1158,13 @@ func _return_home() -> void:
 	game.set_meta("op_notes", notes)
 	game.autosave()
 	game.goto("res://v2/garage.tscn")
+
+
+## EYES: did you link this depot's cameras from the PC (the EYES program on a depot target)?
+func _has_eyes() -> bool:
+	if game == null or game.state == null:
+		return true
+	for id in game.state.os.get("cameras", []):
+		if "depot" in str(id):
+			return true
+	return false

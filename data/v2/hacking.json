@@ -3,6 +3,7 @@
 	"symbols": ["dia", "bars", "step", "ring", "cross", "slash"],
 	"programs": {
 		"grab": {"name": "GRAB", "len": 2, "text": "Copy the files worth taking."},
+		"unlock": {"name": "UNLOCK", "len": 3, "known": true, "text": "Open one vault door (the depot raid). The system locks out after one."},
 		"wipe": {"name": "WIPE", "len": 2, "text": "Wipe the logs: trace down by a third."},
 		"dirt": {"name": "DIRT", "len": 3, "text": "Dig through the owner's mail: dirt on them, and their password for next time."},
 		"camera": {"name": "EYES", "len": 3, "text": "Link the building's cameras: you'll see them in a raid there."},

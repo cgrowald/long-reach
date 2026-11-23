@@ -20,6 +20,15 @@ func build() -> void:
 	for k in clues.size():
 		var cp := Vector2(300 + k * 10, 108 + k * 7)
 		_notes.append({"rect": Rect2(cp, Vector2(92, 34)), "text": "NEW: " + str(clues[k]), "pinned": true})
+	var K = load("res://v2/sim/krall.gd")
+	if K.k(game.state)["search_due"] and not K.k(game.state)["hidden"]:
+		var hb := Kit.button("Hide the stash (1 night action)", func() -> void:
+			if garage.spend(1.5):
+				K.hide(game.state)
+				garage.toast("The stash is under the floor and behind the boards. Let them look.")
+				close(), game)
+		hb.position = Vector2(150, size.y - 26)
+		add_child(hb)
 	var close_b := Kit.button("Back", close, game)
 	close_b.position = Vector2(size.x - 52, size.y - 26)
 	add_child(close_b)
@@ -65,6 +74,17 @@ func _draw() -> void:
 			Pal.text(self, r.position + Vector2(4, 23), "? not proven", 8, Color(0.5, 0.08, 0.06))
 		draw_circle(r.position + Vector2(r.size.x * 0.5, 2), 2.5, Color(0.85, 0.15, 0.1))
 	draw_circle(pin_c, 3.0, Color(0.85, 0.15, 0.1))
+	# Krall's next move (v2/sim/krall.gd)
+	var K = load("res://v2/sim/krall.gd")
+	var kr := Rect2(Vector2(board.position.x + 12, board.end.y - 92), Vector2(200, 78))
+	draw_rect(kr, Color(0.1, 0.08, 0.08))
+	draw_rect(kr, Color(0.75, 0.15, 0.1) if K.k(st)["search_due"] else Pal.DIM, false, 1.0)
+	Pal.text(self, kr.position + Vector2(6, 4), K.summary(st), 8, Color(1.0, 0.5, 0.35) if K.k(st)["search_due"] else Pal.TEXT)
+	var ly := kr.position.y + 18
+	var log: Array = K.k(st)["log"]
+	for e in log.slice(maxi(0, log.size() - 4)):
+		Pal.text(self, Vector2(kr.position.x + 6, ly), "day %d: %s" % [int(e["day"]), e["text"]], 8, Pal.DIM)
+		ly += 13
 	# Pool.
 	var pr := Rect2(Vector2(board.end.x - 128, board.end.y - 70), Vector2(116, 44))
 	draw_rect(pr, Color(0.1, 0.08, 0.08))

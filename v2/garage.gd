@@ -21,6 +21,7 @@ const SCREENS := {
 	"warroom": preload("res://v2/stations/warroom.gd"), "outside": preload("res://v2/stations/outside.gd"),
 	"sleep": preload("res://v2/stations/sleep.gd"), "stash": preload("res://v2/stations/stash.gd"),
 	"cage": preload("res://v2/stations/cage.gd"),
+	"interrogation": preload("res://v2/stations/interrogation.gd"),
 }
 
 var game: Node
@@ -84,7 +85,10 @@ func _ready() -> void:
 		var txt := "You're back. The night is gone.
 " + "
 ".join(PackedStringArray(notes))
-		Menus.message.call_deferred(_overlay_layer, game, txt, Callable(), "AFTER THE OP")
+		var after := func() -> void:
+			if game.state.flags.has("prisoner"):
+				open_station("prisoner")
+		Menus.message.call_deferred(_overlay_layer, game, txt, after, "AFTER THE OP")
 	refresh()
 	if not game.state.morning_seen:
 		Overlays.day_card(_overlay_layer, game, func() -> void: game.state.morning_seen = true)
@@ -191,6 +195,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			_turn(-1)
 		elif event.is_action_pressed("v2_right"):
 			_turn(1)
+		elif event is InputEventKey and event.pressed and event.keycode == KEY_P and game.state.flags.has("prisoner"):
+			open_station("prisoner")
 
 
 func _turn(dir: int) -> void:

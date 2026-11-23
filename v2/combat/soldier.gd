@@ -15,7 +15,10 @@ const CAMO := {
 	"black": [Color(0.12, 0.12, 0.13), Color(0.09, 0.09, 0.1), Color(0.15, 0.15, 0.16), Color(0.07, 0.07, 0.08), Color(0.11, 0.11, 0.12)],
 	"street": [Color(0.24, 0.2, 0.17), Color(0.2, 0.17, 0.15), Color(0.27, 0.23, 0.19), Color(0.18, 0.16, 0.14), Color(0.14, 0.12, 0.11)],
 	"denim": [Color(0.2, 0.24, 0.32), Color(0.17, 0.2, 0.27), Color(0.23, 0.27, 0.35), Color(0.15, 0.18, 0.24), Color(0.2, 0.23, 0.3)],
+	"regime_low": [Color(0.3, 0.3, 0.31), Color(0.26, 0.26, 0.27), Color(0.33, 0.33, 0.34), Color(0.24, 0.24, 0.25), Color(0.28, 0.28, 0.29)],
+	"navy": [Color(0.12, 0.14, 0.21), Color(0.1, 0.12, 0.18), Color(0.14, 0.16, 0.24), Color(0.09, 0.1, 0.16), Color(0.12, 0.13, 0.2)],
 }
+const PATCHES := [Color(0.3, 0.42, 0.6), Color(0.72, 0.55, 0.16), Color(0.5, 0.18, 0.24), Color(0.42, 0.5, 0.36), Color(0.5, 0.42, 0.58), Color(0.62, 0.36, 0.2)]
 const FLAT := {
 	"coyote": Color(0.36, 0.3, 0.21), "ranger": Color(0.21, 0.24, 0.17), "black": Color(0.07, 0.07, 0.075),
 	"skin": Color(0.5, 0.38, 0.3), "glove": Color(0.15, 0.14, 0.12), "red": Color(0.6, 0.09, 0.07),
@@ -178,6 +181,8 @@ static func painted(part: String, camo: String) -> Mesh:
 	var pal: Array = CAMO.get(camo, CAMO["multicam"])
 	if camo == "street" and (part.begins_with("Body_Thigh") or part.begins_with("Body_Shin") or part == "Body_Pelvis"):
 		pal = CAMO["denim"]        # street clothes: a jacket up top, jeans below
+	elif camo == "regime_low" and (part.begins_with("Body_Thigh") or part.begins_with("Body_Shin") or part == "Body_Pelvis"):
+		pal = CAMO["navy"]         # the lowly depot guard: grey jacket, navy trousers (art bible 08)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(key)
 	for si in src.get_surface_count():
@@ -208,8 +213,17 @@ static func painted(part: String, camo: String) -> Mesh:
 				elif n2 < -0.3:
 					idx = 3
 				col = pal[idx]
+				if camo == "street":
+					# the movement's look (art bible 01, 14): colourful stitched patches, two red stripes on the shoulder
+					var pn := _noise.get_noise_3dv(c * 4.3 + Vector3(11, 5, 2))
+					if pn > 0.22:
+						col = PATCHES[int(absf(c.x * 37.0 + c.y * 53.0 + c.z * 29.0)) % PATCHES.size()]
+					if part.begins_with("Body_UpperArm") and ((c.y > -0.065 and c.y < -0.045) or (c.y > -0.035 and c.y < -0.015)):
+						col = Color(0.62, 0.12, 0.1)
 			else:
 				col = FLAT.get(mname, Color(0.4, 0.4, 0.4))
+				if camo == "regime_low" and part == "Gear_Cap" and mname != "black":
+					col = CAMO["navy"][0]
 			col = col * rng.randf_range(0.9, 1.08)
 			col.a = 1.0
 			for k in 3:
