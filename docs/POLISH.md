@@ -25,6 +25,16 @@ Give the existing garage a restrained environment-art pass. Preserve its layout,
 - **Medium:** woven, worn-metal and polymer material looks (a texture or shader each); the cut-panel dashed outline and the "inspect" corner brackets as bench UI.
 - **Bigger:** the market-bag rig as a modelled object with straps, buckles and pouches worn on a fighter (it ties into the rig grid); two-handed tearing in the bench hands.
 
+## The combat screen: "UPRISING / FIELD LINK" (user, 2026-11-22: for the combat face-lift, not before)
+*Arrived inline only (not saved as a file; drop it in `docs/refs/polish/` if you want it kept).* A full-screen command layout in our pixel style, warm beige-on-charcoal panels with thin rules and pixel type:
+- **Top bar:** "UPRISING / FIELD LINK", the objective in amber with a diamond ("RECOVER SHIPPING MANIFESTS / Dispatch office"), a pause button, ELAPSED 00:23:41.
+- **Main feed** (big, left): "02 / ADA LIND — BREACHER", signal bars, "FAIR", a red REC dot. Over-the-shoulder helmet cam down a grimy green hallway: chunky low-poly fighters in tan helmets and plate carriers, one with a red-cross med pouch; vignette and dither. Radio subtitles bottom left: "VIKTOR: Room clear." (yellow), "IVO: Moving." (red).
+- **OPS MAP / RECON** (top right): a paper blueprint ("Rev. B", north arrow, ~25 m scale): rooms in grey, numbered squad circles 1-3, the objective diamond in the OFFICE, a red dashed "?" room = last report; legend SQUAD / OBJECTIVE / LAST REPORT; "Updated 00:18 ago" (the map is reports, not live).
+- **SQUAD panel:** a row per fighter: number box, a helmet portrait, name, signal bars, state (STEADY in teal, "+ BLEEDING" in red); the selected one framed amber; FOCUS: ALL dropdown and a RADIO button.
+- **Feed strip** (bottom): five thumbnails: 1 VIKTOR, 2 ADA (selected, amber), 3 IVO (red dot = hurt), CCTV 07 and CCTV 08 in green night tint, each captioned with its place (Hallway (W), Storage A, Dispatch Anteroom).
+- **Key hints:** 1-3 Helmet cams, Tab Next feed, Space Pause, Esc Back.
+- *Read:* our feed wall + ops board + squad list, reorganised into one calm screen: one big feed, the map as stale paper intel, states as words, CCTV as equal feeds. Medium job when we get there (layout and styling; the parts mostly exist).
+
 ## The gun bench, done properly (user, 2026-11-22: a design change for later, not just polish)
 *"This is more what I meant for this bench, not the three holes we make now, which makes no sense."* The reference is a ChatGPT sheet titled "ENGINE WORKSHOP" (it called the gun an engine to get past ChatGPT's rules):
 - a first-person view at a green **drill press / mill**: the part clamped in a vise on a cross-slide table;

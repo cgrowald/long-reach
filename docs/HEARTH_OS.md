@@ -51,3 +51,23 @@
 **The report:** time, trace, what you took. Files go to the stash as **intel** (dirt, money leads, plans). The box's gadgets show as multipliers in every stage.
 
 **The box (3D, the desk machine):** lean in, and your gadgets lie on the desk in front of it. Drag one onto a slot on top (SCAN / CRACK / NET) and its lamp lights; right-click a slot to unplug. Free to use. New hacking-bench gadgets for the other slots: wordlist drive (crack) and signal damper (net).
+
+## Build 5: the hacking pass (design, user answers 2026-11-22 late)
+*Goal: stolen intel finally does something. The three stage minigames stay as they are (the user hasn't played them and chose to go from the design).*
+
+**1. Two things to do with a file (the choice is the tension):**
+- **Sell it to the fixer.** A contact on the PC (a hidden StateNet page and mail). He pays per file by kind and quality; the price drops the more of one kind you sell. Selling earns his **trust**, which later opens the black market (ECONOMY section 8).
+- **Post it on Nod** from an **anonymous account** (user: "we want to use this to post online on anonymous accounts to gain followers, and more followers means more recruits"). Posting gains followers; followers become recruit leads (RUNDOWN section 7: people come from your world). Posting draws Bureau attention, and an account can get burned.
+- *Claude's call, overrulable:* a file is sold **or** posted, not both (money now vs the movement later).
+
+**2. Payoffs beyond files (build all of them now; user: "these are all behind walls you gain knowledge to start doing; we'll figure out how we level this up, but we build it all first"):** each is a **knowledge** flag, locked by default, with a debug key to unlock all.
+- **Redirect a delivery:** hack a depot or shop; a crate of graded materials waits at a drop the next night (costs a night action to collect).
+- **Empty a payroll:** money at once, more Bureau attention than a normal job.
+- **Camera access:** the place's CCTV feeds become available in a raid there (the depot does this today; make it general per place).
+- **Dirt on a person:** a file naming a contact, kept for the "exploit a person" talk later.
+
+**3. Targets come from the generated town:** each night 2-3 targets drawn from the town's places (offices, depots, shops, clinics, the police station later), with difficulty (nodes, trace rate, password depth) scaling as your gadgets get better. The list rotates nightly; hand-written targets in os.json stay as fixed specials.
+
+**4. Getting cut out (trace full):** keep files already taken, a clue on the corkboard, **plus Bureau attention up and that target locked for a few nights** ("they patched it").
+
+**Open for the build (ask the user when we get there):** how fast followers turn into recruits; what burns an anonymous account and what a new one costs; the fixer's name and voice (user writes story text); how many knowledge walls and what opens each (decided later by the user).

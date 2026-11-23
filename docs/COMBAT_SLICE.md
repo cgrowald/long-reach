@@ -251,6 +251,19 @@ Title screen > **Combat: depot raid** (`v2/combat/fight.tscn`, content in `data/
 
 **Later:** better weapons lower the TTK; specific targets field better-armoured enemies, which needs better rounds and more ammo.
 
+### What the user's Operator clip shows (watched 2026-11-22)
+*The user recorded himself clearing a two-storey house solo in Operator (2 minutes; `Downloads/Operator_...mp4`, read frame by frame through Blender). It is solo, so the team rules above still stand; this adds how one man moves. Built so far: the rear man holds the hall, and the entry spots alternate sides. Everything below is not built yet.*
+1. **Look before you go in.** He walks the fence line, then looks through the windows beside the door before touching it. He sees a man inside and **shoots him through the glass** from outside. Ours: windows are recon (and a firing port); a fighter by a window reports what he sees.
+2. **Crack and peek.** Every inside door is opened a crack with his body against the frame; he looks through the gap first, then opens it fully. Ours: the opener's peek feeds the danger read and the first man's choice (J-hook or straight, or "contact, flash it").
+3. **Slice the pie from the threshold.** He clears whatever he can see from outside the doorway, angle by angle, before crossing. Only the dead corners get cleared by stepping in. Ours: the stack sweeps the visible room from the door; the flow covers just the blind corners.
+4. **Fight from the frame.** On contact he stays at the door and shoots, he doesn't push in. Ours: contact during the peek = hold the doorway and fight, no flow.
+5. **Small rooms from the door.** Bathroom, closet and laundry are cleared from the doorway with one look; nobody piles in. Ours: room size decides how many enter (1 for a closet, 2-3 for a big room).
+6. **Corners and hallways:** he hugs the wall and leans out a little at a time.
+7. **Stairs:** going up, the gun watches the landing above (he shot a man at the top); going down to the basement, he clears the stairwell from the top first, then checks **under the stairs** at the bottom.
+8. **Lights only where it's dark:** the flashlight stays off upstairs and comes on in the basement. Same as our rule.
+9. **Hit mid-clear:** he backs into a cleared room and treats the wounded **limb** (bleeding left arm; bandage, tourniquet, splint, morphine on a body map). Ours: per-limb wounds and med items used on the part, which ties straight into the med bench (torn-shirt bandage up to IFAK). Fits the face-lift's "damage by where it lands".
+10. **Slow at every threshold,** quick between them.
+
 ## 11. The combat face-lift (user, 2026-11-22: later; the garage and the economy come first)
 - **"The combat is good, but it needs a massive face lift."**
 - **Realistic weapon handling and damage:**
