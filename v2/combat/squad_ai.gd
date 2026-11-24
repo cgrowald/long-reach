@@ -1122,7 +1122,10 @@ func _tick_exploit(delta: float) -> void:
 	if float(task["t"]) < need:
 		return
 	pc["done"] = true
-	pc_files.append("%s PC" % _room_name(pc["room"]).capitalize())
+	var pc_name := "%s PC" % _room_name(pc["room"]).capitalize()
+	if pc_files.has(pc_name):
+		pc_name += " %d" % (pc_files.filter(func(x) -> bool: return str(x).begins_with(pc_name)).size() + 1)
+	pc_files.append(pc_name)
 	g.say("Got it. Files are on the stick.", true)
 	log_line.emit("Pulled the files off the %s PC" % _room_name(pc["room"]))
 	if _exploit_pc(str(task["into"])):

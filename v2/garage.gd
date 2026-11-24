@@ -27,6 +27,7 @@ const SCREENS := {
 	"cage": preload("res://v2/stations/cage.gd"),
 	"interrogation": preload("res://v2/stations/interrogation.gd"),
 	"board": preload("res://v2/stations/board.gd"),
+	"haul": preload("res://v2/stations/haul.gd"),
 }
 
 var game: Node
@@ -84,6 +85,7 @@ func _ready() -> void:
 	_apply_settings()
 	game.ambience.volume_db = -12.0
 	if game.has_meta("op_notes"):
+		world.place([0.2, 2.3, 0.0], [0.85, 3.75, 0.4])      # back in through the roller door, facing what you brought home
 		var notes: Array = game.get_meta("op_notes")
 		game.remove_meta("op_notes")
 		var txt := "You're back. The night is gone.
@@ -108,6 +110,7 @@ func _apply_settings() -> void:
 
 func refresh() -> void:
 	world.boards.refresh(game.state)
+	world.show_prop("haul", game.state.flags.has("haul"))      # the carton under the lamp (D)
 	hud.compact = screen != null
 	if screen:
 		hud.hint_line = "Esc or right-click: step back"
@@ -220,6 +223,10 @@ func _hover_card() -> void:
 		var card: Dictionary = world.boards.board_cards[_card]
 		hud.hover_title = "TONIGHT: " + str(card["title"])
 		hud.hover_hint = "%s   [E] show me" % str(Content.station(str(card["go"])).get("name", ""))
+	elif _card == -2:
+		var bu: Dictionary = Tonight.bureau(game.state)
+		hud.hover_title = "BUREAU: " + str(bu["clock"]).replace("KRALL: ", "KRALL ")
+		hud.hover_hint = str(bu["note"]) if str(bu["note"]) != "" else "Nothing on you. Yet."
 	else:
 		hud.hover_hint = "Aim at a card and press E. Or E here: read it close."
 

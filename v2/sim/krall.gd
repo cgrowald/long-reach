@@ -144,3 +144,34 @@ static func seize_delivery(state: RefCounted) -> bool:
 		d["intercept"] = false
 		return true
 	return false
+
+
+# ------------------------------------------------------------------ Bureau notes (D, coming home)
+# One cause, one visible follow-up (GPT notes, CONNECTED_LOOP section 8): something you did, in the Bureau's words,
+# and what it does to Krall's clock. Shown in the Bureau corner of the TONIGHT board and on the next morning card.
+
+## Log what the Bureau learned and bring Krall that much closer.
+static func note(state: RefCounted, text: String, nights: float, why: String) -> void:
+	bump(state, nights, why)
+	var notes: Array = state.flags.get("bureau_notes", [])
+	notes.append({"day": state.day, "text": text, "nights": nights, "seen": false})
+	state.flags["bureau_notes"] = notes.slice(-8)
+
+
+## The newest note, or {} (only recent ones: a week).
+static func latest_note(state: RefCounted) -> Dictionary:
+	var notes: Array = state.flags.get("bureau_notes", [])
+	if notes.is_empty():
+		return {}
+	var n: Dictionary = notes[-1]
+	return n if int(state.day) - int(n["day"]) <= 7 else {}
+
+
+## Notes the morning card hasn't shown yet (marks them shown).
+static func unseen_notes(state: RefCounted) -> Array:
+	var out: Array = []
+	for n in state.flags.get("bureau_notes", []):
+		if not n.get("seen", false):
+			n["seen"] = true
+			out.append(n)
+	return out

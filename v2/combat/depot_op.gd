@@ -599,11 +599,7 @@ func results(outcome: String) -> Array:
 		if not p.is_empty():
 			state.flags["prisoner"] = p
 			out.append("You brought %s back to the garage. They're tied to a chair under the bulb." % p["name"])
-		Krall.bump(state, 2.0, "the depot raid")
-	elif outcome == "withdrew":
-		Krall.bump(state, 1.5, "an aborted depot raid")
-	else:
-		Krall.bump(state, 3.0, "a failed depot raid")
+	_bureau_note(outcome)
 	DepotRun.close(state, run, {"loud": loud, "alarm": alarm, "door": opened, "time": int(f.t_op), "kind": run["kind"]})
 	return out
 
@@ -651,3 +647,35 @@ func choose(id: String) -> void:
 			for w in [_win_prompt, _win_term, _win_door]:
 				if w and is_instance_valid(w):
 					_close_win(w)
+
+
+## What the Bureau makes of tonight (D): one note in their words, tied to what you did, and how much sooner Krall
+## comes for it. The board's Bureau corner shows it tonight; the morning card names the consequence.
+func _bureau_note(outcome: String) -> void:
+	var where := str(run.get("kind_name", "the depot")).to_lower()
+	var txt := ""
+	var nights := 2.0
+	if outcome == "failed":
+		txt = "Raid on the %s beaten off. They have bodies to identify." % where
+		nights = 3.0
+	elif alarm:
+		txt = "Alarm logged at the %s. The response team found the stores opened." % where
+		nights = 3.0
+	elif loud:
+		txt = "Neighbours reported shots at the %s. Patrols asked who drives at night." % where
+		nights = 2.0
+	else:
+		txt = "Break-in at the %s, found at shift change. Nobody heard a thing." % where
+		nights = 1.0
+	if outcome == "withdrew":
+		txt += " The raiders ran."
+		nights = maxf(1.0, nights - 0.5)
+	for e in f.enemies:
+		if e.state == "cuffed":
+			txt += " A guard is missing."
+			nights += 0.5
+			break
+	if opened >= 0:
+		txt += " A vault door was opened."
+		nights += 0.5
+	Krall.note(state, txt, nights, "the depot raid")

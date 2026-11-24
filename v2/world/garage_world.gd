@@ -606,3 +606,55 @@ func _on_soft_floor() -> bool:
 		if bx >= float(r[0]) and bx <= float(r[2]) and by >= float(r[1]) and by <= float(r[3]):
 			return true
 	return false
+
+
+# ------------------------------------------------------------------ props that come and go (D: the haul)
+
+var _props := {}                 # station id -> {node, body}
+
+
+## A station that isn't in the .glb: a piece from another model placed in the room (stations.json "prop":
+## {kit, piece, at (Blender), turn}). Usable like any station; shown only while show_prop(id, true).
+func add_prop(id: String) -> void:
+	var s: Dictionary = _stations.get(id, {})
+	if s.is_empty() or not s.has("prop") or _props.has(id):
+		return
+	var pr: Dictionary = s["prop"]
+	var ps: PackedScene = load(str(pr["kit"]))
+	var src := ps.instantiate()
+	var piece := src.find_child(str(pr["piece"]), true, false) as Node3D
+	if piece == null:
+		src.free()
+		return
+	var n := piece.duplicate() as Node3D
+	src.free()
+	add_child(n)
+	n.transform = Transform3D(Basis(Vector3.UP, deg_to_rad(float(pr.get("turn", 0.0)))), b2g(pr["at"]))
+	KindLook.apply(n)
+	var body := _body(id)
+	_meshes[id] = []
+	for mi in n.find_children("*", "MeshInstance3D", true, false):
+		var m := mi as MeshInstance3D
+		_meshes[id].append(m)
+		var gt := m.global_transform
+		var aabb := m.get_aabb()
+		var shape := CollisionShape3D.new()
+		var b := BoxShape3D.new()
+		b.size = (aabb.size * gt.basis.get_scale()).max(Vector3(0.04, 0.04, 0.04))
+		shape.shape = b
+		shape.transform = Transform3D(gt.basis.orthonormalized(), gt * aabb.get_center())
+		body.add_child(shape)
+	_props[id] = {"node": n, "body": body}
+
+
+func show_prop(id: String, on: bool) -> void:
+	if not _props.has(id):
+		if not on:
+			return
+		add_prop(id)
+		if not _props.has(id):
+			return
+	var p: Dictionary = _props[id]
+	(p["node"] as Node3D).visible = on
+	for c in (p["body"] as Node).get_children():
+		(c as CollisionShape3D).disabled = not on

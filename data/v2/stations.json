@@ -38,6 +38,8 @@
 		{"id": "board", "touch": "kenney_impact/impactPlank_medium_001", "name": "TONIGHT board", "hint": "What's next. Pick a card.",
 			"cam": [2.55, 4.0, 1.55], "look": [2.55, 4.95, 1.55], "hours": 0.0, "screen": "board",
 			"board_face": {"at": [2.55, 4.905, 1.55], "face": [0, -1], "size": [1.13, 0.83]}},
+		{"id": "haul", "touch": "kenney_impact/impactPlank_medium_002", "name": "The haul", "hint": "What came home. Look through it, put it away.", "prop": {"kit": "res://art/depot_kit.glb", "piece": "Kit_crate", "at": [0.85, 3.75, 0.0], "turn": 20},
+			"cam": [0.85, 2.75, 1.45], "look": [0.85, 3.75, 0.35], "hours": 0.0, "screen": "haul"},
 		{"id": "corkboard", "name": "Corkboard", "hint": "What the Bureau knows.", "hidden": true,
 			"cam": [0, 0, 1.5], "look": [0, 1, 1.5], "hours": 0.0, "screen": "corkboard"},
 		{"id": "clipboard", "name": "Clipboard", "hint": "Tonight's plan.", "hidden": true,

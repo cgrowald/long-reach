@@ -1215,6 +1215,23 @@ func _return_home() -> void:
 	var notes := Loadout.apply_op(st, results, loot)
 	if op:
 		notes.append_array(op.results(outcome))
+	# coming home (D): who your meds helped, the files off the PCs, and the haul waiting under a garage lamp
+	for a in squad:
+		for t in a.treated:
+			if str(t.get("by", "")) != "self" and str(t.get("by", "")) != "":
+				notes.append("%s used %s on %s's %s." % [t["by"], t["item"], _first(a), a.part_name(str(t["part"]))])
+	var haul: Array = []
+	for n in notes:
+		var s := str(n)
+		if s.begins_with("Carried out") or s.begins_with("From the vault") or s.begins_with("Looted"):
+			haul.append(s)
+	for pf in sq.pc_files:
+		st.items.append({"id": st.next_item_id, "name": "Files: %s" % pf, "type": "intel", "tag": "files",
+			"worth": "Pulled off a depot PC. Sell it or read it.", "source": data.get("name", ""), "day": st.day, "stars": 0, "quality": 0.0, "hand": true, "perks": []})
+		st.next_item_id += 1
+		haul.append("Files off the %s (on the stick)." % pf)
+	if not haul.is_empty() and outcome != "failed":
+		st.flags["haul"] = {"title": "THE DOBREV CARTON", "lines": haul, "day": st.day}
 	if sq.have_objective and op == null:
 		st.items.append({"id": st.next_item_id, "name": "Shipping manifests", "type": "intel", "tag": "plan",
 			"worth": "Which trucks carry what, and when.", "source": data.get("name", ""), "day": st.day, "stars": 0, "quality": 0.0, "hand": true, "perks": []})

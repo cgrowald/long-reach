@@ -11,6 +11,7 @@ const Wear := preload("res://v2/sim/wear.gd")
 const Loadout := preload("res://v2/sim/loadout.gd")
 const DepotRun := preload("res://v2/sim/depot_run.gd")
 const Content := preload("res://v2/sim/content.gd")
+const Krall := preload("res://v2/sim/krall.gd")
 
 const BENCHES := {"bench_sew": "armor", "bench_med": "meds", "bench_gun": "weapons", "bench_hack": "electronics"}
 
@@ -95,6 +96,10 @@ static func signs(state, station: String) -> Array:
 			rows.append({"text": "PLAN FILE", "tag": "FOUND" if not DepotRun.plan_files(state).is_empty() else "NONE YET", "ok": not DepotRun.plan_files(state).is_empty()})
 			for a in arrivals(state):
 				rows.append({"text": str(a).to_upper(), "tag": "TOMORROW", "ok": true})
+		"haul":
+			for ln in state.flags.get("haul", {}).get("lines", []).slice(0, 4):
+				var s := str(ln)
+				rows.append({"text": (s.substr(0, 30) + ("..." if s.length() > 30 else "")).to_upper(), "tag": "HOME", "ok": true})
 		"pc":
 			var found := not DepotRun.plan_files(state).is_empty()
 			rows.append({"text": "DEPOT PLAN FILE", "tag": "FOUND" if found else "HACK READY", "ok": true})
@@ -116,6 +121,10 @@ static func arrivals(state) -> Array:
 ## The TONIGHT board: the few things worth knowing when the evening starts.
 static func board(state) -> Array:
 	var cards: Array = []
+	# HAUL: what came home last night, waiting under the lamp by the roller door (D)
+	if state.flags.has("haul"):
+		var hl: Array = state.flags["haul"].get("lines", [])
+		cards.append({"title": "HAUL", "line": "%d thing%s from the raid. By the roller door" % [hl.size(), "" if hl.size() == 1 else "s"], "go": "haul", "ok": true})
 	# BENCH: the best thing you can make or mend right now, else the nearest miss
 	var ready: Array = []
 	var short: Array = []
@@ -151,3 +160,9 @@ static func board(state) -> Array:
 	if state.flags.has("prisoner"):
 		cards.append({"title": "THE CHAIR", "line": "%s is waiting" % str(state.flags["prisoner"].get("first", "Someone")), "go": "prisoner", "ok": true})
 	return cards
+
+
+## The Bureau corner of the board (D): Krall's clock, and the newest thing they wrote down about you.
+static func bureau(state) -> Dictionary:
+	var n := Krall.latest_note(state)
+	return {"clock": Krall.summary(state), "note": str(n.get("text", "")), "nights": float(n.get("nights", 0.0))}

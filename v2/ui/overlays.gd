@@ -76,6 +76,13 @@ static func day_card(parent: Control, game: Node, on_close: Callable) -> Control
 		for ln in game.get_meta("work_lines"):
 			pv.add_child(Kit.label(str(ln), Pal.MULT if str(ln).begins_with("AUDIT") or str(ln).begins_with("FIRED") else Pal.TEXT, 8, 230))
 		game.remove_meta("work_lines")
+	# the Bureau notice (D): what your raid caused, in their words, and what it does to Krall's clock
+	var kr = load("res://v2/sim/krall.gd")
+	for n in kr.unseen_notes(st):
+		pv.add_child(Kit.label("BUREAU NOTICE", Color(1.0, 0.55, 0.45), 9))
+		pv.add_child(Kit.label(str(n["text"]), Pal.TEXT, 8, 230))
+		var nn := float(n.get("nights", 0.0))
+		pv.add_child(Kit.label("Because of it, Inspector Krall is %s night%s closer. %s." % [str(snappedf(nn, 0.5)).trim_suffix(".0"), "" if nn <= 1.0 else "s", "Next: " + str(kr.summary(st)).replace("KRALL: ", "").to_lower()], Pal.DIM, 8, 230))
 	var picking_job: bool = st.job == "" and not st.job_offers.is_empty()
 	var rule: Dictionary = st.rule()
 	if not picking_job:

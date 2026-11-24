@@ -29,7 +29,7 @@ func _ready() -> void:
 func refresh() -> void:
 	if game and game.state:
 		cards = Tonight.board(game.state)
-	size = Vector2(150, 30 + cards.size() * 30)
+	size = Vector2(150, 30 + cards.size() * 30 + 30)      # + the Bureau corner (D)
 	queue_redraw()
 
 
@@ -93,3 +93,11 @@ func _draw() -> void:
 			draw_string(Pal.font(), lr.position + Vector2(lr.size.x - 16, 10), ">", HORIZONTAL_ALIGNMENT_LEFT, -1, 9, Pal.BRASS)
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 		_rects.append(cr)
+	# the Bureau corner: Krall's clock and the newest note about you
+	if game and game.state:
+		var bu: Dictionary = Tonight.bureau(game.state)
+		var br := Rect2(Vector2(9, size.y - 30), Vector2(size.x - 18, 25))
+		draw_rect(br, Color(0.84, 0.85, 0.82))
+		draw_rect(Rect2(br.position, Vector2(br.size.x, 9)), Color(0.16, 0.2, 0.3))
+		draw_string(Pal.bold(), br.position + Vector2(3, 8), str(bu["clock"]), HORIZONTAL_ALIGNMENT_LEFT, br.size.x - 6, 7, Color(1.0, 0.6, 0.5))
+		draw_string(Pal.font(), br.position + Vector2(3, 18), str(bu["note"]) if str(bu["note"]) != "" else "Nothing on you. Yet.", HORIZONTAL_ALIGNMENT_LEFT, br.size.x - 6, 7, INK)

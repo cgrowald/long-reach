@@ -92,6 +92,7 @@ func refresh(state) -> void:
 	board_cards = Tonight.board(state)
 	if _board_face:
 		_board_face.cards = board_cards
+		_board_face.bureau = Tonight.bureau(state)
 		_board_face.queue_redraw()
 		_board_vp.render_target_update_mode = SubViewport.UPDATE_ONCE
 	for id in _signs:
@@ -148,9 +149,13 @@ class BoardFace extends Control:
 
 	var cards: Array = []
 	var hover := -1
+	var bureau: Dictionary = {}      # {clock, note}: the Bureau corner (D)
+	var bureau_rect := Rect2()
 	var _rects: Array = []
 
 	func card_at(p: Vector2) -> int:
+		if bureau_rect.has_point(p) and not bureau.is_empty():
+			return -2          # the Bureau memo
 		for i in _rects.size():
 			if (_rects[i] as Rect2).grow(4).has_point(p):
 				return i
@@ -165,10 +170,11 @@ class BoardFace extends Control:
 		for i in 900:
 			draw_rect(Rect2(Vector2(rng.randf() * size.x, rng.randf() * size.y), Vector2(2, 2)), CORK_D)
 		# the title strip
-		var tr := Rect2(Vector2(size.x * 0.5 - 150, 18), Vector2(300, 72))
+		var tr := Rect2(Vector2(40, 18), Vector2(270, 72))
 		draw_rect(Rect2(tr.position + Vector2(4, 5), tr.size), Color(0, 0, 0, 0.3))
 		draw_rect(tr, PAPER)
 		draw_string(Pal.bold(), Vector2(tr.position.x, tr.position.y + 56), "TONIGHT", HORIZONTAL_ALIGNMENT_CENTER, tr.size.x, 52, INK)
+		_draw_bureau(Rect2(Vector2(330, 12), Vector2(size.x - 344, 88)))
 		var n := maxi(cards.size(), 1)
 		var top := 110.0
 		var gap := 12.0
@@ -195,6 +201,23 @@ class BoardFace extends Control:
 				draw_string(Pal.bold(), lr.position + Vector2(lr.size.x - 40, 12 + title_sz), ">", HORIZONTAL_ALIGNMENT_LEFT, -1, title_sz, Pal.BRASS)
 			draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 			_rects.append(cr)
+
+
+	## The Bureau corner (D): a pinned navy memo with Krall's clock and the newest note about you.
+	func _draw_bureau(r: Rect2) -> void:
+		bureau_rect = r
+		if bureau.is_empty():
+			return
+		draw_rect(Rect2(r.position + Vector2(3, 4), r.size), Color(0, 0, 0, 0.3))
+		draw_rect(r, Color(0.84, 0.85, 0.82))
+		draw_rect(Rect2(r.position, Vector2(r.size.x, 22)), Color(0.16, 0.2, 0.3))
+		draw_string(Pal.bold(), r.position + Vector2(8, 17), "BUREAU", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(0.9, 0.9, 0.85))
+		draw_string(Pal.bold(), r.position + Vector2(90, 17), str(bureau.get("clock", "")).replace("KRALL: ", "KRALL  "), HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 96, 15, Color(1.0, 0.55, 0.45))
+		var note := str(bureau.get("note", ""))
+		if note == "":
+			note = "Nothing on you. Yet."
+		draw_multiline_string(Pal.font(), r.position + Vector2(8, 40), note, HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 16, 14, 4, INK)
+		draw_circle(r.position + Vector2(r.size.x * 0.5, 4), 6, Color(0.7, 0.15, 0.12))
 
 
 ## A station's status sign (concept 03): the station's name, then one row per thing with a tag on the right.
