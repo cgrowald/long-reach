@@ -1,5 +1,5 @@
 {
-	"_note": "Wear and mending (docs/BENCH_SEWING.md, user 2026-11-24: gear wears slowly each op, mostly from getting hurt). v2/sim/wear.gd. A hit can tear what the fighter wears (clothes or rig) at a spot; each spot has a place on the sewing table's base piece (at = [x, z, yaw] from the base centre, metres, x right, z toward you) and a place on the fighter (body: arm_r, arm_l, chest, hips). Mending costs one old shirt (scraps) and half an hour per tear.",
+	"_note": "Wear and mending (docs/BENCH_SEWING.md, user 2026-11-24: gear wears slowly each op, mostly from getting hurt). v2/sim/wear.gd. A hit can tear what the fighter wears (clothes or rig) at a spot; each spot has a place on the sewing table's base piece (at = [x, z, yaw] from the base centre, metres, x right, z toward you) and a place on the fighter (body: arm_r, arm_l, chest, hips). Mending costs one old shirt (scraps) per tear and no time (user 2026-11-24: making things takes no time).",
 	"tear_per_hit": 0.7,
 	"rig_share": 0.35,
 	"op_wear": 3,

@@ -84,6 +84,14 @@ func setup(p_garage: Node) -> void:
 			if p.get("alive", true):
 				n += W.after_op(game.state, p, 3, func() -> float: return randf() * 0.6).size()
 		garage.toast("%d tears. Mend them at the sewing table (needs old shirts)." % n))
+	add.call("M1b: next sewing table upgrade", func() -> void:
+		var C = load("res://v2/sim/crafting.gd")
+		for id in ["walking_foot", "strap_rack"]:
+			if not C.installed(game.state).has(id):
+				C.install_upgrade(game.state, id)
+				garage.toast("Installed: %s. The sewing table is now stage %d of 2." % [C.upgrades_def()[id]["name"], C.bench_stage(game.state, "armor")])
+				return
+		garage.toast("The sewing table is fully upgraded."))
 	add.call("Open all markets", func() -> void:
 		game.state.flags["markets_open"] = true
 		game.state.supplies["picks"] = int(game.state.supplies.get("picks", 0)) + 5

@@ -210,6 +210,16 @@ static func quirk_swing(state, bench: String, rng_val: float) -> float:
 	return (rng_val * 2.0 - 1.0) * swing
 
 
+## How built-up a bench is: 0 starter, 1 improved, 2 upgraded (one stage per upgrade installed on it).
+## The sewing table shows it (art/sewing.glb: Sew_Starter, Sew_Improved, Sew_Upgraded) and works easier with it.
+static func bench_stage(state, bench: String) -> int:
+	var n := 0
+	for id in installed(state):
+		if upgrades_def().get(id, {}).get("bench", "") == bench:
+			n += 1
+	return mini(n, 2)
+
+
 static func install_upgrade(state, id: String) -> void:
 	var have: Array = installed(state)
 	if not have.has(id):

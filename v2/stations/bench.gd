@@ -72,7 +72,7 @@ func _show_list() -> void:
 		var name_l := Kit.label("%s" % str(rec["name"]).replace(" (gadget)", ""), Pal.TEXT, 10)
 		name_l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		head.add_child(name_l)
-		head.add_child(Kit.label("T%d  %s" % [int(rec.get("tier", 1)), "1 ACTION" if Economy.action_cost(float(rec.get("hours", 1.0))) > 0 else "FREE"], Pal.BRASS, 7))
+		head.add_child(Kit.label("T%d" % int(rec.get("tier", 1)), Pal.BRASS, 7))
 		if not Crafting.unlocked(st, rec):
 			var after := Crafting.recipe(rec.get("after", ""))
 			v.add_child(Kit.label("Locked: make a good %s first (3 stars+)." % after.get("name", "?"), Pal.DIM, 8, 220))
@@ -107,6 +107,16 @@ func _show_list() -> void:
 			r2.add_child(b)
 		v.add_child(HSeparator.new())
 	if def.get("bench", "") == "armor":
+		var stage: int = Crafting.bench_stage(game.state, "armor")
+		v.add_child(Kit.heading("Your table: " + ["Starter (sawhorses)", "Improved (sewing machine)", "Upgraded (pegboard and cutting board)"][stage]))
+		var ups: Array = []
+		for id in Crafting.upgrades_def():
+			var u: Dictionary = Crafting.upgrades_def()[id]
+			if u.get("bench", "") == "armor" and not Crafting.installed(game.state).has(id):
+				ups.append(str(u.get("name", id)))
+		if not ups.is_empty():
+			v.add_child(Kit.label("Next upgrades come from depot vaults: " + ", ".join(PackedStringArray(ups)) + ".", Pal.DIM, 8, 230))
+		v.add_child(HSeparator.new())
 		_mend_list(v)
 	outer.add_child(Kit.label("Made things go to the shelves (west wall).", Pal.DIM, 8, 240))
 
@@ -136,7 +146,7 @@ func _mend_list(v: VBoxContainer) -> void:
 		v.add_child(Kit.label("%s%s: torn at the %s" % [item.get("name", ""), who, ", ".join(PackedStringArray(spots))], Pal.TEXT, 8, 230))
 		var why: String = W.can_mend(game.state, item)
 		var r := Kit.row(v)
-		r.add_child(Kit.label("%d old shirt%s, %.1fh" % [W.scraps_needed(item), "" if W.scraps_needed(item) == 1 else "s", float(W.job(item)["hours"])], Pal.MULT if why != "" else Pal.DIM, 8))
+		r.add_child(Kit.label("%d old shirt%s" % [W.scraps_needed(item), "" if W.scraps_needed(item) == 1 else "s"], Pal.MULT if why != "" else Pal.DIM, 8))
 		var b := Kit.button("Mend", func() -> void: _mend(item), game)
 		b.disabled = why != ""
 		r.add_child(b)
@@ -146,8 +156,7 @@ func _mend_list(v: VBoxContainer) -> void:
 func _mend(item: Dictionary) -> void:
 	var W := load("res://v2/sim/wear.gd")
 	var job: Dictionary = W.job(item)
-	if not garage.spend(float(job["hours"])):
-		return
+	# making and mending take no time (user 2026-11-24): only missions and going out do
 	_mending = item
 	_recipe = job
 	_list.queue_free()
@@ -180,8 +189,7 @@ func _on_mend_done(scores: Array) -> void:
 # ------------------------------------------------------------------ making it
 
 func _make(r: Dictionary) -> void:
-	if not garage.spend(float(r.get("hours", 1.0))):
-		return
+	# no time cost: making things only uses materials (user 2026-11-24)
 	_grade = Crafting.consume(game.state, r)
 	_recipe = r
 	_step = 0
@@ -244,8 +252,6 @@ func _finish() -> void:
 
 
 func _batch(r: Dictionary) -> void:
-	if not garage.spend(float(r.get("hours", 1.0)) * 0.5):
-		return
 	var bg := Crafting.consume(game.state, r)
 	var item := Crafting.batch(game.state, r, bg)
 	game.sfx.play("confirmation_002", 0.9, -6.0)

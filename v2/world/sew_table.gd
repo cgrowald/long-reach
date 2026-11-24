@@ -15,9 +15,10 @@ const KindLook := preload("res://v2/world/kind_look.gd")
 
 const TOP := 0.78                 # the table top (metres)
 const LIFT := 0.13                # how high a held part floats
-const SNAP_DIST := 0.08           # within this (and the angle below) it snaps onto its outline
+var SNAP_DIST := 0.08             # within this (and the angle below) it snaps onto its outline (further on the upgraded table)
 const SNAP_YAW := 30.0
-const RING_TIME := 1.0            # seconds for a stitch ring's circle to close
+var RING_TIME := 1.0              # seconds for a stitch ring's circle to close (slower with the sewing machine)
+var AIM := 18.0                   # how close a stitch click must land (UI units; wider with the sewing machine)
 const RES := 2.0                  # 3D resolution per UI unit
 const BASE_AT := Vector3(-0.05, 0.0, 0.13)
 const SLOTS := [Vector2(-0.56, -0.02), Vector2(0.48, 0.2), Vector2(-0.56, 0.22), Vector2(0.48, -0.02), Vector2(0.62, 0.2), Vector2(-0.42, 0.3)]
@@ -116,7 +117,7 @@ func _build_world() -> void:
 			(c as Node3D).position = Vector3.ZERO
 			for k in c.get_children():
 				var n := str(k.name)
-				if n.begins_with("Runner") or n.begins_with("BluePatch") or n.begins_with("Sc_"):
+				if n.begins_with("Runner") or n.begins_with("BluePatch") or n.begins_with("Sc_") or n.begins_with("Ext_Jacket") or (stage != "Sew_Starter" and n.begins_with("Cloth_")):
 					k.visible = false
 	KindLook.apply(tables)
 	_bulbs(tables)
@@ -232,9 +233,16 @@ func _nearest_tear(n: Node3D):
 	return best
 
 
-## Which table you have (upgrades come with bench upgrades later; docs/BENCH_SEWING.md build step 5).
+## Which table you have: one stage per sewing-table upgrade installed (Crafting.bench_stage; upgrades come from depot vaults).
+## Improved = the sewing machine: stitch rings close slower and take a wider aim. Upgraded: parts snap in from further off too.
 func stage_name() -> String:
-	return "Sew_Starter"
+	var st: int = load("res://v2/sim/crafting.gd").bench_stage(game.state, "armor")
+	if st >= 1:
+		RING_TIME = 1.35
+		AIM = 23.0
+	if st >= 2:
+		SNAP_DIST = 0.11
+	return ["Sew_Starter", "Sew_Improved", "Sew_Upgraded"][st]
 
 
 func _bulbs(n: Node) -> void:
@@ -467,12 +475,12 @@ func _stitch_click(ui: Vector2) -> void:
 		return
 	var rp := to_ui(rings[ring_i])
 	var dist := ui.distance_to(rp)
-	if dist > 18.0:
+	if dist > AIM:
 		_pop("MISS", ui, Pal.MULT)
 		game.deny()
 		return
 	var timing := 1.0 - absf(ring_t / RING_TIME - 1.0) * 1.6        # best when the circle closes on it
-	var aim := 1.0 - dist / 18.0
+	var aim := 1.0 - dist / AIM
 	var s := clampf(0.55 * clampf(timing, 0.0, 1.0) + 0.45 * aim, 0.0, 1.0)
 	_ring_done(s)
 

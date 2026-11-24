@@ -50,8 +50,8 @@
 		"fume_fan": {"name": "Fume fan", "bench": "electronics", "mult": 0.05, "text": "+0.05 on electronics."},
 		"bench_vise": {"name": "Bench vise", "bench": "weapons", "mult": 0.1, "text": "+0.10 on the gun bench."},
 		"drill_guide": {"name": "Drill guide", "bench": "weapons", "mult": 0.12, "text": "+0.12 on the gun bench.", "quirk": {"text": "Slips until you learn it: results swing.", "variance": 0.14}},
-		"walking_foot": {"name": "Walking foot", "bench": "armor", "mult": 0.1, "text": "+0.10 on the sewing table."},
-		"strap_rack": {"name": "Strap rack", "bench": "armor", "mult": 0.06, "text": "+0.06 on the sewing table."},
+		"walking_foot": {"name": "Sewing machine (walking foot)", "bench": "armor", "mult": 0.1, "text": "+0.10 on the sewing table. A real machine: the table becomes the improved one, stitching is easier."},
+		"strap_rack": {"name": "Strap rack", "bench": "armor", "mult": 0.06, "text": "+0.06 on the sewing table. A pegboard, rolls and a cutting board: the table becomes the upgraded one, parts snap in from further off."},
 		"steriliser": {"name": "Steam steriliser", "bench": "meds", "mult": 0.12, "text": "+0.12 on the med table.", "quirk": {"text": "Temperamental: results swing until you learn it.", "variance": 0.1}},
 		"kit_shelf": {"name": "Kit shelf", "bench": "meds", "mult": 0.06, "text": "+0.06 on the med table."}
 	},
