@@ -41,7 +41,7 @@ The first bench of the bench face-lift (docs/ROADMAP.md M1b). User answers 2026-
 **Time, not gates** (user 2026-11-23): a job takes in-game hours, with no action points or costs beyond the materials.
 
 ## 4. Build order (one bench, start to finish)
-1. Models from the sheets (Blender): the table in three stages; the scrap crate, pincushion, spool, scissors, lamp; the bag rig and chest rig parts; a field jacket with a tear and patch spots; low-poly hands.
+1. Models from the sheets (Blender): the table in three stages; the scrap crate, pincushion, spool, scissors, lamp; the bag rig and chest rig parts; a field jacket with a tear and patch spots; low-poly hands. **Done 2026-11-24:** art/sewing.glb (art/src/make_sewing.py, the three stages) and art/sewing_parts.glb (art/src/make_sewing_parts.py: jacket + tear, both rigs' parts, three scrap patches, hands), surfaces by v2/world/kind_look.gd.
 2. The top-down table view with lift, turn, outline and snap (one shared "hands-on" engine for every bench, ReStroy-style).
 3. Make jobs (the two rigs) on it.
 4. Wear and tears from hits in the fight; mending jobs; patches shown on the fighter.
