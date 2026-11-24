@@ -26,7 +26,7 @@ random.seed(31)
 S.PAL.update({
 	"paint_floor": (0.3, 0.27, 0.24), "paint_wall": (0.17, 0.24, 0.25), "paint_wall_low": (0.13, 0.18, 0.19),
 	"paint_door": (0.36, 0.38, 0.36), "paint_hazard": (0.85, 0.66, 0.15), "paint_steel_frame": (0.36, 0.38, 0.36),
-	"wood_beam": (0.32, 0.22, 0.14), "wood_door": (0.45, 0.3, 0.18), "wood_board": (0.36, 0.24, 0.14),
+	"wood_beam": (0.2, 0.13, 0.08), "wood_ceiling": (0.14, 0.1, 0.07), "wood_door": (0.45, 0.3, 0.18), "wood_board": (0.36, 0.24, 0.14),
 	"fabric_rug": (0.36, 0.22, 0.16), "fabric_rug_b": (0.5, 0.32, 0.2), "fabric_towel": (0.84, 0.8, 0.7),
 	"fabric_band": (0.42, 0.5, 0.36), "fabric_felt": (0.3, 0.3, 0.3), "fabric_pad": (0.6, 0.16, 0.14),
 	"fabric_jacket_a": (0.36, 0.38, 0.2), "fabric_jacket_b": (0.26, 0.3, 0.42), "fabric_jacket_c": (0.5, 0.36, 0.2),
@@ -38,7 +38,7 @@ S.PAL.update({
 	"plain_glass": (0.18, 0.22, 0.3), "plain_crt_glow": (0.5, 0.62, 0.68), "plain_led": (0.4, 1.0, 0.45),
 	"plain_house": (1.0, 0.72, 0.42), "plain_window": (0.12, 0.18, 0.3), "plain_bottle": (0.36, 0.18, 0.08),
 	"plain_talar": (0.72, 0.14, 0.1), "plain_pot": (0.6, 0.32, 0.2), "plain_black": (0.06, 0.06, 0.06),
-	"plain_red": (0.72, 0.12, 0.1), "plain_paper": (0.92, 0.88, 0.78),
+	"plain_red": (0.72, 0.12, 0.1), "plain_paper": (0.92, 0.88, 0.78), "paint_stain": (0.17, 0.15, 0.13),
 })
 
 W, D, H = 8.0, 10.0, 3.0   # room size
@@ -124,7 +124,7 @@ def build_room():
 	for name, c, s in [("Band_Back", (0, D / 2 - 0.005, 0.55), (W, 0.01, 1.1)), ("Band_Front", (0, -D / 2 + 0.005, 0.55), (W, 0.01, 1.1)),
 			("Band_Left", (-W / 2 + 0.005, 0, 0.55), (0.01, D, 1.1)), ("Band_Right", (W / 2 - 0.005, 0, 0.55), (0.01, D, 1.1))]:
 		S.box(name, c, s, "paint_wall_low", bevel=0)
-	S.box("Ceiling", (0, 0, H + 0.05), (W, D, 0.1), "wood_board", bevel=0)
+	S.box("Ceiling", (0, 0, H + 0.05), (W, D, 0.1), "wood_ceiling", bevel=0)
 	for k in range(6):
 		S.box("Beam_%d" % k, (0, -D / 2 + 0.8 + k * 1.7, H - 0.12), (W, 0.16, 0.24), "wood_beam", bevel=0.01)
 	S.box("Beam_Long", (0, 0, H - 0.3), (0.2, D, 0.12), "wood_beam", bevel=0.01)
@@ -357,6 +357,103 @@ def build_chair():
 	S.ball("Chair_Hang_Bulb", (0, 0, 1.86), 0.04, "plain_bulb", sub=2, emission=5.0)
 
 
+# ------------------------------------------------------------------ B4: clutter (concepts 01 and 02)
+
+def jars(pre, x0, x1, y, z, depth_axis="y"):
+	"""A row of jars and tins along a shelf (x0..x1 along X, or along Y if depth_axis is "x")."""
+	cols = ["metal_tin", "plain_bottle", "metal_tin_g", "plain_paper", "metal_copper", "fabric_cream"]
+	n = int((x1 - x0) / 0.11)
+	for k in range(n):
+		t = x0 + 0.06 + k * 0.11
+		h = random.uniform(0.08, 0.16)
+		p = (t, y, z + h / 2) if depth_axis == "y" else (y, t, z + h / 2)
+		S.cyl(pre + "Jar_%d" % k, p, random.uniform(0.03, 0.045), h, random.choice(cols), verts=10)
+
+
+def crate(pre, x, y, z, s=0.45, rot=0.0, col="wood_crate"):
+	S.box(pre + "Crate", (x, y, z + s * 0.35), (s, s * 0.8, s * 0.7), col, rot=(0, 0, rot), bevel=0.01)
+	S.box(pre + "Slat", (x, y, z + s * 0.62), (s + 0.01, s * 0.81, 0.04), "wood_drawer", rot=(0, 0, rot), bevel=0.004)
+
+
+def build_clutter():
+	S.ROOT = bpy.data.objects["Room"]
+	# left wall, above the med table: a pegboard with tools (concept 01 "MEDICAL")
+	S.box("Peg_Board", (-W / 2 + 0.02, 0.85, 1.3), (0.02, 1.0, 0.62), "wood_board", bevel=0.004)
+	for k in range(5):
+		y = 0.45 + k * 0.2
+		S.cyl("Peg_Pin_%d" % k, (-W / 2 + 0.06, y, 1.5), 0.008, 0.06, "metal_steel", rot=(0, 90, 0), verts=6)
+	S.box("Peg_Scissors", (-W / 2 + 0.06, 0.45, 1.36), (0.02, 0.06, 0.2), "metal_steel", rot=(12, 0, 0), bevel=0.003)
+	S.cyl("Peg_Coil", (-W / 2 + 0.06, 0.65, 1.38), 0.08, 0.02, "fabric_band", rot=(0, 90, 0), verts=12)
+	S.box("Peg_Brush", (-W / 2 + 0.06, 0.85, 1.36), (0.03, 0.05, 0.22), "wood_drawer", bevel=0.004)
+	S.box("Peg_Tongs", (-W / 2 + 0.06, 1.05, 1.36), (0.02, 0.04, 0.24), "metal_steel", rot=(-8, 0, 0), bevel=0.003)
+	S.cyl("Peg_Rope", (-W / 2 + 0.06, 1.25, 1.36), 0.07, 0.03, "fabric_cream", rot=(0, 90, 0), verts=12)
+	# left wall, high above the sewing table: a shelf of jars, folded cloth and a trailing plant
+	S.box("ShelfSew_Plank", (-W / 2 + 0.14, -2.85, 1.9), (0.26, 1.0, 0.03), "wood_board", bevel=0.004)
+	for sy in (-1, 1):
+		S.box("ShelfSew_Bracket_%d" % sy, (-W / 2 + 0.06, -2.85 + sy * 0.42, 1.82), (0.1, 0.03, 0.14), "metal_dark", bevel=0.003)
+	jars("ShelfSew_", -3.3, -2.9, -W / 2 + 0.14, 1.915, depth_axis="x")
+	S.cloth_stack("ShelfSew_", (-W / 2 + 0.14, -2.58), 1.915, layers=(("fabric_cream", 0.04), ("fabric_olive", 0.04)))
+	plant("ShelfSewP_", -W / 2 + 0.14, -2.42, 1.915, 0.9)
+	# the medicine trolley between the sewing and med tables
+	tx, ty = -W / 2 + 0.36, -0.75
+	for sx in (-1, 1):
+		for sy in (-1, 1):
+			S.box("Trolley_Leg_%d_%d" % (sx, sy), (tx + sx * 0.18, ty + sy * 0.36, 0.42), (0.03, 0.03, 0.84), "paint_mint", bevel=0.003)
+			S.cyl("Trolley_Wheel_%d_%d" % (sx, sy), (tx + sx * 0.18, ty + sy * 0.36, 0.03), 0.03, 0.025, "plain_black", rot=(90, 0, 0), verts=8)
+	for k, z in enumerate((0.25, 0.82)):
+		S.box("Trolley_Shelf_%d" % k, (tx, ty, z), (0.42, 0.8, 0.025), "paint_mint", bevel=0.004)
+	S.box("Trolley_Pot", (tx, ty - 0.15, 0.92), (0.22, 0.2, 0.18), "metal_mug", bevel=0.02)
+	S.box("Trolley_Cross_V", (tx + 0.111, ty - 0.15, 0.94), (0.002, 0.03, 0.09), "plain_red", bevel=0)
+	S.box("Trolley_Cross_H", (tx + 0.111, ty - 0.15, 0.94), (0.002, 0.09, 0.03), "plain_red", bevel=0)
+	jars("Trolley_", ty + 0.0, ty + 0.36, tx, 0.835, depth_axis="x")
+	for k in range(3):
+		S.box("Trolley_Towel_%d" % k, (tx, ty + 0.1, 0.28 + k * 0.04), (0.3, 0.3, 0.035), "fabric_towel", bevel=0.01)
+	# a stool at the sewing table
+	S.cyl("Stool_Seat", (-2.95, -2.05, 0.5), 0.17, 0.04, "wood_door", verts=12)
+	for k in range(3):
+		a = k / 3.0 * math.tau
+		S.seg("Stool_Leg_%d" % k, (-2.95 + math.cos(a) * 0.12, -2.05 + math.sin(a) * 0.12, 0.48), (-2.95 + math.cos(a) * 0.18, -2.05 + math.sin(a) * 0.18, 0.0), 0.02, "wood_horse", verts=5)
+	# front wall: two shelf units of boxes and tins, a coat rack by the house door, crates
+	shelf_unit("ShelfF1_", 1.35, -D / 2 + 0.25, 1.4, 0.4, 2.0, 4)
+	plant("ShelfF1P_", 1.75, -D / 2 + 0.25, 2.0, 1.1)
+	shelf_unit("ShelfF2_", -0.6, -D / 2 + 0.25, 1.2, 0.4, 1.6, 3)
+	crate("CrateF1_", -2.0, -D / 2 + 0.35, 0.0)
+	crate("CrateF2_", -2.0, -D / 2 + 0.35, 0.33, s=0.38, rot=8, col="paint_box")
+	S.box("Coat_Rail", (-2.7, -D / 2 + 0.06, 1.75), (0.8, 0.04, 0.05), "wood_door", bevel=0.004)
+	for k, col in enumerate(("fabric_jacket_c", "fabric_jacket_b")):
+		S.box("Coat_%d" % k, (-2.92 + k * 0.42, -D / 2 + 0.12, 1.38), (0.34, 0.1, 0.7), col, rot=(0, 0, 4 - k * 8), bevel=0.02)
+	S.box("Cal_Paper", (-1.55, -D / 2 + 0.008, 1.5), (0.3, 0.006, 0.4), "plain_paper", bevel=0)
+	# back wall: crates at the roller door, a hanging plant
+	crate("CrateB1_", -1.95, D / 2 - 0.75, 0.0, rot=-6)
+	crate("CrateB2_", -1.95, D / 2 - 0.75, 0.32, s=0.36, rot=10, col="paint_box")
+	# right wall: a red tool chest between the stash and the gun bench, a bucket, a tall corner shelf
+	cx, cy = W / 2 - 0.3, -0.82
+	S.box("Chest_Body", (cx, cy, 0.5), (0.5, 0.66, 1.0), "plain_red", bevel=0.012)
+	for k in range(5):
+		S.box("Chest_Drawer_%d" % k, (cx - 0.252, cy, 0.14 + k * 0.18), (0.005, 0.6, 0.15), "plain_red", bevel=0.004)
+		S.box("Chest_Pull_%d" % k, (cx - 0.262, cy, 0.18 + k * 0.18), (0.012, 0.22, 0.02), "metal_steel", bevel=0.002)
+	S.box("Chest_Vise", (cx - 0.05, cy, 1.06), (0.2, 0.14, 0.12), "metal_dark", bevel=0.01)
+	S.cyl("Bucket", (W / 2 - 0.35, 1.55, 0.17), 0.15, 0.34, "metal_tin", verts=12, r2=0.12)
+	shelf_unit("ShelfFR_", W / 2 - 0.3, -4.55, 0.5, 0.8, 2.2, 5)
+	plant("ShelfFRP_", W / 2 - 0.3, -4.55, 2.2, 1.0)
+	# books on the desk shelves (the electronics corner)
+	for k in range(9):
+		S.box("Book_%d" % k, (W / 2 - 0.2, 4.45 - k * 0.05, 1.56), (0.18, 0.04, random.uniform(0.18, 0.24)),
+			random.choice(["fabric_jacket_b", "fabric_red", "fabric_mustard", "fabric_olive", "fabric_cream"]), bevel=0.004)
+	# hanging plants from the beams, an extension cable along the floor
+	for k, (x, y) in enumerate(((-1.6, 3.0), (1.7, -2.0), (-2.4, -0.6))):
+		S.seg("HangPlant_Cord_%d" % k, (x, y, H - 0.24), (x, y, 2.25), 0.008, "plain_black", verts=4)
+		plant("HangPlant_%d_" % k, x, y, 2.05, 0.8)
+	S.seg("Cable_A", (W / 2 - 0.8, 2.6, 0.015), (W / 2 - 0.9, 0.0, 0.015), 0.012, "plain_black", verts=5)
+	S.seg("Cable_B", (W / 2 - 0.9, 0.0, 0.015), (W / 2 - 1.2, -1.2, 0.015), 0.012, "plain_black", verts=5)
+	# oil stains on the floor
+	for k, (x, y, s) in enumerate(((0.6, 3.6, 0.9), (-0.4, 2.8, 0.5), (1.2, -1.5, 0.6), (-1.3, -3.6, 0.45))):
+		S.cyl("Stain_%d" % k, (x, y, 0.002), s * 0.5, 0.002, "paint_stain", verts=14)
+	# conduit along the left wall, a fuse box
+	S.seg("Conduit_L", (-W / 2 + 0.04, -4.9, 2.4), (-W / 2 + 0.04, 4.9, 2.4), 0.025, "metal_steel")
+	S.box("Fusebox", (-W / 2 + 0.05, -3.4, 2.1), (0.08, 0.3, 0.4), "metal_tin", bevel=0.008)
+
+
 # ------------------------------------------------------------------ run
 
 build_room()
@@ -369,6 +466,7 @@ build_electronics()
 build_cage()
 build_stash()
 build_chair()
+build_clutter()
 S.ROOT = None
 
 bpy.ops.wm.save_as_mainfile(filepath=os.path.join(HERE, "garage_v3.blend"))

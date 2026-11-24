@@ -12,6 +12,7 @@ const Content := preload("res://v2/sim/content.gd")
 const Crafting := preload("res://v2/sim/crafting.gd")
 const KindLook := preload("res://v2/world/kind_look.gd")
 const GarageBoards := preload("res://v2/world/garage_boards.gd")
+const Footsteps := preload("res://v2/world/footsteps.gd")
 const GLB := "res://art/garage_v3.glb"
 const DITHER := preload("res://v2/world/dither.gdshader")
 
@@ -52,6 +53,8 @@ var _lean_dir := 0
 var _lean_from := Transform3D()
 var _lean_to := Transform3D()
 var _bob := 0.0
+var _stride := 0.0
+var _steps                       # Footsteps (v2/world/footsteps.gd)
 var _trauma := 0.0
 var _time := 0.0
 var _post: ShaderMaterial
@@ -101,18 +104,38 @@ func _environment() -> void:
 	e.background_mode = Environment.BG_COLOR
 	e.background_color = Color(0.02, 0.01, 0.025)
 	e.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	e.ambient_light_color = Color(0.42, 0.32, 0.3)
-	e.ambient_light_energy = 0.32
-	e.tonemap_mode = Environment.TONE_MAPPER_LINEAR
-	e.tonemap_exposure = 1.0
+	# B4 (concepts 01, 02): a warm amber room you want to be in. Warm fill everywhere, pools under every lamp,
+	# cool night blue only at the windows and under the roller door, the kitchen's glow at the house door.
+	e.ambient_light_color = Color(0.62, 0.46, 0.32)
+	e.ambient_light_energy = 0.5
+	e.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+	e.tonemap_exposure = 1.25
 	e.glow_enabled = true
-	e.glow_intensity = 0.6
-	e.glow_bloom = 0.05
+	e.glow_intensity = 0.7
+	e.glow_bloom = 0.08
 	e.fog_enabled = true
-	e.fog_light_color = Color(0.1, 0.06, 0.07)
-	e.fog_density = 0.025
+	e.fog_light_color = Color(0.2, 0.12, 0.07)
+	e.fog_density = 0.012
 	env.environment = e
 	add_child(env)
+	_omni(Color(1.0, 0.66, 0.36), 2.2, 3.6, [-3.75, -4.2, 1.3], true)     # the kitchen through the house door
+	_omni(Color(0.4, 0.55, 0.95), 0.45, 1.6, [-3.7, 0.0, 2.0])             # night through the windows
+	_omni(Color(0.4, 0.55, 0.95), 0.45, 1.6, [-3.7, 2.6, 2.0])
+	_omni(Color(0.45, 0.6, 1.0), 0.6, 1.3, [0.0, 4.7, 0.1])              # the street under the roller door
+	_omni(Color(1.0, 0.7, 0.42), 0.8, 4.5, [0.0, -2.0, 1.4])              # warm fill for the walk-in half
+	_omni(Color(0.6, 0.85, 1.0), 0.5, 1.4, [3.3, 4.0, 1.0])               # the CRT's glow
+
+
+func _omni(col: Color, energy: float, rng: float, at: Array, shadow := false) -> OmniLight3D:
+	var l := OmniLight3D.new()
+	l.light_color = col
+	l.light_energy = energy
+	l.omni_range = rng
+	l.omni_attenuation = 1.1
+	l.shadow_enabled = shadow
+	l.position = b2g(at)
+	add_child(l)
+	return l
 
 
 ## A light in every lamp bulb (art/src/make_garage_v3.py names them *Hang_Bulb* / *Lamp_Bulb*). The light is a
@@ -125,13 +148,22 @@ func _bulbs(root: Node) -> void:
 		var hang := nm.contains("Hang_Bulb")
 		if not hang and not nm.contains("Lamp_Bulb"):
 			continue
-		var l := OmniLight3D.new()
+		var l := OmniLight3D.new()       # the glow around the bulb itself
 		l.light_color = Color(1.0, 0.74, 0.46)
-		l.light_energy = 1.7 if hang else 0.5
-		l.omni_range = 4.2 if hang else 1.0
-		l.omni_attenuation = 1.2
-		l.shadow_enabled = hang
+		l.light_energy = 0.6 if hang else 0.7
+		l.omni_range = 1.4 if hang else 1.2
+		l.omni_attenuation = 1.0
 		m.add_child(l)
+		if hang:                         # a shaded lamp throws its light down: a warm pool, a dark ceiling
+			var pool := SpotLight3D.new()
+			pool.light_color = Color(1.0, 0.72, 0.44)
+			pool.light_energy = 5.0
+			pool.spot_range = 4.6
+			pool.spot_angle = 62.0
+			pool.spot_attenuation = 0.8
+			pool.shadow_enabled = true
+			m.add_child(pool)
+			pool.global_transform = Transform3D(Basis(Vector3.RIGHT, -PI / 2), m.global_position)
 		var id := _station_of(m)
 		if hang or id == "" or not _stations[id].has("work"):
 			continue
@@ -159,6 +191,8 @@ func _post_quad() -> void:
 	q.mesh = mesh
 	_post = ShaderMaterial.new()
 	_post.shader = DITHER
+	_post.set_shader_parameter("shadow_tint", Vector3(0.07, 0.045, 0.02))    # warm shadows, not bruise purple (B4)
+	_post.set_shader_parameter("vignette", 0.4)
 	q.material_override = _post
 	q.extra_cull_margin = 16384.0
 	q.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
@@ -373,6 +407,8 @@ func _player(data: Dictionary) -> void:
 	shape.position = Vector3(0, 0.875, 0)
 	player.add_child(shape)
 	add_child(player)
+	_steps = Footsteps.new()
+	add_child(_steps)
 	if title_mode:
 		return
 	player.global_position = b2g(data.get("spawn", [-3.0, -4.2, 0.0]))
@@ -444,6 +480,10 @@ func _physics_process(delta: float) -> void:
 	player.move_and_slide()
 	var sp := Vector2(player.velocity.x, player.velocity.z).length()
 	_bob += delta * sp * 3.2
+	_stride += delta * sp
+	if _stride > 0.68:                # one step every ~0.7 m walked
+		_stride = 0.0
+		_steps.step()
 
 
 # ------------------------------------------------------------------ using a station (the lean)
