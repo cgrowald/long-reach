@@ -6,6 +6,7 @@ extends RefCounted
 ## Recruits add hook and are shaped like state.people entries (v2/sim/loadout.gd) so they can join directly.
 
 const Content := preload("res://v2/sim/content.gd")
+const Portraits := preload("res://v2/sim/portraits.gd")
 
 
 static func data() -> Dictionary:
@@ -44,6 +45,12 @@ static func make(p_seed: int, kind: String) -> Dictionary:
 		"traits": traits, "trait": traits[0], "line": bg.get("line", ""),
 		"face": "%s %s %d" % [first, last, p_seed % 1000],
 	}
+	# the face (GPT sheets): prisoners look roughed up; the age fits the face, so the ID card matches the photo
+	if kind == "prisoner":
+		p["face"] = "%s %s #held" % [first, last]
+	var arng := RandomNumberGenerator.new()
+	arng.seed = p_seed ^ 0x2a6e
+	p["age"] = Portraits.age_for(str(p["face"]), arng)
 	match kind:
 		"guard":
 			var g: Dictionary = D.get("guards", {}).get("low", {})

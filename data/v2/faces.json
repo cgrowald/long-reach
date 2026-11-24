@@ -1,0 +1,32 @@
+{
+	"_note": "Portraits from GPT's face sheets (docs/refs/catalog/, copied to art/faces/). Each sheet is a 5x5 grid, read left to right, top to bottom. Tags: m / f, optional old / young, optional regime (Bureau collar: kept for officers later) . v2/sim/portraits.gd picks one per person from their name; women's names (below) get f tiles. The 'held' sheet (bruised, bandaged) is the pool for prisoners.",
+	"sheets": {
+		"a": {"file": "res://art/faces/sheet_a.webp", "tiles": [
+			"m", "f", "m", "f", "m",
+			"f", "m old", "f old", "m", "f old",
+			"m old", "f old", "f old", "f old regime", "m old",
+			"m", "f", "m", "f", "m",
+			"m", "f", "m", "f", "m young"]},
+		"b": {"file": "res://art/faces/sheet_b.webp", "tiles": [
+			"m young", "f young", "m young", "f young", "m young",
+			"f", "m", "f", "m", "f young",
+			"m old", "f old", "m old", "f old", "m old",
+			"m", "f", "m", "m", "f",
+			"m", "f", "m regime", "f", "m"]},
+		"c": {"file": "res://art/faces/sheet_c.webp", "tiles": [
+			"m", "f", "m old", "f regime", "m",
+			"f", "m", "f", "m", "f old",
+			"m", "f", "m old", "f", "m",
+			"f", "m", "f", "m", "f",
+			"m old", "f", "m", "f", "m regime"]},
+		"held": {"file": "res://art/faces/sheet_held.webp", "pool": "held", "tiles": [
+			"m old", "f", "m", "f old", "m",
+			"f", "m", "f", "m", "f",
+			"m", "f", "m old", "f", "m",
+			"f", "m old", "f", "m", "f",
+			"m old", "m", "f", "m old", "f"]}
+	},
+	"female_names": ["Ruta", "Petra", "Ilse", "Vera", "Dana", "Lena", "Agata", "Mila", "Hedda", "Ines", "Zofia", "Rosa", "Nadia", "Greta", "Sabine",
+		"Ada", "Mira", "Hana", "Anna", "Ana", "Eva", "Marta", "Irena", "Olga", "Katja", "Lidia", "Nina", "Elena", "Sara", "Jana", "Ivana", "Milena"],
+	"ages": {"young": [19, 27], "mid": [28, 49], "old": [52, 68]}
+}

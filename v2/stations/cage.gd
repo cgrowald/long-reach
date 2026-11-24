@@ -618,7 +618,7 @@ func _draw_portraits(st) -> void:
 		var r := _portrait_rect(i)
 		var alive: bool = q.get("alive", true)
 		var head: String = str(Loadout.to_fighter(st, q).get("head", ""))
-		Face.draw(self, r, str(q["name"]), head, not alive)
+		Face.draw(self, r, str(q.get("face", q["name"])), head, not alive, int(q.get("injury_days", 0)) > 0)
 		var hov := r.has_point(_hover) and alive
 		draw_rect(r, Pal.AMBER if i == sel else (Color(LINE, 0.9) if hov else Color(0.3, 0.27, 0.22)), false, 2.0 if i == sel else 1.0)
 		var first := str(q["name"]).split(" ")[0]

@@ -147,6 +147,7 @@ func _spawn() -> void:
 			def["id"] = "f%d" % i
 		a.setup_actor(def, "us", level)
 		a.set_meta("head", str(def.get("head", "helmet")))
+		a.set_meta("face", str(def.get("face", def.get("name", ""))))
 		a.position = Vector3(float(sp[0]) + (i % 2) * 0.8 - 0.4, 0, float(sp[1]) + 0.3 - int(i / 2) * 0.9)
 		a.face_yaw = 0.0
 		_wire(a)
@@ -728,7 +729,7 @@ func _signal(a) -> int:
 
 
 func _face(a, r: Rect2) -> void:
-	Face.draw(hud, r, str(a.fighter_name), str(a.get_meta("head", "helmet")), a.state == "dead")
+	Face.draw(hud, r, str(a.get_meta("face", a.fighter_name)), str(a.get_meta("head", "helmet")), a.state == "dead")
 	hud.draw_rect(r, UI_LINE, false, 1.0)
 
 
@@ -797,7 +798,7 @@ func _draw_hud() -> void:
 		Pal.text(hud, Vector2(mr.end.x - 86, mr.position.y + 6), ["LOST", "POOR", "FAIR", "GOOD", "GOOD"][sig], 8, UI_TEAL)
 		if a.state == "dead":
 			Pal.text(hud, Vector2(img.position.x, img.get_center().y - 20), "SIGNAL LOST", 14, UI_RED, HORIZONTAL_ALIGNMENT_CENTER, img.size.x)
-			Face.draw(hud, Rect2(img.get_center() - Vector2(24, 0), Vector2(48, 54)), str(a.fighter_name), str(a.get_meta("head", "helmet")), true)
+			Face.draw(hud, Rect2(img.get_center() - Vector2(24, 0), Vector2(48, 54)), str(a.get_meta("face", a.fighter_name)), str(a.get_meta("head", "helmet")), true)
 	else:
 		_cam_icon(Vector2(hx + 2, mr.position.y + 7))
 		hx += 22
@@ -819,7 +820,7 @@ func _draw_hud() -> void:
 		var tw := minf(img.size.x - 30, line.length() * 5.6 + 8)
 		hud.draw_rect(Rect2(img.position.x + 4, y - 2, tw + 18, 14), Color(0, 0, 0, 0.55 * al))
 		if who != null:
-			Face.draw(hud, Rect2(img.position.x + 5, y - 1, 12, 12), str(who.fighter_name), str(who.get_meta("head", "helmet")), who.state == "dead")
+			Face.draw(hud, Rect2(img.position.x + 5, y - 1, 12, 12), str(who.get_meta("face", who.fighter_name)), str(who.get_meta("head", "helmet")), who.state == "dead")
 		Pal.text(hud, Vector2(img.position.x + 20, y), line, 9, Color(b["col"], al), HORIZONTAL_ALIGNMENT_LEFT, tw)
 		y -= 16
 		shown += 1
@@ -1026,7 +1027,7 @@ func _draw_report() -> void:
 		var cr := Rect2(r.position + Vector2(10 + i * (cw + 6), 40), Vector2(cw, 62))
 		hud.draw_rect(cr, Color(0, 0, 0, 0.25))
 		hud.draw_rect(cr, UI_RED if a.state == "dead" else UI_LINE, false, 1.0)
-		Face.draw(hud, Rect2(cr.position + Vector2(4, 4), Vector2(30, 34)), str(a.fighter_name), str(a.get_meta("head", "helmet")), a.state == "dead")
+		Face.draw(hud, Rect2(cr.position + Vector2(4, 4), Vector2(30, 34)), str(a.get_meta("face", a.fighter_name)), str(a.get_meta("head", "helmet")), a.state == "dead")
 		Pal.text(hud, cr.position + Vector2(38, 4), _first(a).to_upper(), 9, UI_TEXT, HORIZONTAL_ALIGNMENT_LEFT, cw - 40)
 		var sw: Array = _state_word(a)
 		Pal.text(hud, cr.position + Vector2(38, 16), "KIA" if a.state == "dead" else ("HOME" if a.state == "ok" else sw[0]), 8, UI_RED if a.state != "ok" else UI_TEAL)

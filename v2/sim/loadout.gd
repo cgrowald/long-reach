@@ -264,6 +264,7 @@ static func to_fighter(state: RefCounted, p: Dictionary) -> Dictionary:
 	var rig := worn(state, p, "rig")
 	var clothes := worn(state, p, "clothes")
 	return {
+		"face": str(p.get("face", p["name"])),
 		"id": p["id"], "name": p["name"], "role": p.get("role", "rear"), "trait": p.get("trait", ""), "line": p.get("line", ""),
 		"tech": int(p.get("tech", 0)), "stick": int(stick_of(state, p).get("stars", -1)),     # -1 = no stick
 		"camo": gdef(clothes.get("gear", "street")).get("camo", "street") if not clothes.is_empty() else "street",
