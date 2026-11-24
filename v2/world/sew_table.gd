@@ -30,6 +30,12 @@ var cam: Camera3D
 var world: Node3D
 var base: Node3D
 var parts: Array = []             # {node, def, home: Vector3, home_yaw, done, fit, stitch: []}
+var mend := false                 # mending a torn item instead of making one (v2/sim/wear.gd job())
+var targets: Array = []           # mend: the tears {spot, name, at, done, tear, colour}
+var palette_src := {}             # mend: colour -> a hidden template scrap
+var patched: Array = []           # mend: [{spot, colour}] as they get done (read by the bench)
+var base_scale := 1.0             # mend: big pieces (the jacket) are shown smaller so the scraps fit beside them
+const MEND_SLOTS := [Vector2(0.6, -0.05), Vector2(0.6, 0.17), Vector2(-0.64, 0.24)]
 var held = null                   # the part dict in hand
 var hand_r: Node3D
 var hand_l: Node3D
@@ -130,6 +136,9 @@ func _build_world() -> void:
 		var pr := _take(lib, str(name))
 		if pr:
 			_lay(pr, Vector3(0.55, 0, -0.02), 0.0)
+	mend = bool(t.get("mend", false))
+	if mend:
+		_build_mend(lib, t)
 	for pd in t.get("parts", []):
 		var n := _take(lib, str(pd["part"]))
 		if n == null:
@@ -154,6 +163,73 @@ func _build_world() -> void:
 	cam.position = Vector3(0.0, TOP + 1.2, 0.8)
 	cam.look_at(Vector3(0.0, TOP, 0.1))
 	cam.current = true
+
+
+## Mending (data/v2/wear.json, v2/sim/wear.gd job()): the torn item in the middle with a ragged tear at each
+## torn spot and the old patches already on it; scraps in three colours laid out as a palette. Pick up any
+## colour, put it over any tear, stitch it. A fresh scrap of that colour takes its place.
+const TEAR_BAKED := 53.0          # the Jacket_Tear mesh's own angle on the table (art/src/make_sewing_parts.py)
+
+
+func _build_mend(lib: Node, t: Dictionary) -> void:
+	if base and _size(base).x > 0.8:
+		base_scale = 0.75
+		base.scale = Vector3(base_scale, 1.0, base_scale)
+	var sc := func(at: Array) -> Array: return [float(at[0]) * base_scale, float(at[1]) * base_scale, float(at[2])]
+	var tear_src := lib.find_child("Jacket_Tear", true, false) as Node3D
+	var top := _base_top()
+	for td in t.get("tears", []):
+		var at: Array = sc.call(td["at"])
+		var tn := tear_src.duplicate() as Node3D
+		world.add_child(tn)
+		tn.position = Vector3(BASE_AT.x + float(at[0]), top + 0.001, BASE_AT.z + float(at[1]))
+		tn.rotation = Vector3(0, deg_to_rad(float(at[2]) + 90.0 - TEAR_BAKED), 0)
+		tn.scale = Vector3(base_scale, 1.0, base_scale)
+		targets.append({"spot": td["spot"], "name": td["name"], "at": at, "done": false, "tear": tn, "colour": ""})
+	var pal: Dictionary = t.get("palette", {})
+	for pa in t.get("patches", []):
+		var src := lib.find_child(str(pal.get(pa["colour"], "Patch_Blue")), true, false) as Node3D
+		if src:
+			var pn := src.duplicate() as Node3D
+			world.add_child(pn)
+			var at2: Array = sc.call(pa["at"])
+			_lay(pn, Vector3(BASE_AT.x + float(at2[0]), 0, BASE_AT.z + float(at2[1])), float(at2[2]), top)
+	var i := 0
+	for colour in pal:
+		var src2 := lib.find_child(str(pal[colour]), true, false) as Node3D
+		if src2 == null:
+			continue
+		var keep := src2.duplicate() as Node3D            # a template for fresh scraps of this colour
+		keep.visible = false
+		world.add_child(keep)
+		palette_src[colour] = keep
+		var s: Vector2 = MEND_SLOTS[i % MEND_SLOTS.size()]
+		_new_scrap(colour, Vector3(s.x, 0, s.y))
+		i += 1
+
+
+func _new_scrap(colour: String, home: Vector3) -> void:
+	var n := (palette_src[colour] as Node3D).duplicate() as Node3D
+	n.visible = true
+	world.add_child(n)
+	_lay(n, home, 0.0)
+	parts.append({"node": n, "def": {"part": colour, "name": colour + " scrap", "at": [0, 0, 0]}, "home": home, "home_yaw": 0.0,
+		"done": false, "fit": 0.0, "stitch": [], "palette": colour})
+
+
+## The open tear nearest to where a scrap is held.
+func _nearest_tear(n: Node3D):
+	var best = null
+	var bd := 1e9
+	for tg in targets:
+		if tg["done"]:
+			continue
+		var at: Array = tg["at"]
+		var d := Vector2(n.position.x - BASE_AT.x - float(at[0]), n.position.z - BASE_AT.z - float(at[1])).length()
+		if d < bd:
+			bd = d
+			best = tg
+	return best
 
 
 ## Which table you have (upgrades come with bench upgrades later; docs/BENCH_SEWING.md build step 5).
@@ -324,6 +400,14 @@ func _put_back(p: Dictionary) -> void:
 
 func _drop(p: Dictionary) -> void:
 	var n: Node3D = p["node"]
+	if p.has("palette"):
+		# a scrap goes over whichever open tear it's nearest
+		var tg = _nearest_tear(n)
+		if tg == null:
+			_put_back(p)
+			return
+		p["def"] = {"part": p["palette"], "name": p["def"]["name"], "at": tg["at"]}
+		p["target"] = tg
 	var tgt := _target(p)
 	var d := Vector2(n.position.x - tgt.x, n.position.z - tgt.z).length()
 	var want := float(p["def"]["at"][2])
@@ -337,6 +421,8 @@ func _drop(p: Dictionary) -> void:
 		tw.tween_property(n, "position", Vector3(tgt.x, _base_top() - a.position.y, tgt.z), 0.16)
 		tw.parallel().tween_property(n, "rotation", Vector3(0, deg_to_rad(want), 0), 0.16)
 		tw.tween_callback(func() -> void: _start_stitch(p))
+		if p.has("palette"):
+			_new_scrap(str(p["palette"]), p["home"])     # a fresh scrap of that colour takes its place
 		game.sfx.play("switch_002", 1.0, -4.0)
 		_pop(["CLICK", "SNUG", "GOOD", "PERFECT"][clampi(int(p["fit"] * 4.0), 0, 3)], to_ui(Vector3(tgt.x, _base_top(), tgt.z)), Pal.GREEN if p["fit"] > 0.6 else Pal.AMBER)
 	else:
@@ -432,12 +518,18 @@ func _part_done() -> void:
 	avg /= maxf(1.0, st.size())
 	p["done"] = true
 	scores.append(clampf(0.5 * float(p["fit"]) + 0.5 * avg, 0.0, 1.0))
+	if p.has("target"):
+		var tg: Dictionary = p["target"]
+		tg["done"] = true
+		tg["colour"] = p["palette"]
+		(tg["tear"] as Node3D).visible = false
+		patched.append({"spot": tg["spot"], "colour": p["palette"]})
 	stitch_part = null
 	rings.clear()
 	phase = "fit"
 	game.sfx.play("confirmation_002", 1.0 + scores.size() * 0.08, -8.0)
 	var left := 0
-	for q in parts:
+	for q in (targets if mend else parts):
 		if not q["done"]:
 			left += 1
 	if left == 0:
@@ -487,11 +579,19 @@ func _process(delta: float) -> void:
 
 func _draw() -> void:
 	# outlines: dashed amber where the held part goes (or every waiting part's place, faint)
-	for p in parts:
-		if p["done"] or (phase == "stitch"):
-			continue
-		var strong: bool = held == p
-		_outline(p, Color(Pal.AMBER, 0.95 if strong else 0.3), strong)
+	if mend:
+		# every open tear gets an outline the size of a scrap: bright while you hold one
+		if phase != "stitch":
+			var sample: Dictionary = held if held != null else (parts[0] if not parts.is_empty() else {})
+			for tg in targets:
+				if not tg["done"] and not sample.is_empty():
+					_outline(sample, Color(Pal.AMBER, 0.95 if held != null else 0.4), held != null, tg["at"])
+	else:
+		for p in parts:
+			if p["done"] or (phase == "stitch"):
+				continue
+			var strong: bool = held == p
+			_outline(p, Color(Pal.AMBER, 0.95 if strong else 0.3), strong)
 	# stitch rings
 	if phase == "stitch":
 		for k in rings.size():
@@ -507,20 +607,25 @@ func _draw() -> void:
 			else:
 				draw_arc(rp, 5.0, 0, TAU, 12, Color(Pal.TEXT, 0.35), 1.0)
 	# the job ticket and checklist (top left), like ReStroy
-	var box := Rect2(Vector2(10, 10), Vector2(200, 30 + parts.size() * 13))
+	var rows: Array = []        # [text, done, now]
+	if mend:
+		for tg in targets:
+			var now2: bool = stitch_part != null and stitch_part.get("target") == tg
+			rows.append(["%s Patch the %s%s" % ["[x]" if tg["done"] else ("[>]" if now2 else "[ ]"), tg["name"], ("  (" + str(tg["colour"]) + ")") if tg["done"] else ""], tg["done"], now2])
+	else:
+		for p in parts:
+			var now: bool = (stitch_part == p) or (held == p)
+			var verb := "Stitch" if stitch_part == p else "Fit and stitch"
+			rows.append(["%s %s the %s" % ["[x]" if p["done"] else ("[>]" if now else "[ ]"), verb, str(p["def"].get("name", ""))], p["done"], now])
+	var box := Rect2(Vector2(10, 10), Vector2(200, 30 + rows.size() * 13))
 	draw_rect(box, Color(0.08, 0.06, 0.045, 0.9))
 	draw_rect(box, Pal.BRASS, false, 1.0)
 	Pal.text(self, box.position + Vector2(7, 5), "SEWING TABLE  /  " + str(recipe.get("name", "")).to_upper(), 8, Pal.AMBER, HORIZONTAL_ALIGNMENT_LEFT, box.size.x - 10)
-	for i in parts.size():
-		var p: Dictionary = parts[i]
+	for i in rows.size():
 		var y := box.position.y + 20 + i * 13
-		var done: bool = p["done"]
-		var now: bool = (stitch_part == p) or (held == p)
-		var mark := "[x]" if done else ("[>]" if now else "[ ]")
-		var verb := "Stitch" if stitch_part == p else "Fit and stitch"
-		Pal.text(self, Vector2(box.position.x + 7, y), "%s %s the %s" % [mark, verb, str(p["def"].get("name", ""))], 8, Pal.GREEN if done else (Pal.TEXT if now else Pal.DIM), HORIZONTAL_ALIGNMENT_LEFT, box.size.x - 12)
+		Pal.text(self, Vector2(box.position.x + 7, y), str(rows[i][0]), 8, Pal.GREEN if rows[i][1] else (Pal.TEXT if rows[i][2] else Pal.DIM), HORIZONTAL_ALIGNMENT_LEFT, box.size.x - 12)
 	# what to do now
-	var hint := "Click a piece to pick it up."
+	var hint := "Pick a scrap colour, then lay it over a tear." if mend else "Click a piece to pick it up."
 	if held != null:
 		hint = "Put it on its amber outline and click.  Wheel: turn.  Right-drag: tip it over.  Right-click: put it back."
 	elif phase == "stitch":
@@ -536,14 +641,15 @@ func _draw() -> void:
 
 
 ## The dashed footprint of where a part goes, projected from the 3D target.
-func _outline(p: Dictionary, col: Color, strong: bool) -> void:
+func _outline(p: Dictionary, col: Color, strong: bool, at_override: Array = []) -> void:
 	var n: Node3D = p["node"]
 	var a := _aabb_local(n)
-	var tgt := _target(p)
+	var at: Array = at_override if not at_override.is_empty() else p["def"]["at"]
+	var tgt := Vector3(BASE_AT.x + float(at[0]), 0, BASE_AT.z + float(at[1]))
 	var y := _base_top() + 0.003
 	var hx := a.size.x * 0.5
 	var hz := a.size.z * 0.5
-	var rot := Basis(Vector3.UP, deg_to_rad(float(p["def"]["at"][2])))
+	var rot := Basis(Vector3.UP, deg_to_rad(float(at[2])))
 	var c := Vector3(tgt.x, y, tgt.z)
 	var pts: Array = []
 	for v in [Vector3(-hx, 0, -hz), Vector3(hx, 0, -hz), Vector3(hx, 0, hz), Vector3(-hx, 0, hz)]:

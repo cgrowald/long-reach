@@ -77,6 +77,13 @@ func setup(p_garage: Node) -> void:
 	add.call("M1: unlock the depot", func() -> void:
 		load("res://v2/sim/depot_run.gd")._d(game.state)["locked_until"] = 0
 		garage.toast("The depot can be hit again."))
+	add.call("M1b: tear the crew's kit", func() -> void:
+		var W = load("res://v2/sim/wear.gd")
+		var n := 0
+		for p in game.state.people:
+			if p.get("alive", true):
+				n += W.after_op(game.state, p, 3, func() -> float: return randf() * 0.6).size()
+		garage.toast("%d tears. Mend them at the sewing table (needs old shirts)." % n))
 	add.call("Open all markets", func() -> void:
 		game.state.flags["markets_open"] = true
 		game.state.supplies["picks"] = int(game.state.supplies.get("picks", 0)) + 5

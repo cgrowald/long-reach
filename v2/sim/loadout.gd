@@ -130,7 +130,11 @@ static func grid_size(state: RefCounted, p: Dictionary) -> Vector2i:
 	if rig.is_empty():
 		return Vector2i(0, 0)
 	var g: Array = rig.get("grid", gdef(rig["gear"]).get("grid", [0, 0]))
-	return Vector2i(int(g[0]), int(g[1]))
+	var w := int(g[0])
+	# a rig torn in two or more places loses a pouch column until it's mended (data/v2/wear.json)
+	if (rig.get("tears", []) as Array).size() >= int(Content.get_file("wear").get("rig_tears_cost_column", 2)):
+		w = maxi(1, w - 1)
+	return Vector2i(w, int(g[1]))
 
 
 static func cells(gid: String) -> Vector2i:
@@ -265,6 +269,7 @@ static func to_fighter(state: RefCounted, p: Dictionary) -> Dictionary:
 	var clothes := worn(state, p, "clothes")
 	return {
 		"face": str(p.get("face", p["name"])),
+		"marks": load("res://v2/sim/wear.gd").marks(state, p),
 		"id": p["id"], "name": p["name"], "role": p.get("role", "rear"), "trait": p.get("trait", ""), "line": p.get("line", ""),
 		"tech": int(p.get("tech", 0)), "stick": int(stick_of(state, p).get("stars", -1)),     # -1 = no stick
 		"camo": gdef(clothes.get("gear", "street")).get("camo", "street") if not clothes.is_empty() else "street",
@@ -372,11 +377,8 @@ static func _wounds(state: RefCounted, p: Dictionary, r: Dictionary) -> Array:
 			scars.append(spot)
 			notes.append("%s will carry a scar on the %s." % [_first(p), spot])
 		p["scars"] = scars
-	if hits > 0:
-		for slot in ["clothes", "rig"]:
-			var it := worn(state, p, slot)
-			if not it.is_empty():
-				it["condition"] = maxi(0, int(it.get("condition", 100)) - hits * 12)
+	# wear and tears on what they wore (v2/sim/wear.gd): a little every op, tears from the hits
+	notes.append_array(load("res://v2/sim/wear.gd").after_op(state, p, hits, func() -> float: return randf()))
 	return notes
 
 

@@ -1,0 +1,27 @@
+{
+	"_note": "Wear and mending (docs/BENCH_SEWING.md, user 2026-11-24: gear wears slowly each op, mostly from getting hurt). v2/sim/wear.gd. A hit can tear what the fighter wears (clothes or rig) at a spot; each spot has a place on the sewing table's base piece (at = [x, z, yaw] from the base centre, metres, x right, z toward you) and a place on the fighter (body: arm_r, arm_l, chest, hips). Mending costs one old shirt (scraps) and half an hour per tear.",
+	"tear_per_hit": 0.7,
+	"rig_share": 0.35,
+	"op_wear": 3,
+	"hit_wear": 10,
+	"mend_gain": 25,
+	"rig_tears_cost_column": 2,
+	"scrap_material": "shirt",
+	"hours_per_tear": 0.5,
+	"colours": {"blue": "Patch_Blue", "mustard": "Patch_Mustard", "red": "Patch_Red"},
+	"bases": {
+		"clothes": {"model": "Jacket_Field", "spots": {
+			"sleeve_r": {"name": "right sleeve", "at": [0.38, -0.06, -37], "body": "arm_r"},
+			"sleeve_l": {"name": "left sleeve", "at": [-0.38, -0.06, 37], "body": "arm_l"},
+			"chest": {"name": "chest", "at": [0.1, 0.1, 8], "body": "chest"},
+			"hem": {"name": "hem", "at": [-0.12, 0.22, -5], "body": "hips"}}},
+		"rig_market": {"model": "RigA_Body", "spots": {
+			"front": {"name": "front", "at": [0.08, 0.05, 10], "body": "chest"},
+			"low": {"name": "bottom", "at": [-0.1, 0.15, -8], "body": "chest"},
+			"strap": {"name": "strap", "at": [0.12, -0.16, 80], "body": "chest"}}},
+		"rig_chest": {"model": "RigB_Body", "spots": {
+			"front": {"name": "front", "at": [0.1, 0.1, 6], "body": "chest"},
+			"low": {"name": "bottom", "at": [-0.12, 0.17, -6], "body": "chest"},
+			"strap": {"name": "strap", "at": [-0.155, -0.16, 80], "body": "chest"}}}
+	}
+}

@@ -116,6 +116,7 @@ func setup(p_loadout: Dictionary) -> void:
 	armed = wm != ""
 	if armed:
 		_hang(rifle, wm, camo)
+	_marks(loadout.get("marks", {}))
 	light = SpotLight3D.new()
 	light.position = Vector3(0.042, -0.01, -0.75)
 	light.light_color = Color(0.92, 0.95, 1.0)
@@ -399,3 +400,46 @@ static func _down_basis(v: Vector3, hint: Vector3) -> Basis:
 	var x := y.cross(z).normalized()
 	z = x.cross(y).normalized()
 	return Basis(x, y, z)
+
+
+# ------------------------------------------------------------------ patches and tears (v2/sim/wear.gd)
+
+const PATCH_COL := {"blue": Color(0.22, 0.28, 0.56), "mustard": Color(0.84, 0.62, 0.2), "red": Color(0.66, 0.16, 0.14)}
+
+
+## Mended patches (in the colour you picked at the sewing table) and open tears, on the body where they are.
+func _marks(m: Dictionary) -> void:
+	var i := 0
+	for pa in m.get("patches", []):
+		_mark(str(pa.get("body", "chest")), str(pa.get("slot", "clothes")), PATCH_COL.get(str(pa.get("colour", "blue")), Color(0.3, 0.3, 0.5)), i, 1.0)
+		i += 1
+	for t in m.get("tears", []):
+		_mark(str(t.get("body", "chest")), str(t.get("slot", "clothes")), Color(0.05, 0.04, 0.035), i, 0.7)
+		i += 1
+
+
+func _mark(body: String, slot: String, col: Color, i: int, s: float) -> void:
+	var mi := MeshInstance3D.new()
+	var bm := BoxMesh.new()
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = col
+	mat.roughness = 1.0
+	mi.material_override = mat
+	mi.mesh = bm
+	var j := 0.03 * float(i % 3)
+	match body:
+		"arm_r", "arm_l":
+			var sx := 1.0 if body == "arm_r" else -1.0
+			bm.size = Vector3(0.014, 0.11, 0.1) * Vector3(1, s, s)
+			(shoulder["R" if sx > 0 else "L"] as Node3D).add_child(mi)
+			mi.position = Vector3(sx * 0.05, -0.13 - j, -0.042)       # front-outer side of the upper arm, seen from the front and the side
+			mi.rotation.y = sx * deg_to_rad(42.0)
+		"hips":
+			bm.size = Vector3(0.1, 0.08, 0.014) * Vector3(s, s, 1)
+			hips.add_child(mi)
+			mi.position = Vector3(-0.08 + j, -0.06, -0.125)
+		_:
+			bm.size = Vector3(0.1, 0.09, 0.014) * Vector3(s, s, 1)
+			chest.add_child(mi)
+			# clothes patches sit high on the chest, above where a rig covers; rig patches on the rig's face
+			mi.position = Vector3(0.08 - j * 2.0, 0.28 - j, -0.2) if slot == "rig" else Vector3(-0.09 + j * 2.0, 0.44 - j, -0.128)

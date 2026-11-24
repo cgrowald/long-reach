@@ -106,7 +106,75 @@ func _show_list() -> void:
 			b.disabled = not miss.is_empty()
 			r2.add_child(b)
 		v.add_child(HSeparator.new())
+	if def.get("bench", "") == "armor":
+		_mend_list(v)
 	outer.add_child(Kit.label("Made things go to the shelves (west wall).", Pal.DIM, 8, 240))
+
+
+# ------------------------------------------------------------------ mending (v2/sim/wear.gd)
+
+var _mending: Dictionary = {}
+
+
+## Torn clothes and rigs (worn or on the shelves): mend them here with scrap patches.
+func _mend_list(v: VBoxContainer) -> void:
+	var W := load("res://v2/sim/wear.gd")
+	v.add_child(Kit.heading("Mending"))
+	var torn: Array = W.torn_items(game.state)
+	if torn.is_empty():
+		v.add_child(Kit.label("Nothing torn. Hits in a fight tear clothes and rigs.", Pal.DIM, 8, 230))
+		return
+	for it in torn:
+		var item: Dictionary = it
+		var who := ""
+		if str(item.get("on", "")) != "":
+			var p: Dictionary = load("res://v2/sim/loadout.gd").person(game.state, str(item["on"]))
+			who = " (" + str(p.get("name", "")).split(" ")[0].capitalize() + "'s)"
+		var spots: Array = []
+		for s in W.tears(item):
+			spots.append(W.spot(item, s).get("name", s))
+		v.add_child(Kit.label("%s%s: torn at the %s" % [item.get("name", ""), who, ", ".join(PackedStringArray(spots))], Pal.TEXT, 8, 230))
+		var why: String = W.can_mend(game.state, item)
+		var r := Kit.row(v)
+		r.add_child(Kit.label("%d old shirt%s, %.1fh" % [W.scraps_needed(item), "" if W.scraps_needed(item) == 1 else "s", float(W.job(item)["hours"])], Pal.MULT if why != "" else Pal.DIM, 8))
+		var b := Kit.button("Mend", func() -> void: _mend(item), game)
+		b.disabled = why != ""
+		r.add_child(b)
+	v.add_child(HSeparator.new())
+
+
+func _mend(item: Dictionary) -> void:
+	var W := load("res://v2/sim/wear.gd")
+	var job: Dictionary = W.job(item)
+	if not garage.spend(float(job["hours"])):
+		return
+	_mending = item
+	_recipe = job
+	_list.queue_free()
+	_list = null
+	_table = SewTable.new()
+	add_child(_table)
+	_table.setup(game, job)
+	_table.finished.connect(_on_mend_done)
+	garage.hands.set_shown(false)
+	game.clunk()
+
+
+func _on_mend_done(scores: Array) -> void:
+	var avg := 0.0
+	for s in scores:
+		avg += float(s)
+	avg /= maxf(1.0, scores.size())
+	var patched: Array = _table.patched.duplicate()
+	load("res://v2/sim/wear.gd").mend(game.state, _mending, patched, avg)
+	var cols: Array = []
+	for pa in patched:
+		cols.append(str(pa["colour"]))
+	garage.toast("Mended: %s, patched in %s. Condition %d%%." % [_mending.get("name", ""), ", ".join(PackedStringArray(cols)), int(_mending.get("condition", 100))])
+	game.sfx.play("confirmation_002", 1.1, -6.0)
+	_mending = {}
+	_end_work()
+	_show_list()
 
 
 # ------------------------------------------------------------------ making it
