@@ -252,6 +252,7 @@ static func to_fighter(state: RefCounted, p: Dictionary) -> Dictionary:
 	var ammo_gid: String = gdef(weapon_item.get("gear", "")).get("ammo", "") if not weapon_item.is_empty() else ""
 	var mags := 0
 	var meds := 0
+	var med_names: Array = []
 	var flash := 0
 	var charges := 0
 	for e in p["grid"]:
@@ -259,6 +260,10 @@ static func to_fighter(state: RefCounted, p: Dictionary) -> Dictionary:
 		if e["gear"] == ammo_gid:
 			mags += 1
 		meds += int(d.get("med", 0))
+		if int(d.get("med", 0)) > 0:
+			var it := item_by_id(state, int(e.get("item", -1))) if e.has("item") else {}
+			var stars := int(it.get("stars", 0))
+			med_names.append(("your %s (%d stars)" % [str(d.get("name", "dressing")).to_lower(), stars]) if stars > 0 else str(d.get("name", "a bandage")).to_lower())
 		flash += int(d.get("flash", 0))
 		charges += int(d.get("charge", 0))
 	var plate := worn(state, p, "plate")
@@ -271,6 +276,7 @@ static func to_fighter(state: RefCounted, p: Dictionary) -> Dictionary:
 		"face": str(p.get("face", p["name"])),
 		"marks": load("res://v2/sim/wear.gd").marks(state, p),
 		"id": p["id"], "name": p["name"], "role": p.get("role", "rear"), "trait": p.get("trait", ""), "line": p.get("line", ""),
+		"med_names": med_names,
 		"tech": int(p.get("tech", 0)), "stick": int(stick_of(state, p).get("stars", -1)),     # -1 = no stick
 		"camo": gdef(clothes.get("gear", "street")).get("camo", "street") if not clothes.is_empty() else "street",
 		"head": {"Gear_Helmet": "helmet", "Gear_Cap": "cap", "Gear_Beanie": "beanie"}.get(gdef(head.get("gear", "")).get("mesh", ""), "none"),

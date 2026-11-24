@@ -12,6 +12,7 @@ signal fired(who, target)
 
 const Rules := preload("res://v2/combat/rules.gd")
 const Audio := preload("res://v2/combat/combat_audio.gd")
+const Impacts := preload("res://v2/combat/impacts.gd")
 const WALK := 0.85
 const RUN := 1.9
 
@@ -59,6 +60,11 @@ var has_light := false
 var shots := 0
 var last_shot_t := -100.0       # when this person last fired (a muzzle flash gives you away)
 var hits := 0
+var wound_parts: Array = []        # open wounds by body part (head, torso, arm_l, arm_r, leg_l, leg_r) (C4)
+var treated: Array = []            # {part, by, item}: what was used on them this op (the report and coming home)
+var med_names: Array = []          # what their meds are, in rig order ("your dressing (3 stars)"); generic when empty
+var arm_hits := 0                  # a bad arm shoots worse
+var leg_hits := 0                  # a bad leg slows them
 var rng := RandomNumberGenerator.new()
 var _say_cd := 0.0
 
@@ -82,6 +88,7 @@ func setup_actor(def: Dictionary, p_team: String, p_level: Node3D) -> void:
 	mag_rounds = int(st["mag"])
 	mags = maxi(0, int(st["mags"]) - 1)
 	meds = int(st["meds"])
+	med_names = (def.get("med_names", []) as Array).duplicate()
 	flashes = int(st["flash"])
 	charges = int(st["charges"])
 	rng.seed = hash(id)
@@ -151,12 +158,16 @@ func tick(delta: float) -> void:
 		return
 	stunned = maxf(0.0, stunned - delta)
 	busy = maxf(0.0, busy - delta)
+	# how they carry themselves: hunched when hurt, a limp on a bad leg, the reload on the body (soldier.gd)
+	hurt = move_toward(hurt, 1.0 if (hp < 55.0 or wounds > 0) else 0.0, delta * 2.0)
+	limp = 1.0 if leg_hits > 0 else 0.0
+	reload_anim = move_toward(reload_anim, 1.0 if (reloading > 0.0 or bandaging > 0.0) else 0.0, delta * 5.0)
 	# walking
 	var v := Vector3.ZERO
 	if not path.is_empty() and busy <= 0.0:
 		var to: Vector3 = path[0]
 		var d := Vector3(to.x - global_position.x, 0, to.z - global_position.z)
-		var step := speed * delta * (0.55 if target != null else 1.0)
+		var step := speed * delta * (0.55 if target != null else 1.0) * (0.62 if leg_hits > 0 else 1.0)    # a bad leg slows them
 		if d.length() <= step + 0.02:
 			if level.walkable(Vector3(to.x, 0, to.z)):
 				global_position = Vector3(to.x, 0, to.z)
@@ -340,22 +351,45 @@ func _shoot() -> void:
 	var p := Rules.hit_chance(st, dist, moving(), t.moving(), cover, shot_i)
 	var hit := rng.randf() < p
 	var end: Vector3 = t.chest_pos() + (Vector3.ZERO if hit else Vector3(rng.randf_range(-0.7, 0.7), rng.randf_range(-0.5, 0.6), rng.randf_range(-0.7, 0.7)))
-	_tracer(rifle.to_global(Vector3(0, 0, -0.95)), end)
+	var muzzle: Vector3 = rifle.to_global(Vector3(0, 0, -0.95))
+	_tracer(muzzle, end)
 	fired.emit(self, t)
 	if hit:
 		hits += 1
 		t.take_hit(self)
+	else:
+		_stray(muzzle, end)
 
 
 func take_hit(from) -> void:
 	if state == "dead":
 		return
-	var res := Rules.resolve_hit(rng, from.st, {"plate": st["plate"], "plate_dur": plate_dur})
+	var res := Rules.resolve_hit(rng, from.st, {"plate": st["plate"], "plate_dur": plate_dur, "low": crouch > 0.5})
 	plate_dur = float(res["plate_dur"])
+	var part: String = res["part"]
+	var before := hp
 	hp -= float(res["dmg"])
+	if res["zone"] == "limb" and before > Rules.LIMB_FLOOR:
+		hp = maxf(hp, Rules.LIMB_FLOOR)       # arms and legs take more: a limb alone doesn't drop you
 	if res["bleed"]:
 		wounds += 1
+		wound_parts.append(part)
+	if not res["blocked"]:
+		if part.begins_with("arm"):
+			arm_hits += 1
+			st["acc"] = float(st["acc"]) * 0.82
+			st["ads"] = float(st["ads"]) + 0.12
+		elif part.begins_with("leg"):
+			leg_hits += 1
 	_kick = 1.0
+	flinch = 1.0
+	# what you see and hear where it landed
+	var dir: Vector3 = (chest_pos() - from.eye()).normalized()
+	var at := part_pos(part)
+	if res["blocked"]:
+		Impacts.plate(level, at, dir)
+	else:
+		Impacts.flesh(level, level, at, dir, res["zone"] != "limb")
 	hit_taken.emit(self, res)
 	if res["zone"] == "head" and not res["blocked"] and hp <= 0.0:
 		_die()
@@ -380,6 +414,7 @@ func _bleed(delta: float) -> void:
 
 func _go_down() -> void:
 	state = "down"
+	Impacts.pool(level, global_position)
 	hp = 0.0
 	target = null
 	stop()
@@ -388,7 +423,10 @@ func _go_down() -> void:
 
 
 func _die() -> void:
+	if state != "down":
+		Impacts.pool(level, global_position)
 	state = "dead"
+	down_variant = rng.randi() % 3
 	hp = 0.0
 	target = null
 	stop()
@@ -401,11 +439,14 @@ func _self_aid(delta: float) -> void:
 	if bandaging > 0.0:
 		bandaging -= delta
 		if bandaging <= 0.0:
+			for p in wound_parts:
+				treated.append({"part": p, "by": "self", "item": str(get_meta("own_med", "a bandage"))})
+			wound_parts.clear()
 			wounds = 0
 			hp = maxf(hp, 20.0)
 		return
 	if wounds > 0 and target == null and meds > 0 and busy <= 0.0:
-		meds -= 1
+		set_meta("own_med", use_med())
 		bandaging = 3.5
 		busy = 3.5
 		if team == "us":
@@ -417,7 +458,12 @@ func _self_aid(delta: float) -> void:
 
 
 ## A medic (or anyone) patching this person. Downed + patched = stable (out of the fight, not dying).
-func get_patched() -> void:
+func get_patched(by_name := "", item := "a bandage") -> void:
+	if wound_parts.is_empty() and state == "down":
+		wound_parts.append("torso")
+	for p in wound_parts:
+		treated.append({"part": p, "by": by_name, "item": item})
+	wound_parts.clear()
 	wounds = 0
 	if state == "down":
 		stable = true
@@ -485,3 +531,47 @@ func order_look(p: Vector3) -> void:
 	look_order = p + Vector3(0, 1.2, 0)
 	look_order_t = 7.0
 	say(["Checking.", "Eyes on it.", "Looking."][rng.randi() % 3], true)
+
+
+## Where a body part is right now (for hit effects and the medic's hands).
+func part_pos(part: String) -> Vector3:
+	var b := global_basis
+	match part:
+		"head":
+			return eye() + Vector3(0, 0.08, 0)
+		"arm_l":
+			return chest_pos() - b.x * 0.24
+		"arm_r":
+			return chest_pos() + b.x * 0.24
+		"leg_l":
+			return global_position + Vector3(0, 0.55, 0) - b.x * 0.1
+		"leg_r":
+			return global_position + Vector3(0, 0.55, 0) + b.x * 0.1
+	return chest_pos()
+
+
+## A round that missed: it goes on until it hits the building (a mark, dust or sparks).
+func _stray(from: Vector3, toward: Vector3) -> void:
+	var dir := (toward - from).normalized()
+	var q := PhysicsRayQueryParameters3D.create(from, from + dir * 30.0)
+	var hit := get_world_3d().direct_space_state.intersect_ray(q)
+	if hit.is_empty():
+		return
+	var metal := false
+	for d in level.doors:
+		if d.get("body") == hit["collider"]:
+			metal = true
+	Impacts.wall(level, hit["position"] + (hit["normal"] as Vector3) * 0.005, hit["normal"], metal)
+
+
+## Words for a body part, for the radio and the report.
+static func part_name(part: String) -> String:
+	return {"head": "head", "torso": "chest", "arm_l": "left arm", "arm_r": "right arm", "leg_l": "left leg", "leg_r": "right leg"}.get(part, part)
+
+
+## Use one of their meds; returns what it was, in plain words.
+func use_med() -> String:
+	meds -= 1
+	if not med_names.is_empty():
+		return str(med_names.pop_front())
+	return "a bandage"

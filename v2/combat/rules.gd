@@ -8,6 +8,9 @@ const HP := 100.0
 const BLEED_RATE := 1.6           # hp per second per open wound
 const BLEED_OUT := 40.0           # seconds a downed fighter lasts without a medic
 const DOWN_AT := 0.0
+const VITAL_MULT := 2.4           # a clean torso hit (GPT lethality, vital hits only)
+const LIMB_MULT := 0.55           # arms and legs take more
+const LIMB_FLOOR := 12.0          # a limb hit alone never takes someone below this (bleeding still can)
 
 
 static func gear_tables() -> Dictionary:
@@ -71,15 +74,24 @@ static func hit_chance(st: Dictionary, dist: float, shooter_moving: bool, target
 	return clampf(c, 0.03, 0.95)
 
 
-## Where a hit lands and what it does. target: {plate, plate_dur}. Returns
-## {zone, dmg, blocked, bleed, plate_dur}.
+## Where a hit lands and what it does (C4, user 2026-11-24: per-limb wounds; GPT lethality for vital hits only).
+## target: {plate, plate_dur, low (crouched behind something: fewer leg hits)}. Returns
+## {zone (head, thorax, limb), part (head, torso, arm_l, arm_r, leg_l, leg_r), dmg, blocked, bleed, plate_dur}.
+## Vital hits are brutal: an unarmoured guard drops in one or two clean torso hits, the head ends it.
+## Arms and legs take more: a limb hit wounds (a bad arm shoots worse, a bad leg slows) but rarely drops anyone.
 static func resolve_hit(rng: RandomNumberGenerator, st: Dictionary, target: Dictionary) -> Dictionary:
 	var roll := rng.randf()
-	var zone := "limb"
-	if roll < 0.07:
-		zone = "head"
-	elif roll < 0.57:
-		zone = "thorax"
+	var legs := 0.12 if target.get("low", false) else 0.23
+	var part := "torso"
+	if roll < 0.08:
+		part = "head"
+	elif roll < 0.55:
+		part = "torso"
+	elif roll < 0.55 + 0.22:
+		part = "arm_l" if rng.randf() < 0.5 else "arm_r"
+	elif roll < 0.55 + 0.22 + legs:
+		part = "leg_l" if rng.randf() < 0.5 else "leg_r"
+	var zone := "head" if part == "head" else ("thorax" if part == "torso" else "limb")
 	var dmg := float(st["dmg"]) * rng.randf_range(0.85, 1.15)
 	var blocked := false
 	var plate := int(target.get("plate", 0))
@@ -95,8 +107,10 @@ static func resolve_hit(rng: RandomNumberGenerator, st: Dictionary, target: Dict
 			dmg *= clampf(0.55 + (pen - plate) * 0.25, 0.55, 0.95)
 	match zone:
 		"head":
-			dmg *= 3.0
+			dmg *= 4.0
+		"thorax":
+			dmg *= VITAL_MULT
 		"limb":
-			dmg *= 0.7
-	var bleed := not blocked and zone != "head" and rng.randf() < (0.55 if zone == "thorax" else 0.4)
-	return {"zone": zone, "dmg": dmg, "blocked": blocked, "bleed": bleed, "plate_dur": dur}
+			dmg *= LIMB_MULT
+	var bleed := not blocked and zone != "head" and rng.randf() < (0.6 if zone == "thorax" else 0.45)
+	return {"zone": zone, "part": part, "dmg": dmg, "blocked": blocked, "bleed": bleed, "plate_dur": dur}

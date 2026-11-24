@@ -281,10 +281,25 @@ func _process(delta: float) -> void:
 	if _flash:
 		_flash.light_energy = maxf(0.0, _flash.light_energy - delta * 160.0)
 	_kick = maxf(0.0, _kick - delta * 12.0)
+	flinch = maxf(0.0, flinch - delta * 3.5)
+	kneel = move_toward(kneel, kneel_want, delta * 3.0)
+	if pose_mode == "down" or pose_mode == "dead":
+		_fall = minf(1.0, _fall + delta * 2.2)
+	else:
+		_fall = 0.0
 	_pose(delta)
 
 
 var pose_mode := "normal"        # normal, down, dead, hands_up
+# body language (C4): set by the fight each frame
+var flinch := 0.0                # 1 the moment a round lands, fades fast
+var hurt := 0.0                  # 0..1: hunched and favouring the wound
+var limp := 0.0                  # 1 = a bad leg
+var kneel := 0.0                 # 0..1: down on one knee (reloading, waiting to be called up)
+var kneel_want := 0.0
+var reload_anim := 0.0           # 0..1: hands at the mag well, rifle canted
+var down_variant := 0            # which way they fell (a few canned falls)
+var _fall := 0.0                 # 0..1 through the fall
 
 
 func _pose(_delta: float) -> void:
@@ -309,13 +324,30 @@ func _pose(_delta: float) -> void:
 		(hip[side] as Node3D).rotation = Vector3(crouch * 0.32 + sw, 0, 0)
 		(knee[side] as Node3D).rotation = Vector3(-(crouch * 0.6 + lift), 0, 0)
 		(ankle[side] as Node3D).rotation = Vector3(crouch * 0.28 - sw * 0.4 + lift * 0.5, 0, 0)
+		if side == "R" and limp > 0.0:
+			# a bad leg: it barely swings and doesn't bend, the body dips onto the good one
+			(hip[side] as Node3D).rotation.x = crouch * 0.32 + sw * 0.35
+			(knee[side] as Node3D).rotation.x = -(crouch * 0.3)
+	if limp > 0.0 and moving > 0.1:
+		hips.position.y -= maxf(0.0, sin(_phase)) * 0.05
+	hips.position.y -= hurt * 0.04
+	# down on one knee: the left knee on the floor, the right foot planted ahead
+	if kneel > 0.01:
+		var k := kneel * kneel * (3.0 - 2.0 * kneel)
+		hips.position.y = lerpf(hips.position.y, 0.58, k)
+		(hip["L"] as Node3D).rotation.x = lerpf((hip["L"] as Node3D).rotation.x, -0.05, k)
+		(knee["L"] as Node3D).rotation.x = lerpf((knee["L"] as Node3D).rotation.x, -1.55, k)
+		(ankle["L"] as Node3D).rotation.x = lerpf((ankle["L"] as Node3D).rotation.x, 0.6, k)
+		(hip["R"] as Node3D).rotation.x = lerpf((hip["R"] as Node3D).rotation.x, 1.45, k)
+		(knee["R"] as Node3D).rotation.x = lerpf((knee["R"] as Node3D).rotation.x, -1.45, k)
+		(ankle["R"] as Node3D).rotation.x = lerpf((ankle["R"] as Node3D).rotation.x, 0.0, k)
 	# torso leans into the rifle and turns toward the aim; a little breathing and sway
 	var sway := Vector2(sin(_t * 1.3 + _sway_seed) * 0.02 + sin(_t * 2.9 + _sway_seed) * 0.01, sin(_t * 1.7 + _sway_seed) * 0.015)
-	chest.rotation = Vector3(-0.12 - crouch * 0.08 + sway.y, aim_yaw * 0.85 - hips.rotation.y + sway.x, 0)
-	neck.rotation = Vector3(-0.04 + aim_pitch * 0.6, aim_yaw * 0.15, 0)
-	# rifle: shouldered and pointed along the aim, or dipped to low ready
-	var pitch := lerpf(-0.45, aim_pitch + 0.12 + crouch * 0.08, raised)
-	rifle.rotation = Vector3(pitch + _kick * 0.06, 0.04, 0)
+	chest.rotation = Vector3(-0.12 - crouch * 0.08 + sway.y - hurt * 0.15 + flinch * 0.4, aim_yaw * 0.85 - hips.rotation.y + sway.x, hurt * 0.08 - flinch * 0.12)
+	neck.rotation = Vector3(-0.04 + aim_pitch * 0.6 + flinch * 0.35, aim_yaw * 0.15, 0)
+	# rifle: shouldered and pointed along the aim, or dipped to low ready; canted down while reloading
+	var pitch := lerpf(-0.45, aim_pitch + 0.12 + crouch * 0.08, raised) - reload_anim * 0.35
+	rifle.rotation = Vector3(pitch + _kick * 0.06 + flinch * 0.25, 0.04, reload_anim * 0.7)
 	rifle.position = Vector3(0.12, lerpf(0.3, 0.37, raised), lerpf(-0.05, -0.1, raised) + _kick * 0.035)
 	if not armed:
 		# nothing in their hands: arms hang loose, a little forward
@@ -327,15 +359,31 @@ func _pose(_delta: float) -> void:
 	# hands on the rifle (2-bone IK), elbows out and down
 	var grip := rifle.to_global(Vector3(0, -0.1, -0.31))
 	var fore := rifle.to_global(Vector3(-0.01, -0.09, -0.6))
+	if reload_anim > 0.01:
+		# the support hand goes to the mag well and works it
+		var mag := rifle.to_global(Vector3(0.0, -0.2 - absf(sin(_t * 6.0)) * 0.06, -0.4))
+		fore = fore.lerp(mag, reload_anim)
 	var down := -chest.global_basis.y
 	_ik("R", grip, (down + chest.global_basis.x * 0.6).normalized())
 	_ik("L", fore, (down - chest.global_basis.x * 0.9).normalized())
 
 
 ## On the floor: lying on the back, a knee up, arms loose. Alive and down, the chest still heaves.
+## They fall into it (0.45 s, gathering speed); the dead land one of a few ways (canned ragdolls, C4).
 func _pose_down() -> void:
-	hips.position.y = 0.16
-	hips.rotation = Vector3(-1.45, 0, 0.1)
+	var k := _fall * _fall
+	var lie := Vector3(-1.45, 0, 0.1)          # on the back
+	var y := 0.16
+	if pose_mode == "dead":
+		match down_variant % 3:
+			1:
+				lie = Vector3(1.45, 0.3, -0.1)     # face down
+				y = 0.14
+			2:
+				lie = Vector3(-0.2, 0.0, 1.45)     # on the side
+				y = 0.2
+	hips.position.y = lerpf(1.0, y, k)
+	hips.rotation = Vector3.ZERO.lerp(lie, k)
 	var breathe := 0.0 if pose_mode == "dead" else sin(_t * 3.0) * 0.03
 	chest.rotation = Vector3(0.05 + breathe, 0, 0)
 	neck.rotation = Vector3(0.3, 0.6 if pose_mode == "dead" else sin(_t * 0.7) * 0.4, 0)

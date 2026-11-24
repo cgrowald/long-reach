@@ -791,7 +791,12 @@ func _state_word(a) -> Array:
 		"down":
 			return ["DOWN", UI_RED]
 	if a.wounds > 0:
-		return ["BLEEDING", UI_RED]
+		var wp: String = a.wound_parts[-1] if not a.wound_parts.is_empty() else ""
+		return ["BLEEDING" + ((": " + a.part_name(wp).to_upper()) if wp != "" else ""), UI_RED]
+	if a.leg_hits > 0:
+		return ["LIMPING", UI_AMBER]
+	if a.arm_hits > 0:
+		return ["BAD ARM", UI_AMBER]
 	if a.reloading > 0.0:
 		return ["RELOADING", UI_AMBER]
 	if a.target != null:

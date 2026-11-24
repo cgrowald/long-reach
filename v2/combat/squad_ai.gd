@@ -845,13 +845,16 @@ func _medic(_delta: float) -> void:
 		return
 	who.stop()
 	who.busy = 4.0 if who.role == "medic" else 6.0
-	who.meds -= 1
+	var item: String = who.use_med()
 	who.crouch = 0.9
-	who.say("Got you, got you. Stay with me.", true)
-	p.get_patched()
+	var part: String = p.wound_parts[0] if not p.wound_parts.is_empty() else "torso"
+	var part_word: String = p.part_name(part)
+	# the medic calls it, so you hear your handmade dressing being used (C4; GPT notes)
+	who.say("%s on %s's %s. Stay with me." % [(item.substr(0, 1).to_upper() + item.substr(1)) if item.begins_with("your") else "Dressing", _first(p), part_word], true)
+	p.get_patched(_first(who), item)
 	if who.has_meta("patient"):
 		who.remove_meta("patient")
-	log_line.emit("%s patched %s" % [_first(who), _first(p)])
+	log_line.emit("%s used %s on %s's %s" % [_first(who), item, _first(p), part_word])
 
 
 ## Anyone who gave up gets zip-tied by the nearest fighter when it's quiet.
@@ -1070,14 +1073,17 @@ func _kneel_calls() -> void:
 			continue
 		if f.moving():
 			f.remove_meta("kneel")              # ordered to move: they get up and go
+			f.kneel_want = 0.0
 			continue
-		f.crouch = 0.9
+		f.kneel_want = 1.0
+		f.crouch = 0.6
 		if f.reloading > 0.0 or in_contact:
 			continue
 		for g in alive_fighters():
 			if g != f and g.global_position.distance_to(f.global_position) < 6.0 and g.target == null:
 				g.say("%s, up! You're good." % _first(f), true)
 				f.remove_meta("kneel")
+				f.kneel_want = 0.0
 				f.crouch = 0.3
 				break
 

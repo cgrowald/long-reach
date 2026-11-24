@@ -21,9 +21,11 @@ static func _wav(samples: PackedFloat32Array) -> AudioStreamWAV:
 
 
 ## kind: rifle, pistol, smg, carbine, kick, bang, click, squelch
-static func get_sound(kind: String) -> AudioStreamWAV:
+static func get_sound(kind: String) -> AudioStream:
 	if _cache.has(kind):
 		return _cache[kind]
+	if "/" in kind:                   # a recorded sound, e.g. "kenney_impact/impactPlate_heavy_002" (C4)
+		return load("res://art/audio/" + kind + ".ogg")      # the resource loader keeps it; a static cache would leak at exit
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(kind)
 	var len_s := 0.6
