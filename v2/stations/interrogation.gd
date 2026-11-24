@@ -26,8 +26,8 @@ func build() -> void:
 	garage.world.add_child(_model)
 	var guard: bool = p.get("kind", "") == "guard" or str(p.get("offense", "")) == "Guarded the depot"
 	_model.setup({"name": p["name"], "camo": "regime_low" if guard else "street", "rig_mesh": "", "back": "", "head": "cap" if guard else "none"})
-	_model.position = garage.world.b2g([0.0, -1.05, 0.0])
-	_model.rotation.y = 0.0
+	_model.position = garage.world.b2g(def.get("seat", [0.0, 0.0, 0.0]))
+	_model.rotation.y = deg_to_rad(float(def.get("seat_yaw", 0.0)))
 	_model.pose_mode = "hands_up"
 	_model.crouch = 0.85
 	if _model.light:

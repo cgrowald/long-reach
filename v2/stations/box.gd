@@ -6,8 +6,7 @@ extends "res://v2/stations/station.gd"
 const GarageWorld := preload("res://v2/world/garage_world.gd")
 const PixelView := preload("res://v2/ui/pixel_view.gd")
 const SLOTS := ["scan", "crack", "net"]
-const SLOT_B := {"scan": [0.33, 1.3, 1.0], "crack": [0.5, 1.3, 1.0], "net": [0.67, 1.3, 1.0]}
-const DESK_Z := 0.767
+## Slot and gadget places on the desk come from data/v2/stations.json (station "rig": slots, gadget_home, gadget_step).
 const SLOT_COL := {"scan": Color(0.35, 0.65, 1.0), "crack": Color(1.0, 0.72, 0.25), "net": Color(0.55, 1.0, 0.45)}
 const SLOT_TEXT := {"scan": "SCAN: widens pscan's pings", "crack": "CRACK: crosses out wrong guesses", "net": "NET: slows the trace"}
 const CUE := Color(1.0, 0.3, 0.85)
@@ -27,7 +26,7 @@ func build() -> void:
 	_root = Node3D.new()
 	garage.world.add_child(_root)
 	for slot in SLOTS:
-		var p := GarageWorld.b2g(SLOT_B[slot])
+		var p := GarageWorld.b2g(def["slots"][slot])
 		_slot_pos[slot] = p
 		_box(Vector3(0.13, 0.012, 0.08), Color(0.05, 0.05, 0.06), p)
 		_box(Vector3(0.13, 0.013, 0.008), (SLOT_COL[slot] as Color).darkened(0.5), p + Vector3(0, 0, 0.044))
@@ -38,7 +37,9 @@ func build() -> void:
 			gs.append(it)
 	for i in gs.size():
 		var it: Dictionary = gs[i]
-		var home := GarageWorld.b2g([0.22 + (i % 6) * 0.11, 1.05 - int(i / 6) * 0.08, DESK_Z + 0.006])
+		var h0: Array = def["gadget_home"]
+		var st: Array = def["gadget_step"]
+		var home := GarageWorld.b2g([float(h0[0]) + int(i / 6) * float(st[0]), float(h0[1]) + (i % 6) * float(st[1]), h0[2]])
 		var m := _gadget_mesh(it)
 		_gadgets.append({"item": it, "mesh": m, "home": home})
 		var slot := _slot_of(it)
@@ -266,7 +267,7 @@ func _draw() -> void:
 			sub = "%s %s" % [str(it["name"]).replace(" (gadget)", ""), "*".repeat(int(it["stars"]))]
 		Pal.text(self, sp + Vector2(-50, -24), sub, 8, Pal.TEXT if i >= 0 else Pal.DIM, HORIZONTAL_ALIGNMENT_CENTER, 100)
 	if _gadgets.is_empty():
-		Pal.text(self, Vector2(0, size.y * 0.72), "No gadgets yet. Make one at the hacking bench (east wall).", 9, Pal.AMBER, HORIZONTAL_ALIGNMENT_CENTER, size.x)
+		Pal.text(self, Vector2(0, size.y * 0.72), "No gadgets yet. Make one at the hacking bench (the right end of this desk).", 9, Pal.AMBER, HORIZONTAL_ALIGNMENT_CENTER, size.x)
 	var cue_done := false
 	for i in _gadgets.size():
 		var g: Dictionary = _gadgets[i]
@@ -287,4 +288,4 @@ func _draw() -> void:
 				draw_circle(gp.lerp(to, ph), 1.5, CUE)
 				draw_arc(to, 12.0 * pulse, 0, TAU, 16, CUE, 1.0)
 				Pal.text(self, to + Vector2(16, -4), "DRAG IT HERE", 8, CUE)
-	Pal.text(self, Vector2(10, size.y - 14), "Esc: lean back", 8, Pal.DIM)
+	Pal.text(self, Vector2(10, size.y - 14), "Esc: step back", 8, Pal.DIM)

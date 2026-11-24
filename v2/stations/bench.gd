@@ -118,7 +118,7 @@ func _show_list() -> void:
 			v.add_child(Kit.label("Next upgrades come from depot vaults: " + ", ".join(PackedStringArray(ups)) + ".", Pal.DIM, 8, 230))
 		v.add_child(HSeparator.new())
 		_mend_list(v)
-	outer.add_child(Kit.label("Made things go to the shelves (west wall).", Pal.DIM, 8, 240))
+	outer.add_child(Kit.label("Made things go to the shelves (by the gear cage).", Pal.DIM, 8, 240))
 
 
 # ------------------------------------------------------------------ mending (v2/sim/wear.gd)

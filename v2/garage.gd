@@ -1,6 +1,8 @@
 extends Control
-## The main game scene: the garage hub. Sit in the chair, turn between the four walls (A / D),
-## hover and click a station to lean in, Esc to lean back or pause. The day runs on hours.
+## The main game scene: the garage hub, walked in first person (docs/CONNECTED_LOOP.md section 7).
+## WASD + mouse look, the centre dot picks a station within reach, left click or E uses it (the view glides in and
+## the station's screen opens), Esc or right-click steps back, Esc while walking pauses, Tab frees the cursor
+## (to click the TONIGHT board in the corner). The day runs on hours.
 
 const Kit := preload("res://v2/ui/kit.gd")
 const Pal := preload("res://v2/ui/pal.gd")
@@ -24,6 +26,7 @@ const SCREENS := {
 	"sleep": preload("res://v2/stations/sleep.gd"), "stash": preload("res://v2/stations/stash.gd"),
 	"cage": preload("res://v2/stations/cage.gd"),
 	"interrogation": preload("res://v2/stations/interrogation.gd"),
+	"board": preload("res://v2/stations/board.gd"),
 }
 
 var game: Node
@@ -39,6 +42,7 @@ var _stations_layer: Control
 var _overlay_layer: Control
 var _pending := ""             # station id waiting for the lean to finish
 var _alarm := false
+var _cursor_free := false      # Tab: the cursor is out (click the TONIGHT board), walking and looking stop
 var _t := 0.0
 
 
@@ -53,9 +57,7 @@ func _ready() -> void:
 	view.vp.add_child(world)
 	world.setup()
 	world.lean_finished.connect(_on_lean_finished)
-	world.set_prefix_visible("Bench_Gun_Tarp", false)    # the gun bench is open now
-	world.set_prefix_visible("Rig_Slot", false)          # the box gets its own slots (v2/stations/box.gd)
-	world.set_prefix_visible("Rig_Cartridge", false)
+	world.refresh_stages(game.state)
 	var ui: Control = view.ui
 	_catcher = Control.new()
 	_catcher.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -73,7 +75,7 @@ func _ready() -> void:
 	board.position = Vector2(4, 40)
 	board.go.connect(func(id: String) -> void:
 		if screen == null:
-			open_station(id))
+			guide(id))
 	_stations_layer = Control.new()
 	_stations_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_stations_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -116,17 +118,15 @@ func refresh() -> void:
 	if board:
 		board.refresh()
 		board.visible = screen == null
-	var n: int = world.facing_count()
 	hud.compact = screen != null
-	hud.facing_text = "" if screen else world.facing_name()
-	hud.left_text = world.facing_name(world.facing - 1)
-	hud.right_text = world.facing_name(world.facing + 1)
 	if screen:
-		hud.hint_line = "Esc or right-click: lean back"
+		hud.hint_line = "Esc or right-click: step back"
+	elif _cursor_free:
+		hud.hint_line = "Click a TONIGHT card to be pointed at it.  Tab or click the room: back to walking."
 	elif game.state.hours_left() <= 0.01:
-		hud.hint_line = "It's late. Go inside and sleep (house door)."
+		hud.hint_line = "It's late. Go inside and sleep (the house door, where you came in)."
 	else:
-		hud.hint_line = "Click things. Esc: pause. F1: debug."
+		hud.hint_line = "WASD walk   mouse look   E / click: use   Tab: cursor   Esc: pause   F1: debug"
 
 
 func toast(s: String) -> void:
@@ -160,29 +160,51 @@ func _overlay_open() -> bool:
 
 # ------------------------------------------------------------------ input
 
-func _on_catcher_input(event: InputEvent) -> void:
+## Walking: the mouse is captured and turns the view; the centre dot picks.
+func _walking() -> bool:
+	return screen == null and not _overlay_open() and not debug_panel.visible and not _cursor_free and _pending == ""
+
+
+func _input(event: InputEvent) -> void:
+	if not _walking() or Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
+		return
 	if event is InputEventMouseMotion:
-		world.set_cursor(event.position, _catcher.size)
-		if screen == null and not world.is_moving():
-			_hover(world.pick(PixelView.to_3d(_catcher, world.camera, event.position)))
+		world.look(event.relative)
+		get_viewport().set_input_as_handled()
 	elif event is InputEventMouseButton and event.pressed:
-		if event.button_index == MOUSE_BUTTON_LEFT and screen == null and world.hovered != "":
-			hands.reach(event.position)
-			open_station(world.hovered)
+		if event.button_index == MOUSE_BUTTON_LEFT:
+			use()
+		get_viewport().set_input_as_handled()
+
+
+func _on_catcher_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed:
+		if event.button_index == MOUSE_BUTTON_LEFT and screen == null and _cursor_free:
+			_cursor_free = false           # click the room: back to walking
+			refresh()
 		elif event.button_index == MOUSE_BUTTON_RIGHT:
 			_back()
+
+
+## Use what the centre dot is on.
+func use() -> void:
+	if screen != null or world.is_moving() or world.hovered == "":
+		return
+	hands.reach(hud.size * 0.5)
+	open_station(world.hovered)
 
 
 func _hover(id: String) -> void:
 	if id != world.hovered and id != "":
 		game.hover()
 	world.set_hover(id)
+	hud.dot_on = id != ""
 	if id == "":
 		hud.hover_title = ""
 		return
 	var s := Content.station(id)
 	hud.hover_title = s.get("name", id)
-	hud.hover_hint = s.get("hint", "")
+	hud.hover_hint = s.get("hint", "") + "   [E]"
 	hud.hover_sign = Tonight.signs(game.state, id)
 	if not game.state.is_unlocked(s):
 		hud.hover_cost = "LOCKED"
@@ -199,24 +221,34 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("v2_quicksave"):
 		quicksave()
 	elif event.is_action_pressed("v2_pause"):
-		_back(true)
+		if _cursor_free and screen == null and not _overlay_open():
+			_cursor_free = false
+			refresh()
+		else:
+			_back(true)
 	elif _overlay_open():
 		return
 	elif event.is_action_pressed("v2_back") and screen:
 		_back()
-	elif screen == null and not world.is_moving():
-		if event.is_action_pressed("v2_left"):
-			_turn(-1)
-		elif event.is_action_pressed("v2_right"):
-			_turn(1)
-		elif event is InputEventKey and event.pressed and event.keycode == KEY_P and game.state.flags.has("prisoner"):
+	elif screen == null and event is InputEventKey and event.pressed and not event.echo:
+		if event.physical_keycode == KEY_E and _walking():
+			use()
+		elif event.physical_keycode == KEY_TAB:
+			_cursor_free = not _cursor_free
+			refresh()
+		elif event.physical_keycode == KEY_P and game.state.flags.has("prisoner"):
 			open_station("prisoner")
 
 
-func _turn(dir: int) -> void:
-	world.turn(dir)
-	_hover("")
-	game.sfx.play("tick_004", 0.6, -14.0)
+## A TONIGHT card: turn the view to that station and make it glow until you use it.
+func guide(id: String) -> void:
+	var s := Content.station(id)
+	if s.is_empty():
+		return
+	_cursor_free = false
+	world.guide_to(id)
+	toast("%s: walk over and press E." % s.get("name", id))
+	game.sfx.play("tick_004", 0.6, -12.0)
 	refresh()
 
 
@@ -239,15 +271,11 @@ func open_station(id: String) -> void:
 	var s := Content.station(id)
 	if s.is_empty():
 		return
-	var f: int = world.station_facing(id)
-	if f != world.facing:
-		world.set_facing(f)
 	_hover("")
 	hands.set_shown(false)
 	world.lean(id)
 	_pending = id
 	game.sfx.play("tick_004", 0.5, -10.0)
-	hud.facing_text = ""
 
 
 func _on_lean_finished() -> void:
@@ -285,6 +313,7 @@ func close_station() -> void:
 		screen = null
 	_pending = ""
 	world.unlean()
+	world.refresh_stages(game.state)
 	hands.set_shown(true)
 	game.sfx.play("close_001", 0.8, -12.0)
 	refresh()
@@ -341,5 +370,19 @@ func _process(delta: float) -> void:
 		world.set_flash(0.5 + 0.5 * sin(_t * 9.0))
 	world.set_darken(0.35 if _overlay_open() else 0.0)
 	hud.visible = not _overlay_open() or debug_panel.visible
+	var walking := _walking()
+	world.walk_enabled = walking
+	hud.dot = screen == null and not _overlay_open() and _pending == ""
+	var want := Input.MOUSE_MODE_CAPTURED if walking and get_window().has_focus() else Input.MOUSE_MODE_VISIBLE
+	if Input.mouse_mode != want and DisplayServer.get_name() != "headless":
+		Input.mouse_mode = want
+	if walking and not world.is_moving():
+		_hover(world.aim())
+	elif world.hovered != "" and screen == null and _pending == "":
+		_hover("")
 	if world.hovered != "":
-		hud.hover_pos = PixelView.to_ui(hud, world.camera, world.station_screen_pos(world.hovered))
+		hud.hover_pos = (hud.size * 0.5).floor() + Vector2(6, 0)    # the tag sits beside the centre dot
+
+
+func _exit_tree() -> void:
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE

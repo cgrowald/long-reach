@@ -1,14 +1,11 @@
 extends Control
 ## In-game HUD on the pixel layer: day and clock with hour pips, money, suspect pool and attention lamp,
-## the facing name, the hover tag next to the object, and toasts.
+## the centre dot, the hover tag next to the object, and toasts.
 
 const Pal := preload("res://v2/ui/pal.gd")
 
 var game: Node
-var facing_text := ""
 var hover_sign: Array = []      # the station's status sign (v2/sim/tonight.gd signs): rows {text, tag, ok}
-var left_text := ""
-var right_text := ""
 var hover_title := ""
 var hover_hint := ""
 var hover_cost := ""
@@ -16,6 +13,8 @@ var hover_pos := Vector2(-100, -100)
 var hint_line := ""
 var show_hints := true
 var compact := false          # a station screen is open: only toasts
+var dot := false              # walking in first person: the centre dot
+var dot_on := false           # ...and it's on something you can use
 var _toast := ""
 var _toast_t := 0.0
 var _t := 0.0
@@ -68,11 +67,13 @@ func _draw() -> void:
 	var att: float = st.attention
 	var blink := att > 60.0 and fmod(_t, 0.8) < 0.4
 	Pal.lamp(self, Vector2(r2.end.x - 12, r2.position.y + 11), 5.0, att > 5.0 and not blink, Pal.MULT if att > 50.0 else Pal.AMBER)
-	# Facing.
-	if facing_text != "":
-		Pal.text(self, Vector2(0, 6), facing_text.to_upper(), 10, Pal.TEXT, HORIZONTAL_ALIGNMENT_CENTER, w)
-		if show_hints:
-			Pal.text(self, Vector2(0, 18), "< %s   A / D   %s >" % [left_text, right_text], 8, Pal.DIM, HORIZONTAL_ALIGNMENT_CENTER, w)
+	# The centre dot: what you'd use. A ring when it's on something.
+	if dot:
+		var c := (size * 0.5).floor()
+		draw_circle(c, 2.2, Color(0, 0, 0, 0.6))
+		draw_circle(c, 1.4, Pal.AMBER if dot_on else Color(0.9, 0.86, 0.78, 0.8))
+		if dot_on:
+			draw_arc(c, 6.0, 0.0, TAU, 20, Color(Pal.AMBER, 0.85), 1.0)
 	# Hover tag beside the object.
 	if hover_title != "":
 		var f := Pal.font()

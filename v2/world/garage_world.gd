@@ -1,42 +1,60 @@
 extends Node3D
-## The v2 garage in 3D: loads art/garage_v2.glb, adds the gritty dithered materials and the light,
-## turns the swivel-chair camera between four walls, leans in to stations, and picks what's under the mouse.
-## Positions in data/v2/stations.json are Blender coords; b2g() converts them.
+## The v2 garage in 3D (docs/CONNECTED_LOOP.md section 7): loads art/garage_v3.glb, gives it its surface looks
+## (kind_look.gd) and a light in every lamp bulb, and lets you walk it in first person (a capsule that bumps into
+## walls and furniture). The centre of the view picks a station within reach; using one glides the camera to that
+## station's close-up (lean), and back again (unlean).
+## Stations are the empties St_<id> in the .glb (every mesh under one belongs to it); data/v2/stations.json holds
+## their close-ups in Blender coords; b2g() converts.
 
 signal lean_finished
 
 const Content := preload("res://v2/sim/content.gd")
-const GLB := "res://art/garage_v2.glb"
+const Crafting := preload("res://v2/sim/crafting.gd")
+const KindLook := preload("res://v2/world/kind_look.gd")
+const GLB := "res://art/garage_v3.glb"
 const DITHER := preload("res://v2/world/dither.gdshader")
 
+const EYE := 1.62                # eye height (m)
+const SPEED := 2.4               # walking speed (m/s)
+const REACH := 2.3               # how far away you can use a station from (m)
+const RADIUS := 0.25
+const SEW_STAGES := ["Sew_Starter", "Sew_Improved", "Sew_Upgraded"]
+const TITLE_SPOT := [-2.6, -3.9, 1.75]
+const TITLE_LOOK := [0.6, 2.0, 1.0]
+
 var camera: Camera3D
-var facing := 0                  # index into facings
+var player: CharacterBody3D
 var leaning := ""                # station id we're leaned into, or ""
 var hovered := ""
+var marked := ""                 # a station the TONIGHT board pointed you at
 var look_sensitivity := 1.0
 var base_fov := 70.0
 var title_mode := false          # slow drift for the title screen
+var walk_enabled := false        # the garage turns walking on when no screen or menu is up
+var move_override := Vector2.ZERO   # tests: walk without keys (x = strafe right, y = forward)
 
-var _facings: Array = []
-var _stations: Dictionary = {}   # id -> station def
+var _stations: Dictionary = {}   # id -> station def (not hidden)
 var _meshes: Dictionary = {}     # station id -> Array[MeshInstance3D]
-var _body_station: Dictionary = {}
-var _seat := Vector3.ZERO
+var _body_station: Dictionary = {}   # StaticBody3D -> station id ("" = the room)
+var _stage_shapes: Dictionary = {}   # sewing stage name -> Array[CollisionShape3D]
+var _stage_nodes: Dictionary = {}    # sewing stage name -> Node3D
 var _yaw := 0.0
-var _yaw_target := 0.0
 var _pitch := 0.0
-var _pitch_target := 0.0
-var _cursor := Vector2.ZERO      # -1..1 from the view centre
-var _lean_t := 0.0               # 0 = in the chair, 1 = leaned in
+var _guide_t := 0.0              # > 0 while the view turns to a marked station
+var _guide_yaw := 0.0
+var _guide_pitch := 0.0
+var _mark_t := 0.0
+var _lean_t := 0.0               # 0 = walking, 1 = leaned in
 var _lean_dir := 0
 var _lean_from := Transform3D()
 var _lean_to := Transform3D()
+var _bob := 0.0
 var _trauma := 0.0
 var _time := 0.0
 var _post: ShaderMaterial
 var _hover_mat: StandardMaterial3D
-var _bulb: OmniLight3D
-var _bench_lights := {}          # station id -> {spot, omni, glow}: each bench's own lamp, bright while you work there
+var _mark_mat: StandardMaterial3D
+var _bench_lights := {}          # station id -> [SpotLight3D]: the bench's own lamp, bright while you work there
 
 
 static func b2g(a: Array) -> Vector3:
@@ -45,17 +63,17 @@ static func b2g(a: Array) -> Vector3:
 
 func setup() -> void:
 	var data := Content.stations()
-	_facings = data.get("facings", [])
-	_seat = b2g(data.get("seat", [0, 0, 1.2]))
 	for s in data.get("stations", []):
-		_stations[s["id"]] = s
+		if not s.get("hidden", false):
+			_stations[s["id"]] = s
 	var scene: PackedScene = load(GLB)
 	var garage := scene.instantiate()
 	add_child(garage)
-	_materials(garage)
-	_lights()
-	_bench_lamps(garage)
-	_clickables(garage)
+	KindLook.apply(garage)
+	_environment()
+	_bodies(garage)
+	_bulbs(garage)
+	_player(data)
 	camera = Camera3D.new()
 	camera.near = 0.03
 	camera.far = 40.0
@@ -65,62 +83,20 @@ func setup() -> void:
 	_hover_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	_hover_mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
 	_hover_mat.albedo_color = Color(0.16, 0.11, 0.05)
-	set_facing(0, true)
+	_mark_mat = _hover_mat.duplicate() as StandardMaterial3D
+	_process(0.0)
 
 
 # ------------------------------------------------------------------ look
 
-func _grit() -> Texture2D:
-	var n := FastNoiseLite.new()
-	n.noise_type = FastNoiseLite.TYPE_VALUE
-	n.frequency = 0.35
-	n.fractal_octaves = 2
-	var t := NoiseTexture2D.new()
-	t.width = 32
-	t.height = 32
-	t.seamless = true
-	t.noise = n
-	var ramp := Gradient.new()
-	ramp.set_color(0, Color(0.62, 0.6, 0.62))
-	ramp.set_color(1, Color(1, 1, 1))
-	t.color_ramp = ramp
-	return t
-
-
-func _materials(root: Node) -> void:
-	var grit := _grit()
-	var done := {}
-	for mi in root.find_children("*", "MeshInstance3D", true, false):
-		var m := mi as MeshInstance3D
-		for i in m.mesh.get_surface_count():
-			var src := m.mesh.surface_get_material(i) as StandardMaterial3D
-			if src == null:
-				continue
-			if not done.has(src):
-				var d := src.duplicate() as StandardMaterial3D
-				d.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
-				d.roughness = 1.0
-				d.metallic = 0.0
-				d.specular_mode = BaseMaterial3D.SPECULAR_DISABLED
-				if not d.emission_enabled:
-					d.albedo_texture = grit
-					d.uv1_triplanar = true
-					d.uv1_world_triplanar = true
-					d.uv1_scale = Vector3(2.2, 2.2, 2.2)
-				else:
-					d.emission_energy_multiplier = maxf(d.emission_energy_multiplier, 1.0) * 1.6
-				done[src] = d
-			m.set_surface_override_material(i, done[src])
-
-
-func _lights() -> void:
+func _environment() -> void:
 	var env := WorldEnvironment.new()
 	var e := Environment.new()
 	e.background_mode = Environment.BG_COLOR
 	e.background_color = Color(0.02, 0.01, 0.025)
 	e.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	e.ambient_light_color = Color(0.36, 0.26, 0.32)     # was bruise purple; warmer per the touch-up study
-	e.ambient_light_energy = 0.22
+	e.ambient_light_color = Color(0.42, 0.32, 0.3)
+	e.ambient_light_energy = 0.32
 	e.tonemap_mode = Environment.TONE_MAPPER_LINEAR
 	e.tonemap_exposure = 1.0
 	e.glow_enabled = true
@@ -128,67 +104,46 @@ func _lights() -> void:
 	e.glow_bloom = 0.05
 	e.fog_enabled = true
 	e.fog_light_color = Color(0.1, 0.06, 0.07)
-	e.fog_density = 0.06
-	e.volumetric_fog_enabled = false
+	e.fog_density = 0.025
 	env.environment = e
 	add_child(env)
-	# The bare bulb: warm, hard, the one light in the room.
-	_bulb = OmniLight3D.new()
-	_bulb.light_color = Color(1.0, 0.78, 0.52)
-	_bulb.light_energy = 2.4
-	_bulb.omni_range = 6.0
-	_bulb.omni_attenuation = 1.4
-	_bulb.shadow_enabled = true
-	_bulb.position = b2g([0, 0.35, 2.05])
-	add_child(_bulb)
-	# Sodium street light through the window: orange, slanting down across the desk.
-	var street := SpotLight3D.new()
-	street.light_color = Color(1.0, 0.5, 0.15)
-	street.light_energy = 9.0
-	street.spot_range = 7.0
-	street.spot_angle = 32.0
-	street.shadow_enabled = true
-	add_child(street)
-	street.position = b2g([1.6, 3.6, 2.6])
-	street.look_at(b2g([0.6, 0.6, 0.2]))
-	# Touch-up pass (garage_touchup_study): localized amber pools at the desk and the benches, dim corners.
-	var bench_lamp := SpotLight3D.new()
-	bench_lamp.light_color = Color(1.0, 0.68, 0.34)
-	bench_lamp.light_energy = 5.0
-	bench_lamp.spot_range = 3.2
-	bench_lamp.spot_angle = 52.0
-	bench_lamp.spot_attenuation = 1.2
-	bench_lamp.shadow_enabled = true
-	add_child(bench_lamp)
-	bench_lamp.position = b2g([2.3, 0.0, 2.02])
-	bench_lamp.look_at(b2g([2.4, 0.0, 0.9]))
-	var desk_lamp := SpotLight3D.new()
-	desk_lamp.light_color = Color(1.0, 0.72, 0.4)
-	desk_lamp.light_energy = 3.0
-	desk_lamp.spot_range = 1.6
-	desk_lamp.spot_angle = 48.0
-	desk_lamp.shadow_enabled = true
-	add_child(desk_lamp)
-	desk_lamp.position = b2g([-0.95, 1.42, 1.12])
-	desk_lamp.look_at(b2g([-0.5, 1.05, 0.76]))
-	# The CRT's red glow.
-	_omni(Color(1.0, 0.3, 0.2), 1.2, 1.4, [-0.35, 1.05, 1.0])
-	# The laptop on the hacking bench.
-	_omni(Color(0.4, 1.0, 0.35), 0.4, 0.8, [2.6, 1.3, 1.1])
-	# Warm light under the house door.
-	_omni(Color(1.0, 0.7, 0.4), 0.8, 1.3, [-1.7, -2.4, 0.1])
-	# Street glow under the roller door.
-	_omni(Color(1.0, 0.5, 0.15), 0.7, 1.6, [0.9, -2.4, 0.1])
 
 
-func _omni(col: Color, energy: float, rng: float, at: Array) -> OmniLight3D:
-	var l := OmniLight3D.new()
-	l.light_color = col
-	l.light_energy = energy
-	l.omni_range = rng
-	l.position = b2g(at)
-	add_child(l)
-	return l
+## A light in every lamp bulb (art/src/make_garage_v3.py names them *Hang_Bulb* / *Lamp_Bulb*). The light is a
+## child of the bulb, so it hides with the bulb (the sewing table's stages). A desk lamp on a bench also gets a
+## spot onto the bench's work point: dim while you walk, a bright pool while you work there.
+func _bulbs(root: Node) -> void:
+	for mi in root.find_children("*", "MeshInstance3D", true, false):
+		var m := mi as MeshInstance3D
+		var nm := str(m.name)
+		var hang := nm.contains("Hang_Bulb")
+		if not hang and not nm.contains("Lamp_Bulb"):
+			continue
+		var l := OmniLight3D.new()
+		l.light_color = Color(1.0, 0.74, 0.46)
+		l.light_energy = 1.7 if hang else 0.5
+		l.omni_range = 4.2 if hang else 1.0
+		l.omni_attenuation = 1.2
+		l.shadow_enabled = hang
+		m.add_child(l)
+		var id := _station_of(m)
+		if hang or id == "" or not _stations[id].has("work"):
+			continue
+		var spot := SpotLight3D.new()
+		spot.light_color = Color(1.0, 0.64, 0.32)
+		spot.light_energy = LAMP_IDLE
+		spot.spot_range = 1.8
+		spot.spot_angle = 55.0
+		spot.spot_attenuation = 0.9
+		spot.shadow_enabled = true
+		m.add_child(spot)
+		var at := m.global_position
+		var target := b2g(_stations[id]["work"])
+		if not at.is_equal_approx(target):
+			spot.look_at_from_position(at, target, Vector3.UP if absf((target - at).normalized().y) < 0.99 else Vector3.FORWARD)
+		if not _bench_lights.has(id):
+			_bench_lights[id] = []
+		_bench_lights[id].append(spot)
 
 
 func _post_quad() -> void:
@@ -217,44 +172,107 @@ func shake(amount: float) -> void:
 	_trauma = minf(_trauma + amount, 1.0)
 
 
-# ------------------------------------------------------------------ picking
+# ------------------------------------------------------------------ stations, collision, picking
 
-func _clickables(root: Node) -> void:
-	for mi in root.find_children("*", "MeshInstance3D", true, false):
-		var m := mi as MeshInstance3D
-		var id := _station_for(str(m.name))
-		if id == "":
-			continue
-		if not _meshes.has(id):
-			_meshes[id] = []
-		_meshes[id].append(m)
-		var body := StaticBody3D.new()
-		var shape := CollisionShape3D.new()
-		var b := BoxShape3D.new()
-		var aabb := m.get_aabb()
-		b.size = aabb.size.max(Vector3(0.04, 0.04, 0.04))
-		shape.shape = b
-		shape.position = aabb.get_center()
-		body.add_child(shape)
-		m.add_child(body)
-		_body_station[body] = id
-
-
-func _station_for(node_name: String) -> String:
+## The station a mesh belongs to: a prefix in a station's "objects" wins, else the nearest St_<id> above it.
+func _station_of(m: Node) -> String:
+	var nm := str(m.name)
 	for id in _stations:
 		for prefix in _stations[id].get("objects", []):
-			if node_name.begins_with(prefix):
+			if nm.begins_with(prefix):
 				return id
+	var n := m.get_parent()
+	while n != null and n != self:
+		var pn := str(n.name)
+		if pn.begins_with("St_"):
+			var id := pn.substr(3)
+			if _stations.has(id):
+				return id
+		n = n.get_parent()
 	return ""
 
 
-## Station id under a point of the (low-res) viewport, or "".
-func pick(pos: Vector2) -> String:
+func _stage_of(m: Node) -> String:
+	var n := m.get_parent()
+	while n != null and n != self:
+		if SEW_STAGES.has(str(n.name)):
+			return str(n.name)
+		n = n.get_parent()
+	return ""
+
+
+## One StaticBody3D per station (and one for the room) with a box per mesh: you bump into them, and the view's
+## ray picks them. Flat things on the floor (rugs, mats) and things up near the ceiling get no box.
+func _bodies(root: Node) -> void:
+	var room := _body("")
+	var floor_shape := CollisionShape3D.new()
+	floor_shape.shape = WorldBoundaryShape3D.new()
+	room.add_child(floor_shape)
+	var by_id := {"": room}
+	for node in SEW_STAGES:
+		_stage_shapes[node] = []
+		_stage_nodes[node] = root.find_child(node, true, false)
+	for mi in root.find_children("*", "MeshInstance3D", true, false):
+		var m := mi as MeshInstance3D
+		var id := _station_of(m)
+		if id != "":
+			if not _meshes.has(id):
+				_meshes[id] = []
+			_meshes[id].append(m)
+		var gt := m.global_transform
+		var aabb := m.get_aabb()
+		var world_box := gt * aabb
+		if world_box.end.y < 0.06 or world_box.position.y > 1.9:
+			continue
+		if not by_id.has(id):
+			by_id[id] = _body(id)
+		var shape := CollisionShape3D.new()
+		var b := BoxShape3D.new()
+		b.size = (aabb.size * gt.basis.get_scale()).max(Vector3(0.04, 0.04, 0.04))
+		shape.shape = b
+		shape.transform = Transform3D(gt.basis.orthonormalized(), gt * aabb.get_center())
+		(by_id[id] as StaticBody3D).add_child(shape)
+		var stage := _stage_of(m)
+		if stage != "":
+			_stage_shapes[stage].append(shape)
+
+
+func _body(id: String) -> StaticBody3D:
+	var body := StaticBody3D.new()
+	body.collision_layer = 1
+	body.collision_mask = 0
+	add_child(body)
+	_body_station[body] = id
+	return body
+
+
+## Show the sewing table's stage you've earned (Crafting.bench_stage), and only its boxes collide.
+func refresh_stages(state) -> void:
+	var stage := Crafting.bench_stage(state, "armor") if state != null else 0
+	for i in SEW_STAGES.size():
+		var on := i == stage
+		var n: Node3D = _stage_nodes.get(SEW_STAGES[i])
+		if n:
+			n.visible = on
+		for s in _stage_shapes[SEW_STAGES[i]]:
+			(s as CollisionShape3D).disabled = not on
+
+
+func sew_stage_visible() -> String:
+	for nm in SEW_STAGES:
+		var n: Node3D = _stage_nodes.get(nm)
+		if n and n.visible:
+			return nm
+	return ""
+
+
+## The station in the centre of the view, within reach, or "".
+func aim() -> String:
 	if camera == null:
 		return ""
-	var from := camera.project_ray_origin(pos)
-	var to := from + camera.project_ray_normal(pos) * 8.0
-	var q := PhysicsRayQueryParameters3D.create(from, to)
+	var from := camera.global_position
+	var to := from - camera.global_transform.basis.z * REACH
+	var q := PhysicsRayQueryParameters3D.create(from, to, 1)
 	var hit := get_world_3d().direct_space_state.intersect_ray(q)
 	if hit.is_empty():
 		return ""
@@ -264,73 +282,177 @@ func pick(pos: Vector2) -> String:
 func set_hover(id: String) -> void:
 	if id == hovered:
 		return
-	for m in _meshes.get(hovered, []):
-		(m as MeshInstance3D).material_overlay = null
+	var old := hovered
 	hovered = id
+	_paint(old)
+	_paint(id)
+
+
+func _paint(id: String) -> void:
+	if id == "":
+		return
+	var mat: Material = null
+	if id == hovered:
+		mat = _hover_mat
+	elif id == marked:
+		mat = _mark_mat
 	for m in _meshes.get(id, []):
-		(m as MeshInstance3D).material_overlay = _hover_mat
+		(m as MeshInstance3D).material_overlay = mat
+
+
+## The TONIGHT board sent you to a station: turn the view to it and make it glow until you use it.
+func guide_to(id: String) -> void:
+	if not _stations.has(id):
+		return
+	var old := marked
+	marked = id
+	_paint(old)
+	_paint(id)
+	_mark_t = 0.0
+	var d := station_center(id) - _eye_pos()
+	_guide_yaw = _yaw + wrapf(atan2(-d.x, -d.z) - _yaw, -PI, PI)
+	_guide_pitch = clampf(atan2(d.y, Vector2(d.x, d.z).length()), -1.2, 1.2)
+	_guide_t = 0.6
+
+
+func clear_mark() -> void:
+	var old := marked
+	marked = ""
+	_paint(old)
+
+
+func station_center(id: String) -> Vector3:
+	var ms: Array = _meshes.get(id, [])
+	var c := Vector3.ZERO
+	var n := 0
+	for m in ms:
+		var mi := m as MeshInstance3D
+		if not mi.is_visible_in_tree():
+			continue
+		c += mi.global_transform * mi.get_aabb().get_center()
+		n += 1
+	if n == 0:
+		return b2g(_stations.get(id, {}).get("look", [0, 0, 1]))
+	return c / n
 
 
 ## Screen position (viewport pixels) of a station's centre, for labels.
 func station_screen_pos(id: String) -> Vector2:
-	var ms: Array = _meshes.get(id, [])
-	if ms.is_empty():
+	if not _meshes.has(id):
 		return Vector2(-100, -100)
-	var c := Vector3.ZERO
-	for m in ms:
-		c += (m as MeshInstance3D).global_transform * (m as MeshInstance3D).get_aabb().get_center()
-	c /= ms.size()
+	var c := station_center(id)
 	if camera.is_position_behind(c):
 		return Vector2(-100, -100)
 	return camera.unproject_position(c)
 
 
-# ------------------------------------------------------------------ camera
-
-func facing_name(i := -999) -> String:
-	var f: Dictionary = _facings[wrapi(facing if i == -999 else i, 0, _facings.size())]
-	return f.get("name", "")
-
-
-func facing_count() -> int:
-	return _facings.size()
+## Show or hide every garage mesh whose name starts with prefix.
+func set_prefix_visible(prefix: String, on: bool) -> void:
+	for n in find_children(prefix + "*", "MeshInstance3D", true, false):
+		(n as Node3D).visible = on
 
 
-func set_facing(i: int, instant := false) -> void:
-	facing = wrapi(i, 0, _facings.size())
-	var target := b2g(_facings[facing]["look"])
-	var d := target - _seat
-	var yaw := atan2(-d.x, -d.z)
-	# Turn the short way round.
-	var diff := wrapf(yaw - _yaw_target, -PI, PI)
-	_yaw_target += diff
-	_pitch_target = atan2(d.y, Vector2(d.x, d.z).length())
-	if instant:
-		_yaw = _yaw_target
-		_pitch = _pitch_target
+# ------------------------------------------------------------------ walking
+
+func _player(data: Dictionary) -> void:
+	player = CharacterBody3D.new()
+	player.collision_layer = 2
+	player.collision_mask = 1
+	var shape := CollisionShape3D.new()
+	var cap := CapsuleShape3D.new()
+	cap.radius = RADIUS
+	cap.height = 1.75
+	shape.shape = cap
+	shape.position = Vector3(0, 0.875, 0)
+	player.add_child(shape)
+	add_child(player)
+	if title_mode:
+		return
+	player.global_position = b2g(data.get("spawn", [-3.0, -4.2, 0.0]))
+	face_point(b2g(data.get("spawn_look", [0, 2, 1.2])))
 
 
-func turn(dir: int) -> void:
-	set_facing(facing + dir)
+## Put the player somewhere (Blender coords) facing a point (tests, after an op).
+func place(at_b: Array, look_b: Array) -> void:
+	player.global_position = b2g(at_b)
+	player.velocity = Vector3.ZERO
+	face_point(b2g(look_b))
 
 
-func station_facing(id: String) -> int:
-	var f: String = _stations.get(id, {}).get("facing", "")
-	for i in _facings.size():
-		if _facings[i]["id"] == f:
-			return i
-	return facing
+func face_point(p: Vector3) -> void:
+	var d := p - _eye_pos()
+	_yaw = atan2(-d.x, -d.z)
+	_pitch = clampf(atan2(d.y, Vector2(d.x, d.z).length()), -1.4, 1.4)
 
+
+## Mouse look (relative motion in window pixels).
+func look(rel: Vector2) -> void:
+	var k := 0.0024 * look_sensitivity
+	_yaw -= rel.x * k
+	_pitch = clampf(_pitch - rel.y * k, deg_to_rad(-80.0), deg_to_rad(80.0))
+	_guide_t = 0.0
+
+
+func _eye_pos() -> Vector3:
+	if player == null:
+		return Vector3(0, EYE, 0)
+	return player.global_position + Vector3(0, EYE, 0)
+
+
+func _eye_transform() -> Transform3D:
+	if title_mode:
+		var p := b2g(TITLE_SPOT)
+		var d := b2g(TITLE_LOOK) - p
+		var yaw := atan2(-d.x, -d.z) + sin(_time * 0.06) * 0.55
+		var pitch := atan2(d.y, Vector2(d.x, d.z).length())
+		return Transform3D(Basis(Vector3.UP, yaw) * Basis(Vector3.RIGHT, pitch), p)
+	var basis := Basis(Vector3.UP, _yaw) * Basis(Vector3.RIGHT, _pitch)
+	var bob := Vector3(0, sin(_bob * 2.0) * 0.018 + sin(_time * 0.9) * 0.004, 0)
+	return Transform3D(basis, _eye_pos() + bob)
+
+
+func _physics_process(delta: float) -> void:
+	if player == null or title_mode:
+		return
+	var input := move_override
+	if input == Vector2.ZERO and walk_enabled and leaning == "" and _lean_dir == 0:
+		if Input.is_physical_key_pressed(KEY_W) or Input.is_physical_key_pressed(KEY_UP):
+			input.y += 1.0
+		if Input.is_physical_key_pressed(KEY_S) or Input.is_physical_key_pressed(KEY_DOWN):
+			input.y -= 1.0
+		if Input.is_physical_key_pressed(KEY_D) or Input.is_physical_key_pressed(KEY_RIGHT):
+			input.x += 1.0
+		if Input.is_physical_key_pressed(KEY_A) or Input.is_physical_key_pressed(KEY_LEFT):
+			input.x -= 1.0
+	if leaning != "" or _lean_dir != 0:
+		input = Vector2.ZERO
+	input = input.limit_length(1.0)
+	var fwd := Vector3(-sin(_yaw), 0, -cos(_yaw))
+	var right := Vector3(cos(_yaw), 0, -sin(_yaw))
+	var want := (fwd * input.y + right * input.x) * SPEED
+	var k := 1.0 - exp(-(12.0 if input != Vector2.ZERO else 16.0) * delta)
+	player.velocity.x = lerpf(player.velocity.x, want.x, k)
+	player.velocity.z = lerpf(player.velocity.z, want.z, k)
+	player.velocity.y = 0.0 if player.is_on_floor() else player.velocity.y - 9.8 * delta
+	player.move_and_slide()
+	var sp := Vector2(player.velocity.x, player.velocity.z).length()
+	_bob += delta * sp * 3.2
+
+
+# ------------------------------------------------------------------ using a station (the lean)
 
 func lean(id: String) -> void:
 	var s: Dictionary = _stations.get(id, {})
 	if s.is_empty():
+		s = Content.station(id)
+	if s.is_empty():
 		return
 	leaning = id
 	set_hover("")
-	_lean_from = _chair_transform()
-	var pos := b2g(s["cam"])
-	_lean_to = Transform3D(Basis(), pos).looking_at(b2g(s["look"]), Vector3.UP)
+	if marked == id:
+		clear_mark()
+	_lean_from = camera.global_transform if camera else _eye_transform()
+	_lean_to = _look_xf(s["cam"], s["look"])
 	_lean_dir = 1
 	_lean_t = 0.0
 
@@ -340,21 +462,23 @@ func refocus(cam_b: Array, look_b: Array) -> void:
 	if leaning == "":
 		return
 	_lean_from = camera.global_transform
-	_lean_to = Transform3D(Basis(), b2g(cam_b)).looking_at(b2g(look_b), Vector3.UP)
+	_lean_to = _look_xf(cam_b, look_b)
 	_lean_dir = 1
 	_lean_t = 0.0
 
 
-## Show or hide every garage mesh whose name starts with prefix (e.g. a tarp once a bench is opened).
-func set_prefix_visible(prefix: String, on: bool) -> void:
-	for n in find_children(prefix + "*", "MeshInstance3D", true, false):
-		(n as Node3D).visible = on
+static func _look_xf(cam_b: Array, look_b: Array) -> Transform3D:
+	var pos := b2g(cam_b)
+	var at := b2g(look_b)
+	var up := Vector3.UP if absf((at - pos).normalized().y) < 0.99 else Vector3.FORWARD
+	return Transform3D(Basis(), pos).looking_at(at, up)
 
 
 func unlean() -> void:
 	if leaning == "":
 		return
 	leaning = ""
+	_lean_from = camera.global_transform
 	_lean_dir = -1
 	_lean_t = 0.0
 
@@ -363,39 +487,32 @@ func is_moving() -> bool:
 	return _lean_dir != 0
 
 
-func set_cursor(pos: Vector2, view_size: Vector2) -> void:
-	_cursor = ((pos / view_size) * 2.0 - Vector2.ONE).clamp(Vector2(-1, -1), Vector2(1, 1))
-
-
-func _chair_transform() -> Transform3D:
-	var look := look_sensitivity * (0.0 if title_mode else 1.0)
-	var yaw := _yaw - _cursor.x * deg_to_rad(14.0) * look
-	var pitch := _pitch - _cursor.y * deg_to_rad(9.0) * look
-	var breath := sin(_time * 0.9) * 0.004
-	var basis := Basis(Vector3.UP, yaw) * Basis(Vector3.RIGHT, pitch)
-	return Transform3D(basis, _seat + Vector3(0, breath, 0))
+## Old API (the swivel chair had a mouse-follow look); benches still call it. Nothing to do now.
+func set_cursor(_pos: Vector2, _view_size: Vector2) -> void:
+	pass
 
 
 func _process(delta: float) -> void:
 	_time += delta
-	if title_mode:
-		_yaw_target += delta * 0.03
-	_yaw = lerp_angle(_yaw, _yaw_target, 1.0 - exp(-7.0 * delta))
-	_pitch = lerpf(_pitch, _pitch_target, 1.0 - exp(-7.0 * delta))
-	var t := _chair_transform()
+	if _guide_t > 0.0:
+		var g := 1.0 - exp(-9.0 * delta)
+		_yaw = lerp_angle(_yaw, _guide_yaw, g)
+		_pitch = lerpf(_pitch, _guide_pitch, g)
+		_guide_t -= delta
+	if marked != "":
+		_mark_t += delta
+		var p := 0.5 + 0.5 * sin(_mark_t * 6.0)
+		_mark_mat.albedo_color = Color(0.25, 0.16, 0.04) * p
+	var t := _eye_transform()
 	if _lean_dir != 0:
 		_lean_t = clampf(_lean_t + delta / 0.45, 0.0, 1.0)
-		if _lean_dir < 0:
-			_lean_from = _chair_transform()
-	if _lean_dir > 0 or leaning != "":
-		var k := _ease(_lean_t)
-		t = _lean_from.interpolate_with(_lean_to, k)
+	if _lean_dir > 0 or (leaning != "" and _lean_dir == 0):
+		t = _lean_from.interpolate_with(_lean_to, _ease(_lean_t))
 		if _lean_t >= 1.0 and _lean_dir > 0:
 			_lean_dir = 0
 			lean_finished.emit()
 	elif _lean_dir < 0:
-		var k := _ease(_lean_t)
-		t = _lean_to.interpolate_with(_chair_transform(), k)
+		t = _lean_from.interpolate_with(_eye_transform(), _ease(_lean_t))
 		if _lean_t >= 1.0:
 			_lean_dir = 0
 	if _trauma > 0.001:
@@ -403,14 +520,15 @@ func _process(delta: float) -> void:
 		t.origin += Vector3(randf_range(-1, 1), randf_range(-1, 1), 0) * 0.02 * s
 		t.basis = t.basis * Basis(Vector3.FORWARD, randf_range(-1, 1) * 0.02 * s)
 		_trauma = maxf(0.0, _trauma - delta * 1.8)
-	camera.global_transform = t
-	var lean_k := _ease(_lean_t) if (leaning != "" or _lean_dir != 0) else 0.0
-	if _lean_dir < 0:
-		lean_k = 1.0 - _ease(_lean_t)
-	camera.fov = base_fov - 8.0 * lean_k
+	if camera:
+		camera.global_transform = t
+		var lean_k := 0.0
+		if leaning != "":
+			lean_k = _ease(_lean_t) if _lean_dir > 0 else 1.0
+		elif _lean_dir < 0:
+			lean_k = 1.0 - _ease(_lean_t)
+		camera.fov = base_fov - 8.0 * lean_k
 	_bench_lamp_tick(delta)
-	# The bulb flickers now and then.
-	_bulb.light_energy = 2.4 * (0.55 if fmod(_time, 7.3) < 0.08 else 1.0)
 
 
 static func _ease(x: float) -> float:
@@ -419,54 +537,13 @@ static func _ease(x: float) -> float:
 
 # ------------------------------------------------------------------ bench lamps
 
-const LAMP_IDLE := 0.7
+const LAMP_IDLE := 0.8
 const LAMP_WORK := 6.0
 
 
-## Every bench has its own desk lamp (art/src/make_garage_v2.py "bench pass 2"). A warm spot from the shade
-## onto the work point: dim while you're in the chair, a bright orange pool while you work at that bench.
-func _bench_lamps(root: Node) -> void:
-	for id in _stations:
-		var s: Dictionary = _stations[id]
-		if not s.has("bench"):
-			continue
-		var prefix: String = (s.get("objects", [""]) as Array)[0]
-		var glow := root.find_child(prefix + "Lamp_Glow*", true, false) as MeshInstance3D
-		if glow == null:
-			continue
-		var gm := StandardMaterial3D.new()
-		gm.albedo_color = Color(1.0, 0.8, 0.5)
-		gm.emission_enabled = true
-		gm.emission = Color(1.0, 0.7, 0.35)
-		gm.emission_energy_multiplier = 1.5
-		glow.material_override = gm
-		var spot := SpotLight3D.new()
-		spot.light_color = Color(1.0, 0.64, 0.32)
-		spot.light_energy = LAMP_IDLE
-		spot.spot_range = 1.6
-		spot.spot_angle = 55.0
-		spot.spot_attenuation = 0.9
-		spot.shadow_enabled = true
-		add_child(spot)
-		spot.global_position = glow.global_position
-		spot.look_at(b2g(s.get("work", s["look"])), Vector3.UP)
-		var omni := OmniLight3D.new()
-		omni.light_color = Color(1.0, 0.6, 0.28)
-		omni.light_energy = 0.25
-		omni.omni_range = 0.6
-		add_child(omni)
-		omni.global_position = glow.global_position
-		_bench_lights[id] = {"spot": spot, "omni": omni, "glow": gm}
-
-
 func _bench_lamp_tick(delta: float) -> void:
+	var k := 1.0 - exp(-delta * 4.0)
 	for id in _bench_lights:
-		var L: Dictionary = _bench_lights[id]
 		var on: bool = leaning == id
-		var k := 1.0 - exp(-delta * 4.0)
-		var spot: SpotLight3D = L["spot"]
-		spot.light_energy = lerpf(spot.light_energy, LAMP_WORK if on else LAMP_IDLE, k)
-		var omni: OmniLight3D = L["omni"]
-		omni.light_energy = lerpf(omni.light_energy, 0.9 if on else 0.25, k)
-		var gm: StandardMaterial3D = L["glow"]
-		gm.emission_energy_multiplier = lerpf(gm.emission_energy_multiplier, 4.0 if on else 1.5, k)
+		for spot in _bench_lights[id]:
+			(spot as SpotLight3D).light_energy = lerpf((spot as SpotLight3D).light_energy, LAMP_WORK if on else LAMP_IDLE, k)

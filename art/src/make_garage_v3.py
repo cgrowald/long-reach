@@ -346,7 +346,7 @@ def build_stash():
 
 def build_chair():
 	"""The prisoner's chair in the back-left corner, under its own bulb."""
-	station("prisoner", (-3.1, 3.7), 135)
+	station("prisoner", (-3.1, 3.7), 45)   # faces the room
 	S.box("Chair_Seat", (0, 0, 0.45), (0.44, 0.42, 0.04), "wood_door", bevel=0.006)
 	for sx in (-1, 1):
 		for sy in (-1, 1):

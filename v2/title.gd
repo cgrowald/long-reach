@@ -26,8 +26,6 @@ func _ready() -> void:
 	world.setup()
 	world.title_mode = true
 	world.base_fov = 62.0
-	world.set_facing(1, true)
-	world.turn(-1)
 	_build()
 
 
