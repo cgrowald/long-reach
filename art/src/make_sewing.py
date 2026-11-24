@@ -16,7 +16,8 @@ import random
 random.seed(11)
 HERE = os.path.dirname(os.path.abspath(__file__))
 ART = os.path.dirname(HERE)
-bpy.ops.wm.read_factory_settings(use_empty=True)
+if __name__ == "__main__":
+	bpy.ops.wm.read_factory_settings(use_empty=True)
 
 PAL = {
 	"wood_plank": (0.62, 0.42, 0.24), "wood_plank_l": (0.7, 0.5, 0.3), "wood_plank_d": (0.52, 0.34, 0.19),
@@ -454,11 +455,11 @@ def build_upgraded(x):
 	metal_box("Under_", (0.42, 0.0), 0.252)
 
 
-build_starter(-2.2)
-build_improved(0.0)
-build_upgraded(2.5)
-ROOT = None
-
-bpy.ops.wm.save_as_mainfile(filepath=os.path.join(HERE, "sewing.blend"))
-bpy.ops.export_scene.gltf(filepath=os.path.join(ART, "sewing.glb"), export_format="GLB", export_apply=True, export_yup=True)
-print("SEWING OK", len(bpy.data.objects), "objects")
+if __name__ == "__main__":         # run directly: build the three stages side by side; imported (make_garage_v3.py): just the pieces
+	build_starter(-2.2)
+	build_improved(0.0)
+	build_upgraded(2.5)
+	ROOT = None
+	bpy.ops.wm.save_as_mainfile(filepath=os.path.join(HERE, "sewing.blend"))
+	bpy.ops.export_scene.gltf(filepath=os.path.join(ART, "sewing.glb"), export_format="GLB", export_apply=True, export_yup=True)
+	print("SEWING OK", len(bpy.data.objects), "objects")
