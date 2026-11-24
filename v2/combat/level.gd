@@ -20,6 +20,7 @@ var rooms: Array = []           # {id, name, rect: Rect2 (x, z)}
 var doors: Array = []           # {id, name, pos: Vector2, axis, a, b, locked, state: closed|open|broken, pivot, slab, body}
 var lights: Array = []          # {light, mesh, base, flicker}
 var objective_pos := Vector3.ZERO
+var pcs: Array = []              # desk PCs your people can exploit: {room, stand, screen, done}
 var _mats := {}
 var _t := 0.0
 
@@ -552,6 +553,9 @@ func _dress() -> void:
 			# kit pieces are built with their back at +Y (Blender) = -Z here, centred: shift so the back touches the wall
 			n.position = p
 			n.rotation.y = yaw + float(it.get("turn", 0.0)) * PI / 180.0
+			if kit == "desk_pc":
+				var fwd := Basis(Vector3.UP, n.rotation.y) * Vector3(0, 0, 1)
+				pcs.append({"room": r["id"], "stand": p + fwd * 0.85, "screen": p + Vector3(0, 1.0, 0), "done": false})
 		_room_lamps(r, rc)
 	if _kit:
 		_kit.free()      # the source pieces were only copied from
@@ -612,3 +616,23 @@ func _room_lamps(r: Dictionary, rc: Rect2) -> void:
 		glow.position = at + Vector3(0, 2.02, 0)
 		add_child(glow)
 		lights.append({"light": pool, "mesh": null, "base": pool.light_energy, "flicker": false})
+
+
+## Crack a door a hand's width (crack and peek): it counts as open for sight, the opener looks through first.
+func crack_door(d: Dictionary) -> void:
+	if d["state"] != "closed":
+		return
+	var pivot: Node3D = d["pivot"]
+	(d["body"] as StaticBody3D).collision_layer = 0
+	d["state"] = "open"
+	d["rot0"] = pivot.rotation.y
+	pivot.create_tween().tween_property(pivot, "rotation:y", pivot.rotation.y + float(d["swing"]) * 0.22, 0.6).set_trans(Tween.TRANS_SINE)
+
+
+## Push a cracked door the rest of the way.
+func finish_open(d: Dictionary) -> void:
+	if not d.has("rot0"):
+		return
+	var pivot: Node3D = d["pivot"]
+	pivot.create_tween().tween_property(pivot, "rotation:y", float(d["rot0"]) + float(d["swing"]), 0.5).set_trans(Tween.TRANS_SINE)
+	d.erase("rot0")

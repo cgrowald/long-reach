@@ -28,6 +28,7 @@ var focus_target = null
 var cover := {}                    # fighter -> Vector3 they watch
 var pending: Dictionary = {}       # an order waiting for the shooting to stop
 var have_objective := false
+var pc_files: Array = []           # PCs exploited this op (C3): what came off them
 var start_pos := Vector3.ZERO
 var in_contact := false
 var _contact_t := 0.0
@@ -127,7 +128,7 @@ func order(kind: String, target = null, who: Array = [], skip_check := false) ->
 			_set_stack(target, "", false)
 			_ack("stack", {"door": _door_name(target)})
 		"breach", "bang", "charge", "open", "bang_wait":
-			auto = false
+			auto = true          # after the room they go on to the next door and ask again (they never open one alone)
 			var how := {"breach": "kick", "bang": "bang", "charge": "charge", "open": "open", "bang_wait": "bang"}[kind] as String
 			if task.get("type") == "stacked" and task.get("door") == target:
 				task["wait"] = kind == "bang_wait"
@@ -417,13 +418,33 @@ func _set_flow(d: Dictionary, into: String, _fast: bool) -> void:
 		order_ = _stack_order()
 	# whoever is furthest back holds the hall
 	order_.sort_custom(func(p, q) -> bool: return p.global_position.distance_to(level.door_world(d)) < q.global_position.distance_to(level.door_world(d)))
-	var n := mini(order_.size(), 3)               # the rear man holds the hall
+	# the room's size decides how many go in (Operator clip 5): a closet takes one, a small room two, a big one three;
+	# one always stays in the hall (the user's method) when there's anyone to spare
+	var r: Rect2 = level.room(into)["rect"]
+	var area := r.size.x * r.size.y
+	var want := 1 if area < 6.0 else (2 if area < 14.0 else 3)
+	var n := mini(want, order_.size() - 1) if order_.size() > 1 else 1
+	# the first man picks how he goes in: a J-hook round the frame to his own side's corner, or straight across
+	# to the far corner; the next goes opposite, the third opposite of that (deeper) (the user's method)
+	var from: String = d["a"] if d["b"] == into else d["b"]
+	var dp: Vector3 = level.door_world(d)
+	var nrm: Vector3 = level.door_normal(d, into)
+	var side0: float = level.door_side(d, from, order_[0].global_position) if not order_.is_empty() else 1.0
+	var hook := rng.randf() < 0.5
+	# entry_spots: 0 and 1 are the two near corners (0 on physical side -1, 1 on side +1), 2 and 3 deeper
+	var own := 0 if side0 < 0.0 else 1
+	var first := own if hook else 1 - own
+	var plan := [spots[first], spots[1 - first], spots[2 + first], spots[3 - first]]
+	if not order_.is_empty() and n > 0:
+		var right := nrm.cross(Vector3.UP)
+		var lr := "right" if ((plan[0] as Vector3) - dp).dot(right) > 0.0 else "left"
+		order_[0].say(("Hooking %s!" if hook else "Straight in, going %s!") % lr, true)
 	for i in order_.size():
 		var f = order_[i]
 		if i < n:
-			var inside: Vector3 = level.door_world(d) + level.door_normal(d, into) * 0.35
+			var inside: Vector3 = dp + nrm * 0.35
 			f.set_meta("flow_at", _t + ENTRY_GAP * i)
-			f.set_meta("flow_path", [level.door_world(d) - level.door_normal(d, into) * 0.4, inside, spots[i]])
+			f.set_meta("flow_path", [dp - nrm * 0.4, inside, plan[i]])
 		else:
 			f.look_at_point = level.door_world(d) - level.door_normal(d, into) * 6.0 + Vector3(0, 1.3, 0)
 			f.remove_meta("flow_at")
@@ -473,6 +494,7 @@ func tick(delta: float) -> void:
 	_medic(delta)
 	_cuff()
 	_gun_swap()
+	_kneel_calls()
 	match task.get("type", "idle"):
 		"stack":
 			_tick_stack(delta)
@@ -480,6 +502,10 @@ func tick(delta: float) -> void:
 			_face_door()
 		"breach":
 			_tick_breach(delta)
+		"slice":
+			_tick_slice(delta)
+		"exploit":
+			_tick_exploit(delta)
 		"flow":
 			_tick_flow(delta)
 		"clear":
@@ -633,7 +659,8 @@ func _tick_breach(delta: float) -> void:
 			enemy_ai.noise(level.door_world(d), 30.0)
 			_stun_room(task["into"], 3.0)
 		else:
-			level.open_door(d, "open")
+			level.crack_door(d)          # crack and peek (Operator clip 2): open a hand's width, look first
+			task["cracked"] = true
 		b.bark("breach", {}, true)
 		task["step"] = 1 if how == "bang" else 2
 		task["t"] = 0.0
@@ -661,7 +688,7 @@ func _tick_breach(delta: float) -> void:
 			b.say("Flash is out. Holding on the door, your call.", true)
 			task = {"type": "stacked", "door": d, "into": task["into"], "stack": task.get("stack", [])}
 			return
-		_set_flow(d, task["into"], false)
+		_set_slice(d, task["into"], task.get("cracked", false), task.get("stack", []))
 
 
 func _stun_room(room_id: String, t: float) -> void:
@@ -729,6 +756,9 @@ func _tick_clear(delta: float) -> void:
 		if other and other != f0:
 			other.say("Room's clear, moving.", true)
 	log_line.emit("%s cleared" % _room_name(room_id))
+	var obj_room: String = level.data.get("objective", {}).get("room", "")
+	if room_id != obj_room and _exploit_pc(room_id):
+		return
 	# the objective: pick it up
 	var obj: Dictionary = level.data.get("objective", {})
 	if obj.get("room", "") == room_id and not have_objective:
@@ -946,3 +976,158 @@ func _door_name(d) -> String:
 func _room_name(id: String) -> String:
 	var r: Dictionary = level.room(id)
 	return str(r.get("name", id)).to_lower() if not r.is_empty() else id
+
+
+# ------------------------------------------------------------------ the doctrine pass (C3)
+# The user's method (army-taught) and his Operator clip: crack and peek, slice the pie from the threshold, fight
+# from the frame on contact, then flow; kneel to reload and a teammate calls you up; exploit every PC.
+
+const SLICE_T := 2.0               # how long the front two work the angles from the doorway
+const SLICE_GIVE_UP := 12.0        # contact that long without a shot: go in anyway
+
+
+## The door is open (or cracked): the front of each side works the room from the threshold before anyone crosses.
+func _set_slice(d: Dictionary, into: String, cracked: bool, stack: Array) -> void:
+	var st: Array = stack.filter(func(f) -> bool: return f.alive())
+	if st.is_empty():
+		st = _stack_order()
+	var from: String = d["a"] if d["b"] == into else d["b"]
+	var lookers: Array = []
+	for s in [1.0, -1.0]:
+		for f in st:
+			if level.door_side(d, from, f.global_position) == s:
+				lookers.append(f)
+				break
+	for f in lookers:
+		f.light_wanted = true
+		f.crouch = 0.3
+	if cracked and not lookers.is_empty():
+		lookers[0].say("Peeking.", true)
+	task = {"type": "slice", "door": d, "into": into, "stack": st, "lookers": lookers, "t": 0.0, "cracked": cracked,
+		"quiet": 0.0, "contact": false}
+
+
+func _tick_slice(delta: float) -> void:
+	task["t"] = float(task["t"]) + delta
+	var d: Dictionary = task["door"]
+	var into: String = task["into"]
+	var r: Rect2 = level.room(into)["rect"]
+	var dp: Vector3 = level.door_world(d)
+	var nrm: Vector3 = level.door_normal(d, into)
+	var tan := Vector3(nrm.z, 0, -nrm.x)
+	var from: String = d["a"] if d["b"] == into else d["b"]
+	# each looker sweeps from the far side's corner across to his own side (slicing the pie)
+	var k := clampf(float(task["t"]) / SLICE_T, 0.0, 1.0)
+	for f in task["lookers"]:
+		if not f.alive() or f.target != null:
+			continue
+		var s: float = level.door_side(d, from, f.global_position)
+		var far := maxf(r.size.x, r.size.y)
+		var aim: Vector3 = dp + nrm * far * 0.7 + tan * (-s) * lerpf(1.6, -1.2, k) * (-1.0)
+		aim.x = clampf(aim.x, r.position.x + 0.3, r.end.x - 0.3)
+		aim.z = clampf(aim.z, r.position.y + 0.3, r.end.y - 0.3)
+		f.look_at_point = Vector3(aim.x, 1.25, aim.z)
+	# contact from the doorway: hold the frame and fight, don't flow (Operator clip 4)
+	var seen_inside := false
+	for e in enemies:
+		if e.state == "ok" and level.room_at(e.global_position) == into:
+			for f in task["lookers"]:
+				if f.alive() and level.clear_line(f.eye(), e.chest_pos()):
+					seen_inside = true
+	if seen_inside or in_contact:
+		if not task["contact"]:
+			task["contact"] = true
+			var l0 = (task["lookers"] as Array)[0] if not (task["lookers"] as Array).is_empty() else null
+			if l0 and l0.alive():
+				l0.say("Contact in there! Holding the door!", true)
+			log_line.emit("Contact at the %s: fighting from the frame" % _door_name(d))
+		task["quiet"] = 0.0
+		if float(task["t"]) < SLICE_GIVE_UP:
+			return
+	else:
+		task["quiet"] = float(task["quiet"]) + delta
+	if float(task["t"]) < SLICE_T or (task["contact"] and float(task["quiet"]) < 1.5):
+		return
+	if task.get("cracked", false):
+		level.finish_open(d)
+	# small rooms are cleared from the door: one look does it (Operator clip 5)
+	if r.size.x * r.size.y < 6.0:
+		var l1 = (task["lookers"] as Array)[0] if not (task["lookers"] as Array).is_empty() else null
+		if l1 and l1.alive():
+			l1.say("Small room. Clear from here.", true)
+		task = {"type": "clear", "into": into, "door": d, "t": 2.5}
+		return
+	_set_flow(d, into, false)
+
+
+## Kneel to reload; once the mag's in they stay down until a teammate calls them up, since only someone
+## looking around knows whether standing puts them in a line of fire (the user's method).
+func _kneel_calls() -> void:
+	for f in alive_fighters():
+		if f.reloading > 0.0 and not f.moving() and not f.has_meta("kneel"):
+			f.set_meta("kneel", true)
+		if not f.has_meta("kneel"):
+			continue
+		if f.moving():
+			f.remove_meta("kneel")              # ordered to move: they get up and go
+			continue
+		f.crouch = 0.9
+		if f.reloading > 0.0 or in_contact:
+			continue
+		for g in alive_fighters():
+			if g != f and g.global_position.distance_to(f.global_position) < 6.0 and g.target == null:
+				g.say("%s, up! You're good." % _first(f), true)
+				f.remove_meta("kneel")
+				f.crouch = 0.3
+				break
+
+
+## After a room is cleared: any PC in it gets exploited (the user: take all data and intel, room by room).
+## Returns true if someone went to a PC (the task is now "exploit").
+func _exploit_pc(room_id: String) -> bool:
+	for pc in level.pcs:
+		if pc["done"] or pc["room"] != room_id:
+			continue
+		var g = stick_carrier()
+		if g == null or level.room_near(g.global_position) != room_id:
+			var best = null
+			var bd := 1e9
+			for f in alive_fighters():
+				var dd: float = f.global_position.distance_to(pc["stand"])
+				if dd < bd:
+					bd = dd
+					best = f
+			g = best
+		if g == null:
+			return false
+		g.say("PC in here. Pulling what's on it.", true)
+		g.go(_route(g, pc["stand"]), WALK)
+		task = {"type": "exploit", "pc": pc, "who": g, "t": 0.0, "into": room_id}
+		return true
+	return false
+
+
+func _tick_exploit(delta: float) -> void:
+	var g = task.get("who")
+	var pc: Dictionary = task["pc"]
+	if g == null or not is_instance_valid(g) or not g.alive():
+		task = {"type": "hold"}
+		return
+	if g.moving() or in_contact:
+		return
+	g.look_at_point = pc["screen"]
+	g.busy = 0.2
+	task["t"] = float(task["t"]) + delta
+	var need := 6.0 - 2.0 * clampf(float(g.get_meta("tech", 1)) / 5.0, 0.0, 1.0)
+	if float(task["t"]) < need:
+		return
+	pc["done"] = true
+	pc_files.append("%s PC" % _room_name(pc["room"]).capitalize())
+	g.say("Got it. Files are on the stick.", true)
+	log_line.emit("Pulled the files off the %s PC" % _room_name(pc["room"]))
+	if _exploit_pc(str(task["into"])):
+		return
+	if auto:
+		_next_doctrine()
+	else:
+		task = {"type": "hold"}
