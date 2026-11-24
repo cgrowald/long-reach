@@ -54,6 +54,7 @@ var _lean_from := Transform3D()
 var _lean_to := Transform3D()
 var _bob := 0.0
 var _stride := 0.0
+var _soft_floor: Array = []      # rugs and mats (Blender rects): carpet footsteps
 var _steps                       # Footsteps (v2/world/footsteps.gd)
 var _trauma := 0.0
 var _time := 0.0
@@ -69,6 +70,7 @@ static func b2g(a: Array) -> Vector3:
 
 func setup() -> void:
 	var data := Content.stations()
+	_soft_floor = data.get("soft_floor", [])
 	for s in data.get("stations", []):
 		if not s.get("hidden", false):
 			_stations[s["id"]] = s
@@ -483,7 +485,7 @@ func _physics_process(delta: float) -> void:
 	_stride += delta * sp
 	if _stride > 0.68:                # one step every ~0.7 m walked
 		_stride = 0.0
-		_steps.step()
+		_steps.step(_on_soft_floor())
 
 
 # ------------------------------------------------------------------ using a station (the lean)
@@ -594,3 +596,13 @@ func _bench_lamp_tick(delta: float) -> void:
 		var on: bool = leaning == id
 		for spot in _bench_lights[id]:
 			(spot as SpotLight3D).light_energy = lerpf((spot as SpotLight3D).light_energy, LAMP_WORK if on else LAMP_IDLE, k)
+
+
+func _on_soft_floor() -> bool:
+	var p := player.global_position
+	var bx := p.x
+	var by := -p.z
+	for r in _soft_floor:
+		if bx >= float(r[0]) and bx <= float(r[2]) and by >= float(r[1]) and by <= float(r[3]):
+			return true
+	return false

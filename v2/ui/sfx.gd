@@ -1,5 +1,6 @@
 extends Node
 ## Tiny sound pool. play("tick_001", pitch, db, min_gap) with a per-sound rate limit.
+## Ids are kenney_interface names; "kenney_impact/footstep_wood_000" style ids load from another pack in art/audio/.
 
 const DIR := "res://art/audio/kenney_interface/"
 var _streams := {}
@@ -21,7 +22,7 @@ func play(id: String, pitch := 1.0, db := -8.0, min_gap := 0.0) -> void:
 		return
 	_last[id] = now
 	if not _streams.has(id):
-		_streams[id] = load(DIR + id + ".ogg")
+		_streams[id] = load(("res://art/audio/" if "/" in id else DIR) + id + ".ogg")    # "kenney_impact/x" = another pack
 	var s: AudioStream = _streams[id]
 	if s == null or _players.is_empty():
 		return

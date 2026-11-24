@@ -278,6 +278,8 @@ func open_station(id: String) -> void:
 	world.lean(id)
 	_pending = id
 	game.sfx.play("tick_004", 0.5, -10.0)
+	if s.has("touch"):
+		game.sfx.play(str(s["touch"]), randf_range(0.95, 1.05), -12.0)    # a knock on wood or metal as you reach in
 
 
 func _on_lean_finished() -> void:

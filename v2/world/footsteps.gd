@@ -1,46 +1,31 @@
 extends AudioStreamPlayer
-## Footsteps on the garage's concrete, generated (no downloads, like v2/ui/ambience.gd): a soft heel thump and a
-## short gritty scuff, four variants so it doesn't machine-gun. step() plays the next one.
+## Footsteps in the garage: Kenney Impact Sounds (CC0, art/audio/kenney_impact/), concrete on the bare floor and
+## carpet on the rugs and mats. step(soft) plays the next one, never the same twice in a row.
 
-const RATE := 22050
+const DIR := "res://art/audio/kenney_impact/"
 
-var _variants: Array = []
-var _i := 0
+var _hard: Array = []
+var _soft: Array = []
+var _last := -1
 
 
 func _ready() -> void:
 	bus = "SFX"
-	volume_db = -15.0
-	var rng := RandomNumberGenerator.new()
-	rng.seed = 5
-	for v in 4:
-		_variants.append(_make(rng, 0.85 + v * 0.07))
+	volume_db = -13.0
+	for k in 5:
+		_hard.append(load(DIR + "footstep_concrete_%03d.ogg" % k))
+		_soft.append(load(DIR + "footstep_carpet_%03d.ogg" % k))
 
 
-func _make(rng: RandomNumberGenerator, pitch: float) -> AudioStreamWAV:
-	var n := int(RATE * 0.16)
-	var data := PackedByteArray()
-	data.resize(n * 2)
-	var lp := 0.0
-	for k in n:
-		var t := float(k) / RATE
-		var thump := sin(TAU * 62.0 * pitch * t) * exp(-t * 45.0) * 0.9
-		lp += (rng.randf_range(-1.0, 1.0) - lp) * 0.22            # gritty, low-passed noise
-		var scuff := lp * exp(-maxf(t - 0.012, 0.0) * 32.0) * (0.0 if t < 0.006 else 0.8)
-		var s := clampf((thump + scuff) * 0.7, -1.0, 1.0)
-		data.encode_s16(k * 2, int(s * 32000.0))
-	var w := AudioStreamWAV.new()
-	w.format = AudioStreamWAV.FORMAT_16_BITS
-	w.mix_rate = RATE
-	w.stereo = false
-	w.data = data
-	return w
-
-
-func step() -> void:
-	if _variants.is_empty():
+func step(soft := false) -> void:
+	var set_: Array = _soft if soft else _hard
+	if set_.is_empty():
 		return
-	_i = (_i + 1 + randi() % 2) % _variants.size()
-	stream = _variants[_i]
-	pitch_scale = randf_range(0.93, 1.07)
+	var i := randi() % set_.size()
+	if i == _last:
+		i = (i + 1) % set_.size()
+	_last = i
+	stream = set_[i]
+	pitch_scale = randf_range(0.94, 1.06)
+	volume_db = -15.0 if soft else -13.0
 	play()

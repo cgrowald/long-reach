@@ -5,7 +5,7 @@
 ## Decided (user, 2026-11-21)
 - **Look:** v2 (White Knuckle): low-poly Blender garage, low resolution, dithered, one hard light per area.
 - **Approach:** the garage is the hub. You sit in a swivel chair, turn between four walls, and lean into stations.
-- **Sound:** placeholders (the Kenney interface clicks already in the repo, plus a generated room hum).
+- **Sound:** placeholders (the Kenney interface clicks already in the repo, plus a generated room hum). Kenney Impact Sounds (CC0, art/audio/kenney_impact/, downloaded 2026-11-24 with the user's OK): footsteps on concrete and carpet in the garage, wood and metal knocks when you use a station (stations.json "touch"); its metal, plate, punch and soft impacts are there for readable hits in combat.
 - **Late game:** the war room is in, as a placeholder. You reach it through a locked floor hatch or from the PC.
 - **Saves:** real saves from day one: three slots plus an autosave every night.
 - **Everything a normal game has:** title screen, settings, pause menu, save and load, transitions, a debug overlay.
