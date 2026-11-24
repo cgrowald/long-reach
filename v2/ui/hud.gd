@@ -6,6 +6,7 @@ const Pal := preload("res://v2/ui/pal.gd")
 
 var game: Node
 var facing_text := ""
+var hover_sign: Array = []      # the station's status sign (v2/sim/tonight.gd signs): rows {text, tag, ok}
 var left_text := ""
 var right_text := ""
 var hover_title := ""
@@ -87,6 +88,25 @@ func _draw() -> void:
 		if hover_cost != "":
 			var cw := f.get_string_size(hover_cost, HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x
 			Pal.text(self, Vector2(tr.end.x - cw - 4, p.y + 3), hover_cost, 8, Pal.DIM)
+		# its status sign (concept 03): what it can do now, plainly
+		if not hover_sign.is_empty():
+			var rows: Array = hover_sign.slice(0, 6)
+			var sw := 0.0
+			for row in rows:
+				sw = maxf(sw, f.get_string_size(str(row["text"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x + f.get_string_size(str(row["tag"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 7).x + 30)
+			var sr := Rect2(Vector2(p.x, p.y + 30), Vector2(maxf(sw, tw), 8 + rows.size() * 13))
+			sr.position = sr.position.clamp(Vector2(2, 40), size - sr.size - Vector2(2, 2))
+			draw_rect(sr, Color(0.09, 0.07, 0.05, 0.95))
+			draw_rect(sr, Pal.BRASS, false, 1.0)
+			for k in rows.size():
+				var row: Dictionary = rows[k]
+				var y := sr.position.y + 4 + k * 13
+				Pal.text(self, Vector2(sr.position.x + 5, y + 1), str(row["text"]), 8, Pal.TEXT if row["ok"] else Pal.DIM)
+				var tg := str(row["tag"])
+				var tgw := f.get_string_size(tg, HORIZONTAL_ALIGNMENT_LEFT, -1, 7).x + 8
+				var tgr := Rect2(Vector2(sr.end.x - tgw - 4, y), Vector2(tgw, 11))
+				draw_rect(tgr, Pal.BRASS if row["ok"] else Color(0.25, 0.2, 0.15))
+				Pal.text(self, tgr.position + Vector2(0, 1), tg, 7, Pal.METAL_D if row["ok"] else Pal.TEXT, HORIZONTAL_ALIGNMENT_CENTER, tgw)
 	# Bottom hint line.
 	if show_hints and hint_line != "":
 		Pal.text(self, Vector2(0, size.y - 12), hint_line, 8, Pal.DIM, HORIZONTAL_ALIGNMENT_CENTER, w)

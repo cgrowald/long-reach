@@ -34,8 +34,9 @@ Every system works on its own (benches, PC hacks, markets, the cage, the raid, t
 ## 5. The garage do-over (concepts 01, 02)
 Wide and open, a warm room you want to be in: the sewing table by the house door (front left), the med table along the left wall, the roller door in the middle of the back wall with the TONIGHT board beside it, the electronics desk with the Veltin CRT back right, the equipment bench on the right, the gear cage front right, a rug down the middle, plants, a lamp over each station. Every station has its status sign. The new sewing table (art/sewing.glb) fits here at full size.
 
-## 6. Proposed order (to confirm with the user)
-A. The TONIGHT board and station signs, fed by the systems that already exist (cheap; fixes "lost" right away).
+## 6. Order (user 2026-11-24)
+Answers: A first, then B, then C, then D. The new garage is walked around in first person. Combat: the 3D overview with a pinned helmet feed. Lethality: GPT's values only for vital hits (head, torso); arm and leg hits take more.
+A. The TONIGHT board and station signs, fed by the systems that already exist (cheap; fixes "lost" right away). **Built 2026-11-24:** v2/sim/tonight.gd (board + signs from benches, mending, crew, drop stick, dressings, depot lock, plan files, orders arriving, the chair), v2/ui/tonight_board.gd (corkboard top left in the garage; click a card to turn to that station), and each station's sign under its hover tag (READY in amber, what's missing in grey). Moves into the 3D garage as real boards with B.
 B. The garage rebuild from the concepts (big; the board and signs move into it).
 C. The combat test room: orders, the 3D view, the pinned feed, pushback choices, leaving outcomes.
 D. Coming home: the haul placed in the garage, one follow-up per raid.

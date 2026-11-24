@@ -11,6 +11,8 @@ const GarageWorld := preload("res://v2/world/garage_world.gd")
 const Hud := preload("res://v2/ui/hud.gd")
 const Hands := preload("res://v2/ui/hands.gd")
 const DebugPanel := preload("res://v2/ui/debug_panel.gd")
+const TonightBoard := preload("res://v2/ui/tonight_board.gd")
+const Tonight := preload("res://v2/sim/tonight.gd")
 const GameState := preload("res://v2/sim/game_state.gd")
 const Content := preload("res://v2/sim/content.gd")
 
@@ -30,6 +32,7 @@ var world
 var hud
 var hands
 var debug_panel
+var board                        # the TONIGHT board (v2/ui/tonight_board.gd): what's next, click to go
 var screen: Control            # the open station screen, or null
 var _catcher: Control
 var _stations_layer: Control
@@ -64,6 +67,13 @@ func _ready() -> void:
 	hud = Hud.new()
 	hud.game = game
 	ui.add_child(hud)
+	board = TonightBoard.new()
+	board.game = game
+	ui.add_child(board)
+	board.position = Vector2(4, 40)
+	board.go.connect(func(id: String) -> void:
+		if screen == null:
+			open_station(id))
 	_stations_layer = Control.new()
 	_stations_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_stations_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -103,6 +113,9 @@ func _apply_settings() -> void:
 # ------------------------------------------------------------------ state shortcuts
 
 func refresh() -> void:
+	if board:
+		board.refresh()
+		board.visible = screen == null
 	var n: int = world.facing_count()
 	hud.compact = screen != null
 	hud.facing_text = "" if screen else world.facing_name()
@@ -170,6 +183,7 @@ func _hover(id: String) -> void:
 	var s := Content.station(id)
 	hud.hover_title = s.get("name", id)
 	hud.hover_hint = s.get("hint", "")
+	hud.hover_sign = Tonight.signs(game.state, id)
 	if not game.state.is_unlocked(s):
 		hud.hover_cost = "LOCKED"
 	elif float(s.get("hours", 0.0)) > 0.0:
