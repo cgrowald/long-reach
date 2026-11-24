@@ -10,10 +10,12 @@ const BenchWork := preload("res://v2/world/bench_work.gd")
 const GarageWorld := preload("res://v2/world/garage_world.gd")
 const Fx := preload("res://v2/ui/fx.gd")
 const PixelView := preload("res://v2/ui/pixel_view.gd")
+const SewTable := preload("res://v2/world/sew_table.gd")
 
 var _grade := -1.0                # average material grade used for the craft in progress
 var _list: Control
 var _work                       # BenchWork while crafting
+var _table: Control              # the top-down sewing table (v2/world/sew_table.gd) for recipes with a "table" job
 var _recipe: Dictionary = {}
 var _step := 0
 var _scores: Array = []
@@ -118,6 +120,14 @@ func _make(r: Dictionary) -> void:
 	_scores.clear()
 	_list.queue_free()
 	_list = null
+	if r.has("table"):
+		_table = SewTable.new()
+		add_child(_table)
+		_table.setup(game, r)
+		_table.finished.connect(_on_table_done)
+		garage.hands.set_shown(false)
+		game.clunk()
+		return
 	var world = garage.world
 	world.refocus(def["work_cam"], def["work_look"])
 	_work = BenchWork.new()
@@ -129,6 +139,11 @@ func _make(r: Dictionary) -> void:
 	garage.hands.set_shown(true)
 	game.clunk()
 	_work.start_step(r["steps"][0])
+
+
+func _on_table_done(scores: Array) -> void:
+	_scores = scores.duplicate()
+	_finish()
 
 
 func _on_step_done(score: float) -> void:
@@ -261,6 +276,9 @@ func _done_result() -> void:
 
 
 func _end_work() -> void:
+	if _table:
+		_table.queue_free()
+		_table = null
 	if _work:
 		_work.queue_free()
 		_work = null
@@ -297,6 +315,11 @@ func back() -> bool:
 	if _result:
 		_done_result()
 		return true
+	if _table:
+		Menus.confirm(self, game, "Stop working? The materials are already used.", func() -> void:
+			_end_work()
+			_show_list())
+		return true
 	if _work:
 		Menus.confirm(self, game, "Stop working? The materials are already used.", func() -> void:
 			_end_work()
@@ -306,6 +329,9 @@ func back() -> bool:
 
 
 func close() -> void:
+	if _table:
+		_table.queue_free()
+		_table = null
 	if _work:
 		_work.queue_free()
 		_work = null

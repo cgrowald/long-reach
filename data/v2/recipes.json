@@ -1,5 +1,5 @@
 {
-	"_note": "Bench crafting (docs/DRIVE.md section 3). Stylised and gamified: real-sounding names, never real procedures. bench = weapons / armor / meds / electronics. steps = the hands-on verbs in order (drill, file, cut, sew, tear, pour, fit, solder). needs = materials used. tool = which tool's multiplier applies. makes = the item. perks unlock at a quality. grid = rig pouch grid [columns, rows]; plates = what plate it takes.",
+	"_note": "Bench crafting (docs/DRIVE.md section 3). table = the sewing table job (v2/world/sew_table.gd, docs/BENCH_SEWING.md): base piece in the middle, parts to fit, at = [x, z, yaw degrees] from the base centre in metres (x right, z toward you). Stylised and gamified: real-sounding names, never real procedures. bench = weapons / armor / meds / electronics. steps = the hands-on verbs in order (drill, file, cut, sew, tear, pour, fit, solder). needs = materials used. tool = which tool's multiplier applies. makes = the item. perks unlock at a quality. grid = rig pouch grid [columns, rows]; plates = what plate it takes.",
 	"materials": {
 		"shirt": {"name": "Old shirt"},
 		"alcohol": {"name": "Vodka (a shot)"},
@@ -49,6 +49,9 @@
 		},
 		{
 			"id": "ikea_rig", "name": "Shopping-bag rig", "bench": "armor", "tier": 1, "hours": 1.5, "model": "Item_Tote_Rig",
+			"table": {"base": "RigA_Body", "parts": [
+				{"part": "RigA_Strap_L", "name": "left strap", "at": [-0.12, -0.13, 0]}, {"part": "RigA_Strap_R", "name": "right strap", "at": [0.12, -0.13, 0]},
+				{"part": "RigA_Pocket", "name": "pocket", "at": [0.0, 0.0, 0]}, {"part": "RigA_Patch", "name": "patch", "at": [0.0, 0.13, 0]}]},
 			"needs": {"bag": 1, "tape": 1, "strap": 1}, "tool": "kitchen_scissors", "material_mult": 0.8, "piece": "bag",
 			"steps": [
 				{"verb": "cut", "text": "Cut the front panel out of the bag"},
@@ -63,6 +66,9 @@
 		},
 		{
 			"id": "chest_rig", "name": "Webbing chest rig", "bench": "armor", "tier": 2, "hours": 2.0, "after": "ikea_rig", "model": "Item_Harness",
+			"table": {"base": "RigB_Body", "props": ["RigB_Webbing"], "parts": [
+				{"part": "RigB_Pouches", "name": "pouch row", "at": [0.0, 0.12, 0]},
+				{"part": "RigB_Tab_1", "name": "left buckle", "at": [-0.155, -0.08, 0]}, {"part": "RigB_Tab_2", "name": "right buckle", "at": [0.155, -0.08, 0]}]},
 			"needs": {"strap": 2, "buckle": 1, "tape": 1}, "tool": "kitchen_scissors", "material_mult": 1.0, "piece": "bag",
 			"steps": [
 				{"verb": "cut", "text": "Cut the webbing to length"},
