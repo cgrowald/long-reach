@@ -6,7 +6,7 @@ The first bench of the bench face-lift (docs/ROADMAP.md M1b). User answers 2026-
 - **Wear:** gear wears SLOWLY with each op, but mostly from getting hurt: bullets (and environmental damage, if we add it). The tear is where the hit was.
 - **Art:** GPT draws it, Claude follows the drawing (it has worked best). No Blender session together.
 
-## 1. What the GPT sheets show (2026-11-24; they arrived inline only, not saved as files)
+## 1. What the GPT sheets show (2026-11-24; files in docs/refs/benches/: sewing_stages, sewing_steps_mend, sewing_steps_rig_a/b, plus tech_, med_, gun_ stages and steps)
 - **The table, three stages:**
   - STARTER: a plank top on two sawhorses; a VESKA crate (blue, stencilled) full of coloured scraps (mustard, blue, red); a stack of folded cloth; a patched runner; a pincushion, a spool, black scissors; a copper desk lamp.
   - IMPROVED: a sturdy olive-green frame with bolts and a lower shelf; a mint-green sewing machine; a small wooden drawer cabinet.
