@@ -261,12 +261,12 @@ func _over_win(mp: Vector2) -> bool:
 
 
 func _open_prompt_win() -> void:
-	var img: Rect2 = f._main_img()
+	var img: Rect2 = f._ov_img()        # popups sit on the overview (C1)
 	_win_prompt = _win("VAULT PC", Vector2(236, 96), img.position + Vector2(10, 30), _draw_prompt)
 
 
 func _open_term_win() -> void:
-	var img: Rect2 = f._main_img()
+	var img: Rect2 = f._ov_img()        # popups sit on the overview (C1)
 	_win_term = _win("terminal", Vector2(228, 128), Vector2(img.position.x + 10, img.end.y - 138), _draw_term)
 	_win_term.accent = Color(0.45, 0.8, 0.55)
 	_win_term.click_body = func(p: Vector2) -> void:
@@ -296,7 +296,7 @@ func _open_door_win() -> void:
 	door_cam.position = Vector3(rc.end.x - 0.25, 2.55, rc.end.y - 0.25)
 	door_cam.look_at(Vector3(-0.2, 0.9, vault.wall_z + 0.6), Vector3.UP)
 	door_post = f._post_for(door_cam, 3)
-	var img: Rect2 = f._main_img()
+	var img: Rect2 = f._ov_img()        # popups sit on the overview (C1)
 	_win_door = _win("VAULT-CAM  /  SECURE STORE", Vector2(224, 176), Vector2(img.end.x - 234, img.position.y + 30), _draw_door)
 	_win_door.click_body = func(p: Vector2) -> void:
 		if phase != "doors":

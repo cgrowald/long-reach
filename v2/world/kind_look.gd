@@ -42,3 +42,10 @@ static func _swap(m: Material, obj_name: String) -> Material:
 	sm.set_shader_parameter("seed", float(hash(obj_name) % 4))
 	_cache[key] = sm
 	return sm
+
+
+## The kind look for one material built in code (name it <kind>_<colour> in resource_name); the material
+## itself if its kind isn't known. For meshes that use material_override (v2/combat/level.gd).
+static func look(m: StandardMaterial3D, salt := "") -> Material:
+	var sm := _swap(m, salt)
+	return sm if sm else m

@@ -68,6 +68,11 @@ var _look_drag := false
 var board: Control
 var op: RefCounted = null          # the depot raid layer (v2/combat/depot_op.gd) when sent from the garage
 const OpsBoard := preload("res://v2/combat/ops_board.gd")
+const Overview := preload("res://v2/combat/overview.gd")
+var overview                      # the main view (v2/combat/overview.gd): raised cutaway or HQ drone
+var show_board := false           # M: the paper ops board over the overview (orders move onto the overview in C2)
+var _pan_drag := false
+var _pan_last := Vector2.ZERO
 
 
 func _ready() -> void:
@@ -211,7 +216,7 @@ func _post_for(cam: Camera3D, layer: int) -> ShaderMaterial:
 	q.layers = 1 << (layer - 1)
 	q.position = Vector3(0, 0, -0.5)
 	cam.add_child(q)
-	cam.cull_mask = 1 | (1 << (layer - 1))
+	cam.cull_mask = 1 | (1 << (layer - 1)) | Level.LAYER_FULL | Level.LAYER_ENEMY
 	return m
 
 
@@ -243,6 +248,9 @@ func _cameras() -> void:
 		main_vp.add_child(cam)
 		f["cam"] = cam
 		f["dead_t"] = 0.0
+	overview = Overview.new()
+	add_child(overview)
+	overview.setup(self)
 
 
 func _feed_xform(f: Dictionary) -> Transform3D:
@@ -303,11 +311,13 @@ func _process(delta: float) -> void:
 		b["t"] = float(b["t"]) + (0.0 if paused else delta)
 	barks = barks.filter(func(b: Dictionary) -> bool: return float(b["t"]) < 6.0)
 	_update_cameras(delta)
+	if overview:
+		overview.tick(delta)
 	if board:
-		var mr := _map_rect()
-		board.position = mr.position + Vector2(2, 15)
-		board.size = mr.size - Vector2(4, 17)
-		board.visible = phase != "report"
+		var oi := _ov_img()
+		board.position = oi.position + Vector2(oi.size.x * 0.5, 0)
+		board.size = Vector2(oi.size.x * 0.5, oi.size.y)
+		board.visible = show_board and phase != "report"
 	_fit_main_vp()
 	if not paused and phase == "op":
 		_cctv_spot()
@@ -466,7 +476,7 @@ func _input(e: InputEvent) -> void:
 	if op and op.input(e, view.ui.get_local_mouse_position()):
 		return
 	if e is InputEventMouseButton:
-		if board and Rect2(board.position, board.size).has_point(view.ui.get_local_mouse_position()) and not wheel_open:
+		if board and board.visible and Rect2(board.position, board.size).has_point(view.ui.get_local_mouse_position()) and not wheel_open:
 			return          # the ops board handles its own clicks
 		var mp := view.ui.get_local_mouse_position() as Vector2
 		if e.button_index == MOUSE_BUTTON_RIGHT:
@@ -484,6 +494,18 @@ func _input(e: InputEvent) -> void:
 					else:
 						pending = wheel_hover
 			get_viewport().set_input_as_handled()
+		elif (e.button_index == MOUSE_BUTTON_WHEEL_UP or e.button_index == MOUSE_BUTTON_WHEEL_DOWN) and e.pressed and overview and _ov_img().has_point(mp):
+			overview.zoom(1.0 if e.button_index == MOUSE_BUTTON_WHEEL_UP else -1.0)
+			get_viewport().set_input_as_handled()
+		elif e.button_index == MOUSE_BUTTON_LEFT and e.pressed and pending < 0 and overview and _ov_img().has_point(mp):
+			if e.double_click:
+				overview.reset()
+			else:
+				_pan_drag = true
+				_pan_last = mp
+			get_viewport().set_input_as_handled()
+		elif e.button_index == MOUSE_BUTTON_LEFT and not e.pressed and _pan_drag:
+			_pan_drag = false
 		elif e.button_index == MOUSE_BUTTON_LEFT and e.pressed:
 			# a squad row? (their cam goes big)
 			for i in squad.size():
@@ -523,6 +545,10 @@ func _input(e: InputEvent) -> void:
 				if not lt.is_empty():
 					wearer.order_look(lt["point"])
 					shout_log.append({"t": t_op, "text": "YOU > %s: LOOK there" % _first(wearer).to_upper()})
+	elif e is InputEventMouseMotion and _pan_drag:
+		var mp2 := view.ui.get_local_mouse_position() as Vector2
+		overview.pan(mp2 - _pan_last, _ov_img().size)
+		_pan_last = mp2
 	elif e is InputEventMouseMotion and wheel_open:
 		var v: Vector2 = view.ui.get_local_mouse_position() - wheel_c
 		if v.length() < 10.0:
@@ -549,6 +575,10 @@ func _input(e: InputEvent) -> void:
 				var by = sq.objection["by"]
 				shout_log.append({"t": t_op, "text": "YOU > OK, %s's way: %s" % [_first(by).to_upper(), sq.objection["suggest_label"]]})
 				sq.accept_suggestion()
+		elif k == KEY_V and overview:
+			overview.mode = "drone" if overview.mode == "overview" else "overview"
+		elif k == KEY_M:
+			show_board = not show_board
 		elif k == KEY_G:
 			_shout(9)
 		elif k == KEY_H:
@@ -636,9 +666,16 @@ func _main_rect() -> Rect2:
 	return Rect2(4, 31, w, hud.size.y - 31 - 21)
 
 
+## The pinned helmet feed (beside the overview, where the ops map used to be).
 func _main_img() -> Rect2:
-	var m := _main_rect()
+	var m := _map_rect()
 	return Rect2(m.position + Vector2(1, 27), m.size - Vector2(2, 28))
+
+
+## The overview image (the big panel).
+func _ov_img() -> Rect2:
+	var m := _main_rect()
+	return Rect2(m.position + Vector2(1, 15), m.size - Vector2(2, 16))
 
 
 func _side_x() -> float:
@@ -705,6 +742,8 @@ func _fit_main_vp() -> void:
 	var want := Vector2i((_main_img().size * PixelView.UI_SCALE / px).round())
 	if want.x > 8 and want.y > 8 and main_vp.size != want:
 		main_vp.size = want
+	if overview:
+		overview.fit(Vector2i((_ov_img().size * PixelView.UI_SCALE / px).round()))
 
 
 func _elapsed() -> String:
@@ -779,36 +818,39 @@ func _draw_hud() -> void:
 		hud.draw_rect(Rect2(pr.position + Vector2(4, 4), Vector2(3, 8)), UI_TEXT)
 		hud.draw_rect(Rect2(pr.position + Vector2(9, 4), Vector2(3, 8)), UI_TEXT)
 	Pal.text(hud, Vector2(tb.end.x - 96, tb.position.y + 6), "ELAPSED  " + _elapsed(), 9, UI_TEXT)
-	# ---- the main feed
-	var mr := _main_rect()
+	# ---- the overview (the main view)
+	_draw_overview()
+	# ---- the pinned helmet feed
+	var fr := _map_rect()
 	var img := _main_img()
 	var mf: Dictionary = feeds[main_i]
-	_panel(mr, "", true)
+	_panel(fr, "", true)
 	if main_vp:
 		hud.draw_texture_rect(main_vp.get_texture(), img, false)
-	var hx := mr.position.x + 4
+	var hx := fr.position.x + 4
 	if mf["kind"] == "helmet":
 		var a = mf["actor"]
-		_face(a, Rect2(mr.position + Vector2(3, 3), Vector2(22, 22)))
+		_face(a, Rect2(fr.position + Vector2(3, 3), Vector2(22, 22)))
 		hx += 26
-		Pal.text(hud, Vector2(hx, mr.position.y + 3), "%02d / %s" % [main_i + 1, str(a.fighter_name).to_upper()], 10, UI_TEXT)
-		Pal.text(hud, Vector2(hx, mr.position.y + 15), "%s  -  HELMET CAM" % str(a.role).to_upper(), 8, UI_TEAL)
+		Pal.text(hud, Vector2(hx, fr.position.y + 3), "%02d / %s" % [main_i + 1, str(a.fighter_name).to_upper()], 10, UI_TEXT)
+		Pal.text(hud, Vector2(hx, fr.position.y + 15), "%s  -  HELMET CAM" % str(a.role).to_upper(), 8, UI_TEAL)
 		var sig := _signal(a)
-		_bars(Vector2(mr.end.x - 104, mr.position.y + 6), sig, UI_TEXT)
-		Pal.text(hud, Vector2(mr.end.x - 86, mr.position.y + 6), ["LOST", "POOR", "FAIR", "GOOD", "GOOD"][sig], 8, UI_TEAL)
+		_bars(Vector2(fr.end.x - 64, fr.position.y + 16), sig, UI_TEXT)
+		Pal.text(hud, Vector2(fr.end.x - 46, fr.position.y + 15), ["LOST", "POOR", "FAIR", "GOOD", "GOOD"][sig], 8, UI_TEAL)
 		if a.state == "dead":
 			Pal.text(hud, Vector2(img.position.x, img.get_center().y - 20), "SIGNAL LOST", 14, UI_RED, HORIZONTAL_ALIGNMENT_CENTER, img.size.x)
 			Face.draw(hud, Rect2(img.get_center() - Vector2(24, 0), Vector2(48, 54)), str(a.get_meta("face", a.fighter_name)), str(a.get_meta("head", "helmet")), true)
 	else:
-		_cam_icon(Vector2(hx + 2, mr.position.y + 7))
+		_cam_icon(Vector2(hx + 2, fr.position.y + 7))
 		hx += 22
-		Pal.text(hud, Vector2(hx, mr.position.y + 3), str(mf["def"]["id"]).to_upper(), 10, Color(0.6, 1.0, 0.6))
-		Pal.text(hud, Vector2(hx, mr.position.y + 15), "FIXED CAMERA  -  %s" % str(mf["def"]["label"]).to_upper(), 8, UI_DIM)
+		Pal.text(hud, Vector2(hx, fr.position.y + 3), str(mf["def"]["id"]).to_upper(), 10, Color(0.6, 1.0, 0.6))
+		Pal.text(hud, Vector2(hx, fr.position.y + 15), "FIXED CAMERA  -  %s" % str(mf["def"]["label"]).to_upper(), 8, UI_DIM)
 	if fmod(t_op, 1.0) < 0.6 or paused:
-		hud.draw_circle(Vector2(mr.end.x - 42, mr.position.y + 11), 3.0, UI_RED)
-	Pal.text(hud, Vector2(mr.end.x - 36, mr.position.y + 6), "REC", 8, UI_RED)
+		hud.draw_circle(Vector2(fr.end.x - 42, fr.position.y + 11), 3.0, UI_RED)
+	Pal.text(hud, Vector2(fr.end.x - 36, fr.position.y + 6), "REC", 8, UI_RED)
 	# radio subtitles, bottom left of the feed, with the speaker's face
-	var y := img.end.y - 16
+	var oimg := _ov_img()        # radio subtitles and PAUSED sit on the overview
+	var y := oimg.end.y - 16
 	var shown := 0
 	for k in range(barks.size() - 1, -1, -1):
 		if shown >= 3:
@@ -817,18 +859,15 @@ func _draw_hud() -> void:
 		var al := clampf(1.0 - (float(b["t"]) - 4.5) / 1.5, 0.0, 1.0)
 		var who = _by_name(str(b["name"]))
 		var line := "%s: %s" % [b["name"], b["text"]]
-		var tw := minf(img.size.x - 30, line.length() * 5.6 + 8)
-		hud.draw_rect(Rect2(img.position.x + 4, y - 2, tw + 18, 14), Color(0, 0, 0, 0.55 * al))
+		var tw := minf(oimg.size.x - 30, line.length() * 5.6 + 8)
+		hud.draw_rect(Rect2(oimg.position.x + 4, y - 2, tw + 18, 14), Color(0, 0, 0, 0.55 * al))
 		if who != null:
-			Face.draw(hud, Rect2(img.position.x + 5, y - 1, 12, 12), str(who.get_meta("face", who.fighter_name)), str(who.get_meta("head", "helmet")), who.state == "dead")
-		Pal.text(hud, Vector2(img.position.x + 20, y), line, 9, Color(b["col"], al), HORIZONTAL_ALIGNMENT_LEFT, tw)
+			Face.draw(hud, Rect2(oimg.position.x + 5, y - 1, 12, 12), str(who.get_meta("face", who.fighter_name)), str(who.get_meta("head", "helmet")), who.state == "dead")
+		Pal.text(hud, Vector2(oimg.position.x + 20, y), line, 9, Color(b["col"], al), HORIZONTAL_ALIGNMENT_LEFT, tw)
 		y -= 16
 		shown += 1
 	if paused:
-		Pal.text(hud, Vector2(img.position.x, img.position.y + img.size.y * 0.35), "PAUSED  (Space)", 12, UI_TEXT, HORIZONTAL_ALIGNMENT_CENTER, img.size.x)
-	# ---- the map
-	var mp_r := _map_rect()
-	_panel(mp_r, "OPS MAP / RECON")
+		Pal.text(hud, Vector2(oimg.position.x, oimg.position.y + oimg.size.y * 0.35), "PAUSED  (Space)", 12, UI_TEXT, HORIZONTAL_ALIGNMENT_CENTER, oimg.size.x)
 	# ---- the squad
 	var sr := _squad_rect()
 	_panel(sr, "SQUAD")
@@ -1164,3 +1203,18 @@ func _has_eyes() -> bool:
 		if "depot" in str(id):
 			return true
 	return false
+
+
+## The overview panel: the raised cutaway (or the HQ drone), what's been seen, the controls in its title.
+func _draw_overview() -> void:
+	var mr := _main_rect()
+	var oi := _ov_img()
+	_panel(mr, "", false)
+	hud.draw_rect(oi, Color(0, 0, 0))
+	if overview:
+		hud.draw_texture_rect(overview.texture(), oi, false)
+		overview.draw_marks(hud, oi)
+		overview.draw_squad(hud, oi, NAME_COL, _main_actor())
+	var title := "OVERVIEW" if overview == null or overview.mode == "overview" else "HQ DRONE"
+	Pal.text(hud, mr.position + Vector2(5, 2), title, 9, UI_AMBER)
+	Pal.text(hud, mr.position + Vector2(70, 3), "drag: pan   wheel: zoom   double-click: fit   V: %s   M: paper plan" % ("drone" if title == "OVERVIEW" else "overview"), 8, UI_DIM)

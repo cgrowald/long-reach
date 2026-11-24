@@ -4,7 +4,13 @@ extends Node3D
 ## kicked or blown, tube lights, props; and answers the squad's questions: which room, how to get there,
 ## where to stack on a door, where to stand inside a room. Godot floor plan: x right, z (forward is -z).
 
-const GRIME := preload("res://v2/combat/grime.gdshader")
+const KindLook := preload("res://v2/world/kind_look.gd")
+const KIT := "res://art/depot_kit.glb"
+const LOW_H := 1.1                # wall height the overview camera sees (the roof and the top of the walls cut away)
+const LAYER_FULL := 8            # render layer 4: whole walls and the ceiling (helmet cams, CCTV)
+const LAYER_CUT := 16            # render layer 5: the low cut walls and the fog (the overview only)
+const LAYER_ENEMY := 32          # render layer 6: guards (the helmet cams always; the overview only once seen)
+const LAYER_SEEN := 64           # render layer 7: a guard someone is looking at right now (the overview sees it)
 const H := 2.8
 const DOOR_W := 1.0
 const DOOR_H := 2.1
@@ -185,14 +191,23 @@ func flash(at: Vector3) -> void:
 
 # ------------------------------------------------------------------ building
 
-func _mat(kind: int, paint := Color(0.44, 0.43, 0.35)) -> ShaderMaterial:
+## Walls, floor and ceiling in the garage's style (kind_look.gd: chipped paint, worn concrete).
+## kind 0 = painted wall, 1 = concrete floor, 2 = ceiling.
+func _mat(kind: int, paint := Color(0.44, 0.43, 0.35)) -> Material:
 	var k := str(kind) + str(paint)
 	if not _mats.has(k):
-		var m := ShaderMaterial.new()
-		m.shader = GRIME
-		m.set_shader_parameter("kind", kind)
-		m.set_shader_parameter("paint", Vector3(paint.r, paint.g, paint.b))
-		_mats[k] = m
+		var m := StandardMaterial3D.new()
+		match kind:
+			0:
+				m.albedo_color = paint
+				m.resource_name = "paint_wall%d" % (hash(str(paint)) % 1000)
+			1:
+				m.albedo_color = Color(0.3, 0.29, 0.27)
+				m.resource_name = "paint_floor"
+			_:
+				m.albedo_color = Color(0.16, 0.16, 0.17)
+				m.resource_name = "paint_ceiling"
+		_mats[k] = KindLook.look(m, "depot%d" % kind)
 	return _mats[k]
 
 
@@ -241,7 +256,7 @@ func _floor_and_ceiling() -> void:
 	var b := _bounds().grow(0.3)
 	var c := b.get_center()
 	box(Vector3(b.size.x, 0.1, b.size.y), Vector3(c.x, -0.05, c.y), _mat(1))
-	box(Vector3(b.size.x, 0.1, b.size.y), Vector3(c.x, H + 0.05, c.y), _mat(2))
+	box(Vector3(b.size.x, 0.1, b.size.y), Vector3(c.x, H + 0.05, c.y), _mat(2)).layers = LAYER_FULL    # no roof on the overview
 
 
 ## Every room edge, merged into lines, with door gaps cut out.
@@ -268,10 +283,16 @@ func _walls() -> void:
 			if hi - lo < 0.02:
 				continue
 			var mid := (lo + hi) * 0.5
+			var full: MeshInstance3D
+			var low: MeshInstance3D
 			if axis == "x":
-				box(Vector3(0.12, H, hi - lo), Vector3(at, H * 0.5, mid), _mat(0, paint), Vector3.ZERO, true)
+				full = box(Vector3(0.12, H, hi - lo), Vector3(at, H * 0.5, mid), _mat(0, paint), Vector3.ZERO, true)
+				low = box(Vector3(0.1, LOW_H, hi - lo), Vector3(at, LOW_H * 0.5, mid), _mat(0, paint))
 			else:
-				box(Vector3(hi - lo, H, 0.12), Vector3(mid, H * 0.5, at), _mat(0, paint), Vector3.ZERO, true)
+				full = box(Vector3(hi - lo, H, 0.12), Vector3(mid, H * 0.5, at), _mat(0, paint), Vector3.ZERO, true)
+				low = box(Vector3(hi - lo, LOW_H, 0.1), Vector3(mid, LOW_H * 0.5, at), _mat(0, paint))
+			full.layers = LAYER_FULL      # the helmet cams see whole walls; the overview sees them cut low
+			low.layers = LAYER_CUT
 
 
 func _add_iv(lines: Dictionary, key: String, a: float, b: float) -> void:
@@ -368,18 +389,7 @@ func _props() -> void:
 	rng.seed = 4
 	var wood := flat(Color(0.22, 0.18, 0.14))
 	var dark := flat(Color(0.12, 0.1, 0.08))
-	for r in rooms:
-		var rc: Rect2 = r["rect"]
-		if r["id"] == "hall" or r["id"] in data.get("bare_rooms", []):
-			continue
-		var c := rc.get_center() + Vector2(rng.randf_range(-0.6, 0.6), rng.randf_range(-0.8, 0.8))
-		box(Vector3(1.4, 0.06, 0.8), Vector3(c.x, 0.76, c.y), wood)
-		for lx in [-0.6, 0.6]:
-			for lz in [-0.32, 0.32]:
-				box(Vector3(0.05, 0.76, 0.05), Vector3(c.x + lx, 0.38, c.y + lz), dark)
-		box(Vector3(0.45, 0.06, 0.45), Vector3(c.x - 0.6, 0.45, c.y + 0.7), flat(Color(0.15, 0.15, 0.16)), Vector3(0, rng.randf(), 0))
-		for k in 3:
-			box(Vector3(0.5, 0.5, 0.4), Vector3(rc.end.x - 0.4, 0.25 + k * 0.5, rc.position.y + 0.5 + rng.randf() * 0.3), flat(Color(0.4, 0.31, 0.2)), Vector3(0, rng.randf() * 0.3, 0))
+	_dress()
 	# the objective: a stack of manifests on the office desk, a faint lamp on it
 	var ob: Dictionary = data.get("objective", {})
 	if ob.has("pos"):
@@ -408,7 +418,7 @@ func _process(delta: float) -> void:
 ## Is this spot lit by one of the building's own lights (so you can see someone standing there)?
 func lit(p: Vector3) -> bool:
 	for l in lights:
-		var ol: OmniLight3D = l["light"]
+		var ol: Light3D = l["light"]
 		if ol.light_energy > 0.3 and Vector2(ol.global_position.x, ol.global_position.z).distance_to(Vector2(p.x, p.z)) < 3.2:
 			return true
 	return false
@@ -475,3 +485,130 @@ func near_door(p: Vector3, r := 0.9) -> bool:
 		if Vector2(p.x, p.z).distance_to(d["pos"]) < r:
 			return true
 	return false
+
+
+# ------------------------------------------------------------------ dressing (C1: the garage's style)
+
+## Depth of each kit piece (m), to stand it against a wall. Pieces face into the room.
+const KIT_DEPTH := {"crate": 0.6, "crate_stack": 1.0, "shelf": 0.5, "desk": 0.7, "desk_pc": 0.7, "chair": 1.5,
+	"lockers": 0.5, "cabinet": 0.62, "fridge": 0.62, "break_table": 2.6, "notice_board": 0.06, "extinguisher": 0.2,
+	"pipes": 0.24, "bin": 0.36}
+const KIT_WIDTH := {"crate": 0.6, "crate_stack": 1.2, "shelf": 1.4, "desk": 1.3, "desk_pc": 1.3, "chair": 0.5,
+	"lockers": 1.5, "cabinet": 0.5, "fridge": 0.65, "break_table": 1.3, "notice_board": 1.0, "extinguisher": 0.2,
+	"pipes": 3.0, "bin": 0.35}
+
+var _kit: Node3D
+
+
+func _kit_piece(name: String) -> Node3D:
+	if _kit == null:
+		var ps: PackedScene = load(KIT)
+		_kit = ps.instantiate()
+	var src := _kit.find_child("Kit_" + name, true, false) as Node3D
+	if src == null:
+		return null
+	var n := src.duplicate() as Node3D
+	n.transform = Transform3D()
+	add_child(n)
+	KindLook.apply(n)
+	return n
+
+
+## Every room's furniture from data (rooms[].dress: {kit, wall n/s/e/w, at 0..1 along it}), against its wall,
+## nudged off any door on that wall. Pieces have no colliders: the squad walks by doctrine, not around props.
+func _dress() -> void:
+	for r in data.get("rooms", []):
+		var rm := room(r["id"])
+		var rc: Rect2 = rm["rect"]
+		var bare: bool = r["id"] in data.get("bare_rooms", [])     # e.g. the vault fills the office in the depot raid
+		for it in ([] if bare else r.get("dress", [])):
+			var kit: String = it["kit"]
+			var wall: String = it.get("wall", "n")
+			var t := float(it.get("at", 0.5))
+			var depth: float = KIT_DEPTH.get(kit, 0.6)
+			var half_w: float = KIT_WIDTH.get(kit, 0.6) * 0.5
+			var along_len := rc.size.x if wall in ["n", "s"] else rc.size.y
+			var along := clampf(t * along_len, half_w + 0.1, along_len - half_w - 0.1)
+			along = _off_doors(rc, wall, along, half_w)
+			var p := Vector3.ZERO
+			var yaw := 0.0
+			match wall:
+				"n":
+					p = Vector3(rc.position.x + along, 0, rc.position.y + 0.07 + depth * 0.5)
+				"s":
+					p = Vector3(rc.position.x + along, 0, rc.end.y - 0.07 - depth * 0.5)
+					yaw = PI
+				"w":
+					p = Vector3(rc.position.x + 0.07 + depth * 0.5, 0, rc.position.y + along)
+					yaw = PI * 0.5
+				_:
+					p = Vector3(rc.end.x - 0.07 - depth * 0.5, 0, rc.position.y + along)
+					yaw = -PI * 0.5
+			if it.get("center", false):
+				p = Vector3(rc.get_center().x, 0, rc.get_center().y)
+			var n := _kit_piece(kit)
+			if n == null:
+				continue
+			# kit pieces are built with their back at +Y (Blender) = -Z here, centred: shift so the back touches the wall
+			n.position = p
+			n.rotation.y = yaw + float(it.get("turn", 0.0)) * PI / 180.0
+		_room_lamps(r, rc)
+	if _kit:
+		_kit.free()      # the source pieces were only copied from
+		_kit = null
+
+
+## Slide a piece along its wall so it doesn't block a door on that wall.
+func _off_doors(rc: Rect2, wall: String, along: float, half_w: float) -> float:
+	for d in doors:
+		var dp: Vector2 = d["pos"]
+		var on_wall := false
+		var c := 0.0
+		match wall:
+			"n":
+				on_wall = d["axis"] == "z" and absf(dp.y - rc.position.y) < 0.05
+				c = dp.x - rc.position.x
+			"s":
+				on_wall = d["axis"] == "z" and absf(dp.y - rc.end.y) < 0.05
+				c = dp.x - rc.position.x
+			"w":
+				on_wall = d["axis"] == "x" and absf(dp.x - rc.position.x) < 0.05
+				c = dp.y - rc.position.y
+			_:
+				on_wall = d["axis"] == "x" and absf(dp.x - rc.end.x) < 0.05
+				c = dp.y - rc.position.y
+		if on_wall and absf(along - c) < half_w + DOOR_W * 0.5 + 0.35:
+			along = c + (1.0 if along >= c else -1.0) * (half_w + DOOR_W * 0.5 + 0.4)
+	return along
+
+
+## A shaded hanging lamp over each room (every ~6 m down a long hall) throwing a warm pool down.
+func _room_lamps(r: Dictionary, rc: Rect2) -> void:
+	if r.get("lamps", 1) == 0:
+		return
+	var long_z := rc.size.y > rc.size.x
+	var n := maxi(1, int(maxf(rc.size.x, rc.size.y) / 6.0))
+	for k in n:
+		var f := (k + 0.5) / n
+		var at := Vector3(rc.get_center().x, 0, rc.position.y + rc.size.y * f) if long_z else Vector3(rc.position.x + rc.size.x * f, 0, rc.get_center().y)
+		var lamp := _kit_piece("lamp")
+		if lamp == null:
+			return
+		lamp.position = at
+		var pool := SpotLight3D.new()
+		pool.light_color = Color(1.0, 0.74, 0.46)
+		pool.light_energy = float(r.get("lamp_energy", 3.2))
+		pool.spot_range = 3.6
+		pool.spot_angle = 64.0
+		pool.spot_attenuation = 0.8
+		pool.shadow_enabled = true
+		pool.position = at + Vector3(0, 2.0, 0)
+		pool.rotation = Vector3(-PI * 0.5, 0, 0)
+		add_child(pool)
+		var glow := OmniLight3D.new()
+		glow.light_color = Color(1.0, 0.74, 0.46)
+		glow.light_energy = 0.5
+		glow.omni_range = 1.3
+		glow.position = at + Vector3(0, 2.02, 0)
+		add_child(glow)
+		lights.append({"light": pool, "mesh": null, "base": pool.light_energy, "flicker": false})

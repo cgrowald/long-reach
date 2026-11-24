@@ -3,11 +3,16 @@
 	"name": "Dobrev Freight depot - B2 offices",
 	"objective": {"text": "Get the shipping manifests from the dispatch office", "room": "office", "pos": [-1.4, -24.8]},
 	"rooms": [
-		{"id": "hall", "name": "B2 CORRIDOR", "rect": [-1.25, -21.5, 1.25, 2.5]},
-		{"id": "r1", "name": "BREAK ROOM", "rect": [1.25, -7.0, 5.25, -1.0]},
-		{"id": "r2", "name": "STORE ROOM", "rect": [1.25, -13.0, 5.25, -7.0]},
-		{"id": "r3", "name": "SECURITY", "rect": [1.25, -19.0, 5.25, -13.0]},
-		{"id": "office", "name": "DISPATCH OFFICE", "rect": [-2.5, -26.5, 2.5, -21.5]}
+		{"id": "hall", "name": "B2 CORRIDOR", "rect": [-1.25, -21.5, 1.25, 2.5],
+			"dress": [{"kit": "pipes", "wall": "w", "at": 0.3}, {"kit": "pipes", "wall": "w", "at": 0.65}, {"kit": "extinguisher", "wall": "w", "at": 0.45}, {"kit": "notice_board", "wall": "w", "at": 0.78}, {"kit": "bin", "wall": "w", "at": 0.92}]},
+		{"id": "r1", "name": "BREAK ROOM", "rect": [1.25, -7.0, 5.25, -1.0],
+			"dress": [{"kit": "fridge", "wall": "e", "at": 0.15}, {"kit": "break_table", "center": true, "turn": 90}, {"kit": "bin", "wall": "s", "at": 0.85}, {"kit": "notice_board", "wall": "n", "at": 0.5}, {"kit": "cabinet", "wall": "e", "at": 0.85}]},
+		{"id": "r2", "name": "STORE ROOM", "rect": [1.25, -13.0, 5.25, -7.0],
+			"dress": [{"kit": "shelf", "wall": "e", "at": 0.25}, {"kit": "shelf", "wall": "e", "at": 0.72}, {"kit": "crate_stack", "wall": "n", "at": 0.45}, {"kit": "crate", "wall": "s", "at": 0.6}, {"kit": "crate", "wall": "s", "at": 0.85}]},
+		{"id": "r3", "name": "SECURITY", "rect": [1.25, -19.0, 5.25, -13.0],
+			"dress": [{"kit": "desk_pc", "wall": "e", "at": 0.3}, {"kit": "chair", "wall": "e", "at": 0.3}, {"kit": "desk_pc", "wall": "e", "at": 0.72}, {"kit": "chair", "wall": "e", "at": 0.72}, {"kit": "lockers", "wall": "n", "at": 0.5}, {"kit": "cabinet", "wall": "s", "at": 0.85}]},
+		{"id": "office", "name": "DISPATCH OFFICE", "rect": [-2.5, -26.5, 2.5, -21.5],
+			"dress": [{"kit": "cabinet", "wall": "n", "at": 0.12}, {"kit": "cabinet", "wall": "n", "at": 0.25}, {"kit": "shelf", "wall": "e", "at": 0.5}, {"kit": "chair", "wall": "w", "at": 0.6}]}
 	],
 	"doors": [
 		{"id": "d1", "name": "BREAK ROOM DOOR", "pos": [1.25, -4.0], "axis": "x", "a": "hall", "b": "r1", "locked": false},
