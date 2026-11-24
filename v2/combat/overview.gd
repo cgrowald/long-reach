@@ -219,6 +219,7 @@ func draw_squad(ci: CanvasItem, img: Rect2, cols: Array, main_actor) -> void:
 	if img.size.x <= 0.0 or img.size.y <= 0.0:
 		return
 	var sc := img.size / Vector2(vp.size)
+	var placed: Array = []         # tags already drawn: a crowded stack stacks its tags upward
 	for i in fight.squad.size():
 		var a = fight.squad[i]
 		var px := to_px(a.global_position + Vector3(0, 2.1, 0))
@@ -234,9 +235,28 @@ func draw_squad(ci: CanvasItem, img: Rect2, cols: Array, main_actor) -> void:
 		var label := "%d %s" % [i + 1, name]
 		var w := label.length() * 5.2 + 8
 		var r := Rect2(p - Vector2(w * 0.5, 14), Vector2(w, 11))
+		var guard := 0
+		while placed.any(func(o: Rect2) -> bool: return o.grow(1.0).intersects(r)) and guard < 6:
+			r.position.y -= 13.0
+			guard += 1
+		placed.append(r)
 		ci.draw_rect(r, Color(0, 0, 0, 0.6))
 		ci.draw_rect(r, col, false, 2.0 if a == main_actor else 1.0)
 		Pal.text(ci, r.position + Vector2(4, 0), label, 8, col)
 		ci.draw_line(Vector2(p.x, r.end.y), Vector2(p.x, p.y + 4), Color(col, 0.7), 1.0)
+		if fight.orders and fight.orders.is_holding(a) and a.state == "ok":
+			Pal.text(ci, r.position + Vector2(0, -11), "HOLDING", 8, Color(0.95, 0.72, 0.3), HORIZONTAL_ALIGNMENT_CENTER, w)
 		if a.state == "down":
 			Pal.text(ci, r.position + Vector2(0, -11), "DOWN", 8, Color(1.0, 0.35, 0.3), HORIZONTAL_ALIGNMENT_CENTER, w)
+
+
+## Overview viewport pixels -> the point on the floor under them (Vector3.INF if the ray misses).
+func ground_at(px: Vector2) -> Vector3:
+	var o := cam.project_ray_origin(px)
+	var d := cam.project_ray_normal(px)
+	if absf(d.y) < 0.001:
+		return Vector3.INF
+	var t := -o.y / d.y
+	if t < 0.0:
+		return Vector3.INF
+	return o + d * t

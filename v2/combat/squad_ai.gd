@@ -341,7 +341,10 @@ func _next_doctrine() -> void:
 		var lead2 = by_role("point")
 		if lead2 and float(danger("open", door)["risk"]) > threshold(lead2) and alive_fighters().any(func(f) -> bool: return f.flashes > 0):
 			how = "bang"
-		_set_stack(door, how, true)
+		# they never open an unknown door on their own (user 2026-11-24, C2): stack, then ask you.
+		# Their suggestion (how) is offered as the first choice.
+		_set_stack(door, how, false)
+		task["await_call"] = true
 
 
 func _set_stack(d: Dictionary, how: String, then_breach: bool) -> void:
@@ -565,6 +568,12 @@ func _tick_stack(delta: float) -> void:
 		return
 	if not task.get("then", false):
 		task["type"] = "stacked"
+		if task.get("await_call", false):
+			var lead = (task["stack"] as Array)[0] if not (task["stack"] as Array).is_empty() else by_role("point")
+			if lead and lead.alive():
+				var sugg := {"open": "Quiet open?", "kick": "It's locked. Kick it?", "bang": "Somebody's in there. Flash it?"}.get(task.get("how", "open"), "") as String
+				lead.say("At the %s. Your call. %s" % [_door_name(task["door"]).to_lower(), sugg], true)
+			log_line.emit("AT THE %s: your call" % _door_name(task["door"]).to_upper())
 		return
 	if float(task["t"]) < BREATH + _arrive_t():
 		return

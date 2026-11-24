@@ -69,6 +69,8 @@ var board: Control
 var op: RefCounted = null          # the depot raid layer (v2/combat/depot_op.gd) when sent from the garage
 const OpsBoard := preload("res://v2/combat/ops_board.gd")
 const Overview := preload("res://v2/combat/overview.gd")
+const Orders := preload("res://v2/combat/orders.gd")
+var orders                        # orders on the overview (v2/combat/orders.gd)
 var overview                      # the main view (v2/combat/overview.gd): raised cutaway or HQ drone
 var show_board := false           # M: the paper ops board over the overview (orders move onto the overview in C2)
 var _pan_drag := false
@@ -251,6 +253,9 @@ func _cameras() -> void:
 	overview = Overview.new()
 	add_child(overview)
 	overview.setup(self)
+	orders = Orders.new()
+	add_child(orders)
+	orders.setup(self)
 
 
 func _feed_xform(f: Dictionary) -> Transform3D:
@@ -313,6 +318,8 @@ func _process(delta: float) -> void:
 	_update_cameras(delta)
 	if overview:
 		overview.tick(delta)
+	if orders and phase == "op":
+		orders.tick(delta)
 	if board:
 		var oi := _ov_img()
 		board.position = oi.position + Vector2(oi.size.x * 0.5, 0)
@@ -395,8 +402,8 @@ func _shout(i: int, target = null) -> void:
 
 
 ## Give an order (from the shout wheel or the ops board): log it, say it on the radio, pass it on.
-func issue(id: String, label: String, say_line: String, target = null) -> void:
-	var who := recipients.duplicate()
+func issue(id: String, label: String, say_line: String, target = null, who_override = null) -> void:
+	var who: Array = recipients.duplicate() if who_override == null else who_override
 	var to_txt := "ALL" if who.is_empty() else ", ".join(PackedStringArray(who.map(func(a) -> String: return _first(a).to_upper())))
 	var what := ""
 	if target is Dictionary:
@@ -475,11 +482,18 @@ func _input(e: InputEvent) -> void:
 		return
 	if op and op.input(e, view.ui.get_local_mouse_position()):
 		return
+	if orders and orders.input(e, view.ui.get_local_mouse_position()):
+		get_viewport().set_input_as_handled()
+		return
 	if e is InputEventMouseButton:
 		if board and board.visible and Rect2(board.position, board.size).has_point(view.ui.get_local_mouse_position()) and not wheel_open:
 			return          # the ops board handles its own clicks
 		var mp := view.ui.get_local_mouse_position() as Vector2
-		if e.button_index == MOUSE_BUTTON_RIGHT:
+		if e.button_index == MOUSE_BUTTON_RIGHT and e.pressed and orders and _ov_img().has_point(mp):
+			pending = -1
+			orders.open_menu(mp)          # orders on the overview (C2); the shout wheel stays on the helmet feed
+			get_viewport().set_input_as_handled()
+		elif e.button_index == MOUSE_BUTTON_RIGHT:
 			if e.pressed:
 				pending = -1
 				wheel_open = true
@@ -572,9 +586,7 @@ func _input(e: InputEvent) -> void:
 			paused = not paused
 		elif k == KEY_B:
 			if not sq.objection.is_empty():
-				var by = sq.objection["by"]
-				shout_log.append({"t": t_op, "text": "YOU > OK, %s's way: %s" % [_first(by).to_upper(), sq.objection["suggest_label"]]})
-				sq.accept_suggestion()
+				orders.their_way()
 		elif k == KEY_V and overview:
 			overview.mode = "drone" if overview.mode == "overview" else "overview"
 		elif k == KEY_M:
@@ -784,6 +796,8 @@ func _state_word(a) -> Array:
 		return ["RELOADING", UI_AMBER]
 	if a.target != null:
 		return ["ENGAGING", UI_AMBER]
+	if orders and orders.is_holding(a):
+		return ["HOLDING", UI_AMBER]
 	return ["STEADY", UI_TEAL]
 
 
@@ -922,7 +936,7 @@ func _draw_hud() -> void:
 	var hb := Rect2(4, h - 17, w - 8, 15)
 	_panel(hb)
 	var hx2 := hb.position.x + 6
-	for kv in [["1-4", "Talk to one"], ["Tab", "Next feed"], ["Wheel", "Zoom map (dbl-click: fit)"], ["R-mouse", "Shout"], ["Space", "Pause"], ["G", "Carry on"], ["Esc", "Back"]]:
+	for kv in [["R-click map", "Orders"], ["Shift", "Queue"], ["1-4", "Who"], ["Space", "Pause"], ["G", "Next door"], ["Tab", "Feed"], ["V", "Drone"], ["Esc", "Back"]]:
 		Pal.text(hud, Vector2(hx2, hb.position.y + 3), kv[0], 8, UI_TEXT)
 		hx2 += kv[0].length() * 5.0 + 6
 		Pal.text(hud, Vector2(hx2, hb.position.y + 3), kv[1], 8, UI_TEAL)
@@ -960,7 +974,8 @@ func _draw_hud() -> void:
 				hud.draw_arc(sp, 9.0 + sin(t_op * 8.0) * 1.5, 0, TAU, 16, Color(1, 0.3, 0.85), 1.0)
 		hud.draw_rect(Rect2(mp + Vector2(10, -6), Vector2(tag.length() * 5.5 + 6, 12)), Color(0, 0, 0, 0.75))
 		Pal.text(hud, mp + Vector2(13, -5), tag, 8, Color(1, 0.3, 0.85) if ok else Color(0.8, 0.8, 0.8))
-	_draw_objection()
+	if orders:
+		orders.draw(hud)          # the order menu, queued markers, pushback buttons
 	if phase == "report":
 		_draw_report()
 
