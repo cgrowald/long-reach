@@ -8,7 +8,7 @@
 >   - stick carrier: pack the drop stick into one fighter's rig in the cage (tech 1+; v2/sim/loadout.gd `stick_carrier`).
 >   - the vault: 3D room (v2/combat/vault_room.gd), command hack in a small draggable terminal popup (v2/sim/vault_hack.gd, v2/ui/popup_win.gd): you tell the carrier what to type, the typing takes the time, they're out of the fight meanwhile. Then a vault-camera popup: click a door. User: "exactly what I wanted".
 > - **Done 2026-11-23 (later):** the plan file as a Bureau SERVICE FORM and the prisoner ID (people's laminated card, or a guard's black Bureau card) as paper (v2/ui/paper.gd; Shelves > Read, cage > Plan file, the interrogation chair); the plan shows tonight's real guards (DepotRun.seed_for). The gear cage rebuilt like bible 17. Fixed: a crew of 3 crashed the fight's main feed (CAM 04).
-> - **Now: M1c, the catalog** (section below): step 1 (faces) done; next step 2, the item data and material sources (ask the cage-stats question first). M1 is played; its leftover notes are folded into M1c and the face-lift.
+> - **Now: M1b, the bench face-lift** (user 2026-11-24: "continue on the M list"). Ask its defining questions first. The catalog idea is parked (Parking lot); its faces step is done.
 > - **User after M1 (2026-11-23, decisions log in GAME_DESIGN 20):** judge fun on the whole game, not pieces; no more Krall questions; Schedule I style open world (time, not gates or currency; things pop up); the overworld territory map (Paper Mario) soon; GPT gear catalogs in docs/refs/catalog/ to model from, with material sources, ideas bought off people, blueprints = regime tech; smoother fighter models. Answers: next = items from the catalogs (every tile its own item); ideas come from sellers, recruits' old jobs and StateNet; gates give way to things popping up over time.
 > - **Then ask the user (do not decide alone):** the user fears the game is boring; combat is great, but it needs a variety of maps, targets and reasons to hit them. Offer to move map/target variety (M4: generated buildings, more op types) ahead of M1b (benches). Also parked: things to do while an op or hack runs (maybe watch the op as a feed on your PC at night); blood splatter and ragdolls.
 > - **Process (user 2026-11-23):** small fixes = screenshots in chat, no playtests; full playtests only after big slices. Keep chats short to save usage: one milestone chunk per chat.
@@ -90,16 +90,6 @@ Design is in docs/DEPOT_SLICE.md (sections 1, 4, 5, 8).
 
 **Playtest question at sign-off:** what did you make, who used it, what did you learn on the PC that changed the raid, and what will you do tomorrow because of Krall?
 
-## M1c. The catalog: flood the game with items (decided 2026-11-23, next)
-GPT's sheets in docs/refs/catalog/ (16 so far, more coming). Every tile is its own named item. Order:
-1. ~~**Faces**~~ (done 2026-11-23: 4 sheets, 100 faces drawn from art/faces/, picked by name in v2/sim/portraits.gd, tags in data/v2/faces.json; ages follow the face; prisoners from the bruised sheet; the hurt get tape on their own face; regime-collar tiles kept for officers): everyone uses them (people, recruits, prisoners, guards, ID cards, the cage). The hurt/scarred sheet for the injured.
-2. **Item data:** one entry per tile in data/v2/ (name, family, slot, warmth, weather, pockets/carry, blend-in vs stand-out, toughness, wear), and where its materials come from (day job, markets, depots, scavenging).
-3. **Ideas:** how you learn to make the handmade ones: bought off people, your recruits' old jobs, StateNet pages. Blueprints are regime tech, taken in raids.
-4. **Model kits:** one smooth Blender generator per family (jacket, coat, parka, bag, pouch, rig, hat, glove, boot), each tile a mix of parts and colours; icons rendered from the models for the stash.
-5. **People:** the outfit sheets dress townsfolk and recruits and set the regime ranks; the fighter body gets rebuilt smoother toward them.
-6. **Things pop up over time** (Schedule I) instead of gates: sellers message you with ideas, deliveries arrive after a wait.
-Not decided yet (ask before that step): how stats show in the cage, what happens to night actions and Krall's countdown.
-
 ## M1b. The bench face-lift (decided C6: right after M1)
 Each bench redone step by step, with defining questions before building. Repairs with sound, worn and mended states, colourful patches and armbands (art bible 06, 12, 14, 19). Crisp animations from games the user finds. Fixes: the sewing table's fabric blocking the view, the gun bench parts hard to pick up. Better models, with a Blender walkthrough together and GPT decals ("stickers").
 
@@ -134,6 +124,15 @@ The face-lift goes piece by piece inside each milestone, using docs/LOOK_BIBLE.m
 ---
 
 ## Parking lot (ideas waiting for a milestone; not built until scheduled)
+- **The catalog (was "M1c", parked 2026-11-24: the user wants the M list in order).** Faces already done; the rest waits for a milestone (fits the bench face-lift and the face-lift stages):
+  GPT's sheets in docs/refs/catalog/ (16 so far, more coming). Every tile is its own named item. Order:
+  1. ~~**Faces**~~ (done 2026-11-23: 4 sheets, 100 faces drawn from art/faces/, picked by name in v2/sim/portraits.gd, tags in data/v2/faces.json; ages follow the face; prisoners from the bruised sheet; the hurt get tape on their own face; regime-collar tiles kept for officers): everyone uses them (people, recruits, prisoners, guards, ID cards, the cage). The hurt/scarred sheet for the injured.
+  2. **Item data:** one entry per tile in data/v2/ (name, family, slot, warmth, weather, pockets/carry, blend-in vs stand-out, toughness, wear), and where its materials come from (day job, markets, depots, scavenging).
+  3. **Ideas:** how you learn to make the handmade ones: bought off people, your recruits' old jobs, StateNet pages. Blueprints are regime tech, taken in raids.
+  4. **Model kits:** one smooth Blender generator per family (jacket, coat, parka, bag, pouch, rig, hat, glove, boot), each tile a mix of parts and colours; icons rendered from the models for the stash.
+  5. **People:** the outfit sheets dress townsfolk and recruits and set the regime ranks; the fighter body gets rebuilt smoother toward them.
+  6. **Things pop up over time** (Schedule I) instead of gates: sellers message you with ideas, deliveries arrive after a wait.
+  Not decided yet (ask before that step): how stats show in the cage, what happens to night actions and Krall's countdown.
 - **Bench mechanics and face-lift (needs a slot on the roadmap).** Redo each bench step by step, with defining questions about what each step does. Crisp animations from reference games the user finds. The sewing table's fabric blocks the view; the gun bench parts are hard to pick up.
 - **Better models:** walk through Blender together to line things up; GPT-made 2D images used as "stickers" (decals) on the 3D models for detail.
 - **The code chain to make more sense** (questions asked 2026-11-23).
