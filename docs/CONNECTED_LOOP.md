@@ -40,3 +40,12 @@ A. The TONIGHT board and station signs, fed by the systems that already exist (c
 B. The garage rebuild from the concepts (big; the board and signs move into it).
 C. The combat test room: orders, the 3D view, the pinned feed, pushback choices, leaving outcomes.
 D. Coming home: the haul placed in the garage, one follow-up per raid.
+
+## 7. B, the garage do-over: answers and build plan (2026-11-24)
+Answers: concept 01's placement; first person, WASD + mouse look, a centre dot, click or E to use; a wide double garage (~8 x 10 m); fewer stations (the TONIGHT board replaces the corkboard and clipboard, the war room is on the PC, the forgery desk and floor hatch wait until they're used).
+Layout (top view, the roller door in the middle of the back wall):
+- back wall: shelves with boxes (left), the roller door (middle), the TONIGHT board beside it (right), the electronics desk with the Veltin CRT = the PC + the box + the phone + the hacking bench (right corner);
+- left wall: windows; the med table (middle); the house door (front) with the sewing table beside it (front left); the prisoner's chair in the back-left corner under its own bulb;
+- right wall: the equipment bench = the gun bench (middle); the gear cage and the stash shelves (front right);
+- the middle: a long rug, open floor to walk through; a lamp over every station; plants on the high shelves.
+Build steps: B1 the room and every station's starter model (art/src/make_garage_v3.py; the sewing table reused from make_sewing.py; the other benches' starters from their GPT stage sheets in docs/refs/benches/); B2 first-person walking, the centre dot, using stations, the old station screens opened from it; B3 the TONIGHT board and the station signs as real boards in the room; B4 lights, sound, clutter, screenshots against the concepts.
