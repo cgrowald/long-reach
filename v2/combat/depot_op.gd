@@ -58,6 +58,7 @@ var door_cam: Camera3D
 var door_post: ShaderMaterial
 var opened := -1
 var door_result: Dictionary = {}
+var drop_stores := false           # GET EVERYONE OUT: the stores stay behind (C5)
 var prisoner: Dictionary = {}
 var lines: Array = []             # for the report
 var _t := 0.0
@@ -133,7 +134,14 @@ func _on_log(t: String) -> void:
 func _on_objective() -> void:
 	phase = "prompt"
 	f._event("At the vault PC. Your call.")
-	_open_prompt_win()
+	# the leave card (C5): the one-door rule before you choose, what each way takes home, where backup stands
+	var c = f.sq.stick_carrier()
+	var who := "Nobody brought a stick: the PC can't be hit." if c == null else "%s plugs in the stick (tech %d). Covering them is your job." % [str(c.fighter_name).split(" ")[0].capitalize(), int(c.tech)]
+	var cells := _carry_cells()
+	f.leave.open("THE VAULT PC  -  ONE DOOR, THEN IT LOCKS OUT", [
+		{"id": "freight", "title": "OUT WITH THE FREIGHT", "line": "Leave the vault. Carry out the %s: what fits in %d rig cells." % [str(run["stores_title"]).to_lower(), cells], "risk": f.leave.backup_text(), "enabled": true},
+		{"id": "vault", "title": "STAY FOR THE VAULT", "line": who + " Then you pick ONE of three doors; the other two lock for good.", "risk": "Every command costs time. " + f.leave.backup_text(), "enabled": c != null},
+		{"id": "everyone", "title": "GET EVERYONE OUT NOW", "line": "Drop the stores too. The hurt get carried.", "risk": f.leave._hurt_text(), "enabled": true}])
 
 
 # ------------------------------------------------------------------ the loop
@@ -401,6 +409,10 @@ func _draw_door(w: Control, b: Rect2) -> void:
 		var c := Color(1.0, 0.8, 0.35) if on or i == opened else Color(1.0, 0.8, 0.35, 0.5)
 		if phase == "doors" or i == opened:
 			w.draw_rect(dr, c, false, 2.0 if on else 1.0)
+		elif opened >= 0:
+			# the one-door rule, visible: the other two are shut for good
+			w.draw_rect(dr, Color(0.9, 0.2, 0.15), false, 1.0)
+			Pal.text(w, Vector2(dr.position.x - 14, dr.get_center().y - 5), "LOCKED OUT", 7, Color(1.0, 0.35, 0.3), HORIZONTAL_ALIGNMENT_CENTER, dr.size.x + 28)
 		Pal.text(w, Vector2(dr.position.x - 10, dr.end.y + 1), "%02d %s" % [i + 1, DepotRun.door_hint(run, i).to_lower()], 7, c, HORIZONTAL_ALIGNMENT_CENTER, dr.size.x + 20)
 		_door_rects.append([dr, i])
 	var ty := fr.end.y + 3
@@ -569,7 +581,7 @@ func results(outcome: String) -> Array:
 	if outcome == "success":
 		if opened >= 0:
 			out.append("From the vault: " + DepotRun.grant(state, door_result))
-		var carried := DepotRun.carry_stores(state, run, _carry_cells())
+		var carried: Array = [] if drop_stores else DepotRun.carry_stores(state, run, _carry_cells())
 		if not carried.is_empty():
 			out.append("Carried out of the %s: %s." % [str(run["stores_title"]).to_lower(), ", ".join(PackedStringArray(carried))])
 		# a prisoner: the holding cell, or a guard you cuffed
@@ -588,6 +600,8 @@ func results(outcome: String) -> Array:
 			state.flags["prisoner"] = p
 			out.append("You brought %s back to the garage. They're tied to a chair under the bulb." % p["name"])
 		Krall.bump(state, 2.0, "the depot raid")
+	elif outcome == "withdrew":
+		Krall.bump(state, 1.5, "an aborted depot raid")
 	else:
 		Krall.bump(state, 3.0, "a failed depot raid")
 	DepotRun.close(state, run, {"loud": loud, "alarm": alarm, "door": opened, "time": int(f.t_op), "kind": run["kind"]})
@@ -623,3 +637,17 @@ func _draw_haul(ci: CanvasItem, sz: Vector2) -> void:
 	for row in rows:
 		ci.draw_string(Pal.font(), Vector2(r.position.x + 10, y), str(row), HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 20, 8, Pal.TEXT)
 		y += 14
+
+
+## The fight's leave card chose (C5): plug in, leave the vault, or get everyone out now.
+func choose(id: String) -> void:
+	match id:
+		"plug", "leave":
+			_press(id)
+		"everyone":
+			phase = "out"
+			drop_stores = true
+			lines.append("You got everyone out and left the stores behind.")
+			for w in [_win_prompt, _win_term, _win_door]:
+				if w and is_instance_valid(w):
+					_close_win(w)

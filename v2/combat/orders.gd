@@ -86,11 +86,7 @@ func open_menu(mp: Vector2) -> void:
 	else:
 		menu_title = "OUTSIDE"
 	_add("HOLD", "Hold" if fight.recipients.is_empty() else "Hold (%s)" % _who_text(fight.recipients), func() -> void: _give("hold", "HOLD", "Hold! Hold there.", null))
-	_add("WITHDRAW", "Withdraw to the van", func() -> void:
-		if sq.have_objective:
-			_give("go", "WITHDRAW", "We've got it. Out, now.", null)
-		else:
-			_give("fallback", "WITHDRAW", "Pull out! Back to the van!", null))
+	_add("WITHDRAW", "Leave...", func() -> void: fight.leave.open_withdraw())     # the leave card (C5)
 	menu_hover = -1
 	if fight.game:
 		fight.game.sfx.play("tick_004", 1.2, -12.0)

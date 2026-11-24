@@ -70,6 +70,9 @@ var op: RefCounted = null          # the depot raid layer (v2/combat/depot_op.gd
 const OpsBoard := preload("res://v2/combat/ops_board.gd")
 const Overview := preload("res://v2/combat/overview.gd")
 const Orders := preload("res://v2/combat/orders.gd")
+const LeaveCard := preload("res://v2/combat/leave_card.gd")
+var leave                         # the leave card (v2/combat/leave_card.gd)
+var leave_choice := ""            # freight, vault, everyone: how this op ended (the report says it)
 var orders                        # orders on the overview (v2/combat/orders.gd)
 var overview                      # the main view (v2/combat/overview.gd): raised cutaway or HQ drone
 var show_board := false           # M: the paper ops board over the overview (orders move onto the overview in C2)
@@ -104,7 +107,7 @@ func _ready() -> void:
 		if t.begins_with("YOU overruled"):
 			shout_log.append({"t": t_op, "text": t}))
 	sq.objective_done.connect(func() -> void: _event("OBJECTIVE COMPLETE: get out"))
-	sq.exfil_done.connect(func() -> void: _end("success"))
+	sq.exfil_done.connect(func() -> void: _end("withdrew" if not sq.have_objective else "success"))
 	_cameras()
 	hud = Control.new()
 	hud.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -256,6 +259,10 @@ func _cameras() -> void:
 	orders = Orders.new()
 	add_child(orders)
 	orders.setup(self)
+	leave = LeaveCard.new()
+	add_child(leave)
+	leave.setup(self)
+	leave.chosen.connect(_on_leave_chosen)
 
 
 func _feed_xform(f: Dictionary) -> Transform3D:
@@ -481,6 +488,9 @@ func _input(e: InputEvent) -> void:
 			_leave()
 		return
 	if op and op.input(e, view.ui.get_local_mouse_position()):
+		return
+	if leave and leave.input(e, view.ui.get_local_mouse_position()):
+		get_viewport().set_input_as_handled()
 		return
 	if orders and orders.input(e, view.ui.get_local_mouse_position()):
 		get_viewport().set_input_as_handled()
@@ -981,6 +991,8 @@ func _draw_hud() -> void:
 		Pal.text(hud, mp + Vector2(13, -5), tag, 8, Color(1, 0.3, 0.85) if ok else Color(0.8, 0.8, 0.8))
 	if orders:
 		orders.draw(hud)          # the order menu, queued markers, pushback buttons
+	if leave:
+		leave.draw(hud)
 	if phase == "report":
 		_draw_report()
 
@@ -1076,7 +1088,7 @@ func _draw_report() -> void:
 	var r := Rect2(Vector2(40, 30), Vector2(w - 80, h - 60))
 	_panel(r)
 	var good := outcome == "success"
-	var head := "OP REPORT  -  " + (("WE GOT OUT" if op else "THE MANIFESTS ARE OURS") if good else "FAILED")
+	var head := "OP REPORT  -  " + _leave_headline()
 	Pal.text(hud, r.position + Vector2(10, 8), head, 12, Color(0.55, 0.9, 0.55) if good else UI_RED)
 	Pal.text(hud, r.position + Vector2(10, 24), "%s   elapsed %s" % [data.get("name", ""), _elapsed()], 8, UI_DIM)
 	# your people: a card each, with their face (greyed if they didn't come home)
@@ -1238,3 +1250,43 @@ func _draw_overview() -> void:
 	var title := "OVERVIEW" if overview == null or overview.mode == "overview" else "HQ DRONE"
 	Pal.text(hud, mr.position + Vector2(5, 2), title, 9, UI_AMBER)
 	Pal.text(hud, mr.position + Vector2(70, 3), "drag: pan   wheel: zoom   double-click: fit   V: %s   M: paper plan" % ("drone" if title == "OVERVIEW" else "overview"), 8, UI_DIM)
+
+
+## The leave card's answer (C5).
+func _on_leave_chosen(id: String) -> void:
+	match id:
+		"stay":
+			return
+		"vault":
+			leave_choice = "vault"
+			shout_log.append({"t": t_op, "text": "YOU: STAY FOR THE VAULT"})
+			if op:
+				op.choose("plug")
+		"freight":
+			leave_choice = "freight" if leave_choice != "vault" else "vault"
+			shout_log.append({"t": t_op, "text": "YOU: OUT WITH THE FREIGHT"})
+			barks.append({"name": "YOU", "text": "That's enough. Out, with what we've got.", "t": 0.0, "col": Color(1, 1, 1)})
+			if op:
+				op.choose("leave")
+			else:
+				sq.order("go", null, [], true)
+		"everyone":
+			leave_choice = "everyone"
+			shout_log.append({"t": t_op, "text": "YOU: GET EVERYONE OUT NOW"})
+			barks.append({"name": "YOU", "text": "Drop it. Everybody out, now!", "t": 0.0, "col": Color(1, 1, 1)})
+			if op:
+				op.choose("everyone")
+			sq.order("fallback", null, [], true)
+
+
+## The headline of the report: the three ways out the game recognises.
+func _leave_headline() -> String:
+	if outcome == "failed":
+		return "FAILED"
+	match leave_choice:
+		"vault":
+			return "STAYED FOR THE VAULT"
+		"everyone":
+			return "GOT EVERYONE OUT" + ("" if sq.have_objective else "  (job not done)")
+		_:
+			return "OUT WITH THE FREIGHT" if op else ("THE MANIFESTS ARE OURS" if outcome == "success" else "WE GOT OUT")

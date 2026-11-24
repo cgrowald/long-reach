@@ -176,9 +176,7 @@ func order(kind: String, target = null, who: Array = [], skip_check := false) ->
 			_ack("hold")
 		"fallback":
 			auto = false
-			task = {"type": "fallback"}
-			for f in alive_fighters():
-				f.go(_route(f, start_pos + Vector3(rng.randf_range(-0.6, 0.6), 0, rng.randf_range(0.0, 1.0))), RUN)
+			bound_out(true)
 			_ack("fallback")
 		"cover":
 			for f in _who(who):
@@ -305,9 +303,7 @@ func _who(who: Array) -> Array:
 ## Next room to clear: the nearest uncleared one on the way, the objective room last.
 func _next_doctrine() -> void:
 	if have_objective:
-		task = {"type": "exfil"}
-		for f in alive_fighters():
-			f.go(_route(f, start_pos + Vector3(rng.randf_range(-0.5, 0.5), 0, rng.randf_range(0.0, 1.0))), WALK)
+		bound_out(false)
 		return
 	var lead = by_role("point")
 	if lead == null:
@@ -515,10 +511,8 @@ func tick(delta: float) -> void:
 				task = {"type": "hold"}
 		"grab":
 			_tick_grab(delta)
-		"exfil":
-			if alive_fighters().all(func(f) -> bool: return not f.moving()):
-				task = {"type": "done"}
-				exfil_done.emit()
+		"bound":
+			_tick_bound(delta)
 		"fallback":
 			if alive_fighters().all(func(f) -> bool: return not f.moving()):
 				task = {"type": "hold"}
@@ -1137,3 +1131,149 @@ func _tick_exploit(delta: float) -> void:
 		_next_doctrine()
 	else:
 		task = {"type": "hold"}
+
+
+# ------------------------------------------------------------------ leaving: bounding overwatch (C5)
+# They don't walk backwards out of a building (the user's method): the crew splits in two; one half covers back the
+# way they came while the other moves a few metres past them, calls "Set!", and then they swap. Anyone down is
+# carried by the nearest healthy one (slow, no gun). At the van: exfil_done.
+
+const BOUND_LEG := 3.5
+
+
+func bound_out(abort: bool) -> void:
+	# the route out starts from whoever is deepest in the building
+	var lead = null
+	var far := -1.0
+	for a in alive_fighters():
+		var dd: float = a.global_position.distance_to(start_pos)
+		if dd > far:
+			far = dd
+			lead = a
+	if lead == null:
+		return
+	var pts: Array = [lead.global_position]
+	pts.append_array(_route(lead, start_pos))
+	var healthy: Array = fighters.filter(func(f) -> bool: return f.state == "ok")
+	healthy.sort_custom(func(p, q) -> bool: return p.global_position.distance_to(start_pos) < q.global_position.distance_to(start_pos))
+	var carriers := {}
+	for d in fighters:
+		if d.state != "down":
+			continue
+		var best = null
+		var bd := 1e9
+		for h in healthy:
+			if carriers.values().has(h):
+				continue
+			var dd: float = h.global_position.distance_to(d.global_position)
+			if dd < bd:
+				bd = dd
+				best = h
+		if best != null:
+			carriers[d] = best
+			best.say("I've got %s! Moving!" % _first(d), true)
+			best.go(_route(best, d.global_position), RUN)
+	var groups := [[], []]
+	var k := 0
+	for h in healthy:
+		if carriers.values().has(h):
+			continue
+		groups[k % 2].append(h)
+		k += 1
+	task = {"type": "bound", "path": pts, "groups": groups, "mover": 0, "s": [0.0, 0.0], "carriers": carriers, "abort": abort,
+		"picked": {}, "t": 0.0}
+	if not groups[0].is_empty():
+		groups[0][0].say("Bounding out. Moving!", true)
+	log_line.emit("Leaving: bounding back to the van" + (" (abort)" if abort else ""))
+
+
+func _path_len(pts: Array) -> float:
+	var l := 0.0
+	for i in range(pts.size() - 1):
+		l += (pts[i] as Vector3).distance_to(pts[i + 1])
+	return l
+
+
+func _point_at(pts: Array, s: float) -> Vector3:
+	for i in range(pts.size() - 1):
+		var a: Vector3 = pts[i]
+		var b: Vector3 = pts[i + 1]
+		var seg := a.distance_to(b)
+		if s <= seg or i == pts.size() - 2:
+			return a.lerp(b, clampf(s / maxf(seg, 0.001), 0.0, 1.0))
+		s -= seg
+	return pts[-1]
+
+
+func _tick_bound(delta: float) -> void:
+	task["t"] = float(task["t"]) + delta
+	var pts: Array = task["path"]
+	var total := _path_len(pts)
+	var groups: Array = task["groups"]
+	for g in groups:
+		g.assign((g as Array).filter(func(f) -> bool: return f.state == "ok"))
+	# carriers: pick up, then walk the whole way slowly; the downed come along
+	var carriers: Dictionary = task["carriers"]
+	var all_home := true
+	for d in carriers.keys():
+		var c = carriers[d]
+		if not is_instance_valid(c) or c.state != "ok":
+			continue
+		if not task["picked"].has(d):
+			if c.global_position.distance_to(d.global_position) < 1.0:
+				task["picked"][d] = true
+				c.go(_route(c, start_pos), WALK * 0.75)
+				c.weapons_free = false
+			all_home = false
+			continue
+		d.global_position = c.global_position + c.global_basis.z * 0.45      # dragged along behind them
+		d.rotation.y = c.rotation.y
+		if c.global_position.distance_to(start_pos) > 1.6:
+			all_home = false
+			if not c.moving():
+				c.go(_route(c, start_pos + Vector3(randf_range(-0.4, 0.4), 0, 0.3)), WALK * 0.75)     # blocked: try again
+	var mover: int = task["mover"]
+	var cover: int = 1 - mover
+	if groups[0].is_empty() and groups[1].is_empty():
+		pass
+	elif (groups[mover] as Array).is_empty():
+		task["mover"] = cover
+	else:
+		var moving_now: Array = groups[mover]
+		var s: Array = task["s"]
+		var target_s := minf(total, float(s[cover]) + BOUND_LEG) if not (groups[cover] as Array).is_empty() else total
+		if float(s[mover]) < target_s - 0.01:
+			s[mover] = target_s
+			var p := _point_at(pts, target_s)
+			var nxt := _point_at(pts, minf(total, target_s + 0.5))
+			var side := (nxt - p).normalized().cross(Vector3.UP)
+			for i in moving_now.size():
+				moving_now[i].go(_route(moving_now[i], p + side * (float(i) - 0.5 * (moving_now.size() - 1)) * 0.8), RUN * 0.8)
+				moving_now[i].crouch = 0.3
+		elif moving_now.all(func(f) -> bool: return not f.moving()):
+			# set: the other half moves now (past them, or the last leg to the van)
+			if not (groups[cover] as Array).is_empty() and float(s[cover]) < total - 0.05:
+				moving_now[0].say("Set!", true)
+				groups[cover][0].say("Moving!", true)
+				task["mover"] = cover
+			elif float(s[mover]) < total - 0.05:
+				s[mover] = float(s[mover]) - 0.02     # nobody to cover: just keep going
+			for x in moving_now:
+				if x.global_position.distance_to(_point_at(pts, float(s[mover]))) > 1.5 and not x.moving():
+					x.go(_route(x, _point_at(pts, float(s[mover]))), RUN * 0.8)
+		# the covering half watches back the way they came
+		var back := _point_at(pts, maxf(0.0, float(s[cover]) - 6.0)) + Vector3(0, 1.3, 0)
+		for f in groups[cover]:
+			if f.target == null and not f.moving():
+				f.look_at_point = back
+				f.crouch = 0.55
+	for g in groups:
+		for f in g:
+			if f.global_position.distance_to(start_pos) > 2.2:
+				all_home = false
+	if all_home and float(task["t"]) > 1.0:
+		for c in carriers.values():
+			if is_instance_valid(c):
+				c.weapons_free = true
+		task = {"type": "done", "abort": task["abort"]}
+		exfil_done.emit()
