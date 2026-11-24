@@ -1,7 +1,7 @@
 extends Control
 ## The TONIGHT board on screen (docs/CONNECTED_LOOP.md section 2; concept docs/refs/Garage/05_tonight_board.png):
 ## a corkboard with pinned paper cards saying what's next. Click a card: the garage turns to that station.
-## Text from v2/sim/tonight.gd. Moves into the 3D garage as a real board with the garage do-over.
+## Text from v2/sim/tonight.gd. Used big by the board station (v2/stations/board.gd); the 3D board is v2/world/garage_boards.gd.
 
 signal go(station: String)
 

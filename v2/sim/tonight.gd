@@ -95,6 +95,9 @@ static func signs(state, station: String) -> Array:
 			rows.append({"text": "PLAN FILE", "tag": "FOUND" if not DepotRun.plan_files(state).is_empty() else "NONE YET", "ok": not DepotRun.plan_files(state).is_empty()})
 			for a in arrivals(state):
 				rows.append({"text": str(a).to_upper(), "tag": "TOMORROW", "ok": true})
+		"pc":
+			var found := not DepotRun.plan_files(state).is_empty()
+			rows.append({"text": "DEPOT PLAN FILE", "tag": "FOUND" if found else "HACK READY", "ok": true})
 		"prisoner":
 			if state.flags.has("prisoner"):
 				rows.append({"text": "SOMEONE IN THE CHAIR", "tag": "TALK", "ok": true})

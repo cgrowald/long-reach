@@ -11,6 +11,7 @@ signal lean_finished
 const Content := preload("res://v2/sim/content.gd")
 const Crafting := preload("res://v2/sim/crafting.gd")
 const KindLook := preload("res://v2/world/kind_look.gd")
+const GarageBoards := preload("res://v2/world/garage_boards.gd")
 const GLB := "res://art/garage_v3.glb"
 const DITHER := preload("res://v2/world/dither.gdshader")
 
@@ -24,6 +25,8 @@ const TITLE_LOOK := [0.6, 2.0, 1.0]
 
 var camera: Camera3D
 var player: CharacterBody3D
+var boards                       # GarageBoards: the TONIGHT board and the station signs
+var aim_point := Vector3.ZERO    # where the centre of the view last hit a station
 var leaning := ""                # station id we're leaned into, or ""
 var hovered := ""
 var marked := ""                 # a station the TONIGHT board pointed you at
@@ -73,6 +76,9 @@ func setup() -> void:
 	_environment()
 	_bodies(garage)
 	_bulbs(garage)
+	boards = GarageBoards.new()
+	add_child(boards)
+	boards.setup(_stations)
 	_player(data)
 	camera = Camera3D.new()
 	camera.near = 0.03
@@ -276,6 +282,7 @@ func aim() -> String:
 	var hit := get_world_3d().direct_space_state.intersect_ray(q)
 	if hit.is_empty():
 		return ""
+	aim_point = hit["position"]
 	return _body_station.get(hit["collider"], "")
 
 

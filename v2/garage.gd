@@ -1,8 +1,9 @@
 extends Control
 ## The main game scene: the garage hub, walked in first person (docs/CONNECTED_LOOP.md section 7).
 ## WASD + mouse look, the centre dot picks a station within reach, left click or E uses it (the view glides in and
-## the station's screen opens), Esc or right-click steps back, Esc while walking pauses, Tab frees the cursor
-## (to click the TONIGHT board in the corner). The day runs on hours.
+## the station's screen opens), Esc or right-click steps back, Esc while walking pauses. The TONIGHT board hangs
+## by the roller door (v2/world/garage_boards.gd): aim at a card and press E to be turned to that station.
+## Every station has its status sign beside it. The day runs on hours.
 
 const Kit := preload("res://v2/ui/kit.gd")
 const Pal := preload("res://v2/ui/pal.gd")
@@ -13,7 +14,6 @@ const GarageWorld := preload("res://v2/world/garage_world.gd")
 const Hud := preload("res://v2/ui/hud.gd")
 const Hands := preload("res://v2/ui/hands.gd")
 const DebugPanel := preload("res://v2/ui/debug_panel.gd")
-const TonightBoard := preload("res://v2/ui/tonight_board.gd")
 const Tonight := preload("res://v2/sim/tonight.gd")
 const GameState := preload("res://v2/sim/game_state.gd")
 const Content := preload("res://v2/sim/content.gd")
@@ -35,14 +35,13 @@ var world
 var hud
 var hands
 var debug_panel
-var board                        # the TONIGHT board (v2/ui/tonight_board.gd): what's next, click to go
 var screen: Control            # the open station screen, or null
 var _catcher: Control
 var _stations_layer: Control
 var _overlay_layer: Control
 var _pending := ""             # station id waiting for the lean to finish
 var _alarm := false
-var _cursor_free := false      # Tab: the cursor is out (click the TONIGHT board), walking and looking stop
+var _card := -1                # the TONIGHT card under the centre dot, or -1
 var _t := 0.0
 
 
@@ -69,13 +68,6 @@ func _ready() -> void:
 	hud = Hud.new()
 	hud.game = game
 	ui.add_child(hud)
-	board = TonightBoard.new()
-	board.game = game
-	ui.add_child(board)
-	board.position = Vector2(4, 40)
-	board.go.connect(func(id: String) -> void:
-		if screen == null:
-			guide(id))
 	_stations_layer = Control.new()
 	_stations_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_stations_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -115,18 +107,16 @@ func _apply_settings() -> void:
 # ------------------------------------------------------------------ state shortcuts
 
 func refresh() -> void:
-	if board:
-		board.refresh()
-		board.visible = screen == null
+	world.boards.refresh(game.state)
 	hud.compact = screen != null
 	if screen:
 		hud.hint_line = "Esc or right-click: step back"
-	elif _cursor_free:
-		hud.hint_line = "Click a TONIGHT card to be pointed at it.  Tab or click the room: back to walking."
 	elif game.state.hours_left() <= 0.01:
 		hud.hint_line = "It's late. Go inside and sleep (the house door, where you came in)."
+	elif world.marked != "":
+		hud.hint_line = "Go to the glowing %s and press E." % str(Content.station(world.marked).get("name", "")).to_lower()
 	else:
-		hud.hint_line = "WASD walk   mouse look   E / click: use   Tab: cursor   Esc: pause   F1: debug"
+		hud.hint_line = "What's next: the TONIGHT board by the roller door.   WASD walk   E / click: use   Esc: pause"
 
 
 func toast(s: String) -> void:
@@ -162,7 +152,7 @@ func _overlay_open() -> bool:
 
 ## Walking: the mouse is captured and turns the view; the centre dot picks.
 func _walking() -> bool:
-	return screen == null and not _overlay_open() and not debug_panel.visible and not _cursor_free and _pending == ""
+	return screen == null and not _overlay_open() and not debug_panel.visible and _pending == ""
 
 
 func _input(event: InputEvent) -> void:
@@ -178,19 +168,18 @@ func _input(event: InputEvent) -> void:
 
 
 func _on_catcher_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.pressed:
-		if event.button_index == MOUSE_BUTTON_LEFT and screen == null and _cursor_free:
-			_cursor_free = false           # click the room: back to walking
-			refresh()
-		elif event.button_index == MOUSE_BUTTON_RIGHT:
-			_back()
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_RIGHT:
+		_back()
 
 
-## Use what the centre dot is on.
+## Use what the centre dot is on. On a TONIGHT card: turn to that card's station instead.
 func use() -> void:
 	if screen != null or world.is_moving() or world.hovered == "":
 		return
 	hands.reach(hud.size * 0.5)
+	if world.hovered == "board" and _card >= 0 and _card < world.boards.board_cards.size():
+		guide(str(world.boards.board_cards[_card]["go"]))
+		return
 	open_station(world.hovered)
 
 
@@ -214,6 +203,27 @@ func _hover(id: String) -> void:
 		hud.hover_cost = ""
 
 
+## On the TONIGHT board: which card the dot is on; the tag says what E does.
+func _hover_card() -> void:
+	var c := -1
+	if world.hovered == "board":
+		c = world.boards.card_at(world.aim_point)
+	if c != _card:
+		_card = c
+		world.boards.set_board_hover(c)
+		if c >= 0:
+			game.hover()
+	if world.hovered != "board":
+		return
+	hud.hover_sign = []
+	if _card >= 0 and _card < world.boards.board_cards.size():
+		var card: Dictionary = world.boards.board_cards[_card]
+		hud.hover_title = "TONIGHT: " + str(card["title"])
+		hud.hover_hint = "%s   [E] show me" % str(Content.station(str(card["go"])).get("name", ""))
+	else:
+		hud.hover_hint = "Aim at a card and press E. Or E here: read it close."
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("v2_debug"):
 		debug_panel.visible = not debug_panel.visible
@@ -221,11 +231,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("v2_quicksave"):
 		quicksave()
 	elif event.is_action_pressed("v2_pause"):
-		if _cursor_free and screen == null and not _overlay_open():
-			_cursor_free = false
-			refresh()
-		else:
-			_back(true)
+		_back(true)
 	elif _overlay_open():
 		return
 	elif event.is_action_pressed("v2_back") and screen:
@@ -233,9 +239,6 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif screen == null and event is InputEventKey and event.pressed and not event.echo:
 		if event.physical_keycode == KEY_E and _walking():
 			use()
-		elif event.physical_keycode == KEY_TAB:
-			_cursor_free = not _cursor_free
-			refresh()
 		elif event.physical_keycode == KEY_P and game.state.flags.has("prisoner"):
 			open_station("prisoner")
 
@@ -245,7 +248,6 @@ func guide(id: String) -> void:
 	var s := Content.station(id)
 	if s.is_empty():
 		return
-	_cursor_free = false
 	world.guide_to(id)
 	toast("%s: walk over and press E." % s.get("name", id))
 	game.sfx.play("tick_004", 0.6, -12.0)
@@ -378,6 +380,7 @@ func _process(delta: float) -> void:
 		Input.mouse_mode = want
 	if walking and not world.is_moving():
 		_hover(world.aim())
+		_hover_card()
 	elif world.hovered != "" and screen == null and _pending == "":
 		_hover("")
 	if world.hovered != "":
