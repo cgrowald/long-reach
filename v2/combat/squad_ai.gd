@@ -499,6 +499,7 @@ func tick(delta: float) -> void:
 	_gun_swap()
 	_kneel_calls()
 	_cover_tick(delta)
+	_capture_check()
 	match task.get("type", "idle"):
 		"stack":
 			_tick_stack(delta)
@@ -541,8 +542,8 @@ func _perceive(delta: float) -> void:
 		var bd := 1e9
 		var fwd := Vector3(-sin(f.face_yaw), 0, -cos(f.face_yaw))
 		for e in enemies:
-			if e.state != "ok" or e.ducked:
-				continue              # down behind cover: nothing to see
+			if e.state != "ok" or e.ducked or e.kind == "vip":
+				continue              # down behind cover: nothing to see (and the deputy is wanted alive: nobody shoots him unasked)
 			var d: float = f.global_position.distance_to(e.global_position)
 			if d > 24.0:
 				continue
@@ -724,6 +725,15 @@ func _tick_flow(delta: float) -> void:
 
 func _tick_clear(delta: float) -> void:
 	var room_id: String = task["into"]
+	if level.room(room_id).get("outdoor", false):
+		# out on open ground (M4): there's no clearing a street. Take cover, wait for the boss.
+		cleared[room_id] = true
+		task = {"type": "hold"}
+		auto = false
+		var by = by_role("point")
+		if by:
+			by.say("We're out on the road. Your call, boss." if in_contact else "Out. Road's quiet.", true)
+		return
 	for e in enemies:
 		if e.state == "ok" and level.room_at(e.global_position) == room_id:
 			task["t"] = 0.0
@@ -1372,6 +1382,16 @@ func _peek_or_duck(f, delta: float) -> void:
 
 
 func _move_to_point(p: Vector3) -> void:
+	# a shut door in the way: stack on it first (they never open one alone)
+	var lead = by_role("point")
+	if lead and level.path(lead.global_position, p).is_empty():
+		var rooms: Array = level.room_path(level.room_near(lead.global_position), level.room_near(p))
+		for i in range(rooms.size() - 1):
+			var d: Dictionary = level.door_between(rooms[i], rooms[i + 1])
+			if not d.is_empty() and d["state"] == "closed":
+				lead.say("Door's shut on the way. Stacking on it.", true)
+				_set_stack(d, "", false)
+				return
 	if level.cover != null and not level.cover.spots.is_empty() and in_contact:
 		var fs := alive_fighters()
 		var groups: Array = [[], []]
@@ -1448,3 +1468,32 @@ func _tick_advance(delta: float) -> void:
 		elif not nxt.is_empty():
 			nxt[0].say("Moving!", true)
 		_send_movers()
+
+
+# ------------------------------------------------------------------ a capture objective (M4 V2: the deputy)
+
+var vip_outcome := ""              # "taken" or "dead" once it's settled
+
+
+func _capture_check() -> void:
+	var obj: Dictionary = level.data.get("objective", {})
+	if obj.get("kind", "") != "capture" or have_objective:
+		return
+	for e in enemies:
+		if e.id != str(obj.get("who", "")):
+			continue
+		if e.state == "cuffed":
+			vip_outcome = "taken"
+			log_line.emit("%s zip-tied. We have him." % e.fighter_name)
+		elif e.state == "dead" or e.state == "down":
+			vip_outcome = "dead"
+			log_line.emit("%s is down. That's the job, one way or another." % e.fighter_name)
+		else:
+			return
+		have_objective = true
+		objective_done.emit()
+		var by = alive_fighters()[0] if not alive_fighters().is_empty() else null
+		if by:
+			by.say("Got him! We're leaving!" if vip_outcome == "taken" else "He's done. Let's go!", true)
+		bound_out(false)
+		return

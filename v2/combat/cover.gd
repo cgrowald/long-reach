@@ -10,6 +10,10 @@ extends Node3D
 ## The usual cover-shooter pattern: pick a spot with the object between you and the threat, peek, duck.
 
 const LOW_LAYER := 2              # physics layer bit for low cover (rounds stop, eyes see over)
+const KIT := "res://art/street_kit.glb"     # art/src/make_street_kit.py: Kit_<kind>, native sizes below
+const KindLook := preload("res://v2/world/kind_look.gd")
+const NATIVE := {"sandbags": Vector3(1.8, 0.95, 0.65), "barrier": Vector3(2.0, 0.85, 0.6), "car": Vector3(4.2, 1.45, 1.8),
+	"booth": Vector3(2.0, 2.4, 2.0), "barrel": Vector3(0.62, 1.0, 0.62), "low_wall": Vector3(3.0, 1.0, 0.3), "crate": Vector3(0.9, 0.9, 0.9)}
 const CELL := 0.5
 
 ## kind -> size (x = length, y = height, z = depth), protection when crouched behind it, colour
@@ -28,6 +32,7 @@ var pieces: Array = []            # {kind, center: Vector3, half: Vector2 (x alo
 var spots: Array = []             # {pos: Vector3, piece: int, out: Vector3 (away from the piece), taken: actor or null}
 var grid: AStarGrid2D
 var _origin := Vector2.ZERO
+var _kit: Node3D
 
 
 func build(p_level: Node3D, specs: Array) -> void:
@@ -45,6 +50,9 @@ func build(p_level: Node3D, specs: Array) -> void:
 			"protect": float(kd["protect"]), "tall": kd.get("tall", false)}
 		piece["body"] = _mesh(k, size, c, yaw, kd["col"], piece["tall"])
 		pieces.append(piece)
+	if _kit:
+		_kit.free()        # the source pieces were only copied from
+		_kit = null
 	_spots()
 
 
@@ -207,7 +215,7 @@ func refresh(area: Rect2) -> void:
 	var b := _cell(Vector3(area.end.x, 0, area.end.y))
 	for x in range(maxi(a.x, 0), mini(b.x + 1, grid.region.size.x)):
 		for y in range(maxi(a.y, 0), mini(b.y + 1, grid.region.size.y)):
-			grid.set_point_solid(Vector2i(x, y), not level.walkable(_pt(Vector2i(x, y)), 0.25))
+			grid.set_point_solid(Vector2i(x, y), not level.walkable(_pt(Vector2i(x, y)), 0.32))
 
 
 func _cell(p: Vector3) -> Vector2i:
@@ -232,7 +240,7 @@ func path(a: Vector3, b: Vector3) -> Array:
 	var raw: Array = []
 	for c in ids:
 		raw.append(_pt(c))
-	raw[raw.size() - 1] = b if level.walkable(b, 0.25) else raw[raw.size() - 1]
+	raw[raw.size() - 1] = b if level.walkable(b, 0.3) else raw[raw.size() - 1]
 	# string-pull: skip points while the straight walk stays clear
 	var out: Array = []
 	var from := a
@@ -250,7 +258,7 @@ func path(a: Vector3, b: Vector3) -> Array:
 func _walk_clear(a: Vector3, b: Vector3) -> bool:
 	var n := int(a.distance_to(b) / 0.25) + 1
 	for k in range(1, n + 1):
-		if not level.walkable(a.lerp(b, float(k) / n), 0.25):
+		if not level.walkable(a.lerp(b, float(k) / n), 0.31):
 			return false
 	return true
 
@@ -273,6 +281,17 @@ func _mesh(kind: String, size: Vector3, c: Vector3, yaw: float, col: Color, tall
 	root.rotation.y = yaw
 	add_child(root)
 	var mat: Material = level.flat(col)
+	var model := _kit_piece(kind)
+	if model:
+		root.add_child(model)
+		model.scale = size / (NATIVE[kind] as Vector3)
+	else:
+		_blocks(kind, size, root, mat, col)
+	return _body(kind, size, root, tall)
+
+
+## Placeholder shapes when the kit has no model for a kind.
+func _blocks(kind: String, size: Vector3, root: Node3D, mat: Material, col: Color) -> void:
 	match kind:
 		"sandbags":
 			# two staggered rows of bags
@@ -298,7 +317,10 @@ func _mesh(kind: String, size: Vector3, c: Vector3, yaw: float, col: Color, tall
 			level.box(Vector3(size.x * 0.98, 0.12, size.z * 0.47), Vector3(0, size.y * 0.6, 0), level.flat(Color(0.75, 0.6, 0.15)), Vector3.ZERO, false, root)
 		_:
 			level.box(size, Vector3(0, size.y * 0.5, 0), mat, Vector3.ZERO, false, root)
-	# the body that stops rounds
+
+
+## The body that stops rounds.
+func _body(kind: String, size: Vector3, root: Node3D, tall: bool) -> StaticBody3D:
 	var sb := StaticBody3D.new()
 	sb.collision_layer = 1 if tall else LOW_LAYER
 	sb.collision_mask = 0
@@ -311,3 +333,17 @@ func _mesh(kind: String, size: Vector3, c: Vector3, yaw: float, col: Color, tall
 	root.add_child(sb)
 	sb.set_meta("protect", KINDS.get(kind, KINDS["crate"])["protect"])
 	return sb
+
+
+func _kit_piece(kind: String) -> Node3D:
+	if not NATIVE.has(kind) or not ResourceLoader.exists(KIT):
+		return null
+	if _kit == null:
+		_kit = (load(KIT) as PackedScene).instantiate()
+	var src := _kit.find_child("Kit_" + kind, true, false) as Node3D
+	if src == null:
+		return null
+	var n := src.duplicate() as Node3D
+	n.transform = Transform3D()
+	KindLook.apply(n)
+	return n

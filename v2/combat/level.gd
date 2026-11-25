@@ -23,6 +23,7 @@ var lights: Array = []          # {light, mesh, base, flicker}
 var objective_pos := Vector3.ZERO
 var pcs: Array = []              # desk PCs your people can exploit: {room, stand, screen, done}
 var cover: Node3D                # cover pieces, cover spots and the walking grid (v2/combat/cover.gd, M4 V1)
+var civ: RefCounted = null        # the civilians' brain (stray rounds can hit them), when there are any
 var _mats := {}
 var _t := 0.0
 

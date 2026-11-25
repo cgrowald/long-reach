@@ -53,6 +53,10 @@ func tick(delta: float) -> void:
 		if e.state != "ok":
 			continue
 		var ai: Dictionary = e.get_meta("ai")
+		if e.kind == "vip":
+			_vip(e, ai, delta)
+			e.tick(delta)
+			continue
 		# hear
 		for n in noises:
 			var heard_r: float = float(n["r"])
@@ -294,3 +298,49 @@ func _nearest_fighter(e) -> Variant:
 				bd = d
 				best = f.global_position
 	return best
+
+
+# ------------------------------------------------------------------ the deputy (M4 V2)
+# Unarmed. When it goes loud he runs for his hiding place (data "hide"), throwing doors open on the way, and
+# cowers there. When one of yours gets close with a clear line he gives up. Nobody on our side shoots him
+# unless you tell them to.
+
+const VIP_LINES := {"run": ["Get me out of here!", "Do something! Protect me!", "Inside, inside!"],
+	"hide": ["Oh God...", "They won't find me here."],
+	"give": ["Don't shoot! Do you know who I am?!", "All right! All right! I'm unarmed!", "I can pay you! Whatever they pay you!"]}
+
+
+func _vip(e, ai: Dictionary, delta: float) -> void:
+	var d: Dictionary = e.get_meta("def")
+	match str(ai["mode"]):
+		"idle", "patrol", "alert", "react", "combat":
+			var loud := not noises.is_empty() or enemies.any(func(o) -> bool: return o != e and o.state == "ok" and o.get_meta("ai")["mode"] in ["combat", "react"])
+			if loud or _spot(e, ai) != null:
+				ai["mode"] = "run"
+				e.bark_custom(VIP_LINES["run"][rng.randi() % 3])
+				var to: Vector3 = Vector3(d["hide"][0], 0, d["hide"][1]) if d.has("hide") else e.global_position
+				_throw_doors_open(e, to)
+				e.go(level.path(e.global_position, to), e.RUN)
+		"run":
+			if not e.moving():
+				ai["mode"] = "hide"
+				e.bark_custom(VIP_LINES["hide"][rng.randi() % 2])
+		"hide":
+			e.crouch = move_toward(e.crouch, 1.0, delta * 3.0)
+			for f in fighters:
+				if f.state == "ok" and f.global_position.distance_to(e.global_position) < 6.0 and level.clear_line(f.eye(), e.chest_pos()):
+					e.surrender()
+					e.bark_custom(VIP_LINES["give"][rng.randi() % 3])
+					return
+
+
+## He doesn't wait for a door: every door on his way flies open (you'll see which way he went).
+func _throw_doors_open(e, to: Vector3) -> void:
+	var rooms: Array = level.room_path(level.room_near(e.global_position), level.room_near(to))
+	for i in range(rooms.size() - 1):
+		var dr: Dictionary = level.door_between(rooms[i], rooms[i + 1])
+		if not dr.is_empty() and dr["state"] == "closed":
+			dr["locked"] = false
+			level.open_door(dr, "kick")
+	if level.cover:
+		level.cover.refresh(level._bounds())        # the grid has to know before he picks his way

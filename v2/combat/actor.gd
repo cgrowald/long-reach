@@ -131,6 +131,7 @@ func say(text: String, force := false) -> void:
 
 
 func go(points: Array, p_speed := WALK) -> void:
+	_rerouted = false
 	path = points.duplicate()
 	speed = p_speed
 
@@ -194,9 +195,16 @@ func tick(delta: float) -> void:
 			var gained := d.length() - Vector3(to.x - global_position.x, 0, to.z - global_position.z).length()
 			if gained < step * 0.25:
 				_blocked += delta
-				if _blocked > 0.8:          # can't get there: skip this waypoint
-					path.pop_front()
+				if _blocked > 0.8:          # can't get there: find a way round (the grid), else skip this waypoint
 					_blocked = 0.0
+					if level.cover and not _rerouted:
+						_rerouted = true
+						var np: Array = level.path(global_position, path[path.size() - 1])
+						if not np.is_empty():
+							path = np
+					else:
+						path.pop_front()
+						_rerouted = false
 			else:
 				_blocked = 0.0
 	move_speed = v.length()
@@ -230,6 +238,7 @@ func tick(delta: float) -> void:
 
 
 var _blocked := 0.0
+var _rerouted := false
 
 
 ## Move to p if the floor allows it; otherwise slide along whichever axis is free (walls stop you).
@@ -600,4 +609,6 @@ func _miss(muzzle: Vector3, end: Vector3, cover: float) -> void:
 		if hit != null:
 			Impacts.wall(level, hit["position"], hit["normal"], false)
 			return
+	if level.civ:
+		level.civ.stray(muzzle, end, self)
 	_stray(muzzle, end)

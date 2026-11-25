@@ -65,6 +65,9 @@ func _build() -> void:
 	v.add_child(Kit.button("Combat: depot raid", func() -> void:
 		game.set_meta("fight_level", "combat/depot")
 		game.goto("res://v2/combat/fight.tscn"), game))
+	v.add_child(Kit.button("Combat: Kessel Road (first mission)", func() -> void:
+		game.set_meta("fight_level", "combat/kessel_road")
+		game.goto("res://v2/combat/plan_screen.tscn"), game))
 	v.add_child(Kit.button("Combat: roadblock (cover test)", func() -> void:
 		game.set_meta("fight_level", "combat/roadblock_test")
 		game.goto("res://v2/combat/fight.tscn"), game))

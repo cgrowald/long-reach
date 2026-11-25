@@ -17,6 +17,7 @@ const Audio := preload("res://v2/combat/combat_audio.gd")
 const FEED := preload("res://v2/combat/feedcam.gdshader")
 const Loadout := preload("res://v2/sim/loadout.gd")
 const DepotOp := preload("res://v2/combat/depot_op.gd")
+const CivAI := preload("res://v2/combat/civ_ai.gd")
 
 const SHOUTS := [
 	{"id": "stack", "label": "STACK", "needs": "door", "say": "Stack up on that door."},
@@ -39,6 +40,9 @@ var world: Node3D
 var level: Node3D
 var squad: Array = []
 var enemies: Array = []
+var civilians: Array = []         # people who aren't fighters (M4 V2): the bar's patrons
+var civ: RefCounted = null
+var plan: Dictionary = {}         # what you picked before going in: {hour, entry}
 var sq: RefCounted
 var en: RefCounted
 var feeds: Array = []            # {kind, actor, label, cam (a Node3D marker), dead_t}; only the chosen one renders
@@ -87,6 +91,8 @@ func _ready() -> void:
 	if game and not game.has_meta("op_team"):
 		lv_id = str(game.get_meta("fight_level", lv_id))
 	data = Content.get_file(lv_id)
+	if data.has("plan"):
+		data = _apply_plan(data)
 	if game and game.state != null and game.has_meta("op_team"):
 		op = DepotOp.new()
 		data = op.prepare(self, data)
@@ -102,6 +108,10 @@ func _ready() -> void:
 	_spawn()
 	en = EnemyAI.new()
 	en.setup(enemies, squad, level)
+	if not civilians.is_empty():
+		civ = CivAI.new()
+		civ.setup(civilians, level)
+		level.civ = civ
 	sq = SquadAI.new()
 	var sp: Array = data["start"]["pos"]
 	sq.setup(squad, enemies, level, en, Vector3(sp[0], 0, sp[1]))
@@ -190,6 +200,18 @@ func _spawn() -> void:
 		a.rotation.y = a.face_yaw
 		_wire(a)
 		enemies.append(a)
+	for d in data.get("civilians", []):
+		var c: Node3D = Actor.new()
+		world.add_child(c)
+		var cd: Dictionary = (d as Dictionary).duplicate()
+		cd.merge({"kind": "civilian", "head": "none", "rig_mesh": "", "weapon_mesh": "", "knees": false, "gear": {"weapon": "pistol", "mags": 0, "meds": 0}})
+		c.setup_actor(cd, "civ", level)
+		var cp: Array = d["pos"]
+		c.position = Vector3(cp[0], 0, cp[1])
+		c.face_yaw = float(d.get("yaw", 0.0))
+		c.rotation.y = c.face_yaw
+		c.said.connect(_on_said)
+		civilians.append(c)
 
 
 func _wire(a: Node3D) -> void:
@@ -324,10 +346,14 @@ func _main_actor():
 # ------------------------------------------------------------------ the loop
 
 func _process(delta: float) -> void:
-	for a in squad + enemies:
+	for a in squad + enemies + civilians:
 		a.set_process(not paused)
 	if not paused and phase == "op":
 		t_op += delta
+		if civ:
+			for n in en.noises:
+				civ.noise(n["pos"], float(n["r"]))
+			civ.tick(delta)
 		en.tick(delta)
 		sq.tick(delta)
 		if op:
@@ -1127,6 +1153,11 @@ func _draw_report() -> void:
 		tally[e.state] = int(tally.get(e.state, 0)) + 1
 	Pal.text(hud, Vector2(r.position.x + 10, y), "THEM: %d dead, %d down, %d zip-tied, %d gave up, %d ran, %d still standing" % [tally["dead"], tally["down"], tally["cuffed"], tally["surrendered"], tally["fled"], tally["ok"]], 8, UI_TEXT)
 	y += 16
+	if not civilians.is_empty():
+		var hurt: int = civ.hurt.size()
+		var fled: int = civilians.filter(func(c) -> bool: return c.state == "fled").size()
+		Pal.text(hud, Vector2(r.position.x + 10, y), "THE PEOPLE THERE: %d hurt by stray rounds, %d ran, %d hid it out%s" % [hurt, fled, civilians.size() - fled - hurt, "  (the district will remember)" if hurt > 0 else ""], 8, UI_RED if hurt > 0 else UI_TEXT)
+		y += 16
 	Pal.text(hud, Vector2(r.position.x + 10, y), "YOUR SHOUTS", 8, UI_AMBER)
 	y += 11
 	for s in shout_log.slice(maxi(0, shout_log.size() - 7)):
@@ -1322,4 +1353,37 @@ func _leave_headline() -> String:
 		"everyone":
 			return "GOT EVERYONE OUT" + ("" if sq.have_objective else "  (job not done)")
 		_:
+			if sq.vip_outcome != "":
+				return ("WE HAVE THE DEPUTY" if sq.vip_outcome == "taken" else "THE DEPUTY IS DEAD") + ("" if outcome == "success" else "  (but we didn't get out clean)")
 			return "OUT WITH THE FREIGHT" if op else ("THE MANIFESTS ARE OURS" if outcome == "success" else "WE GOT OUT")
+
+
+# ------------------------------------------------------------------ the plan (M4 V2: pick the hour and the way in)
+
+## What you picked on the plan screen (Game meta "fight_plan" = {hour, entry}) shapes the level before it's
+## built: who is where at that hour, where you start, which doors a friend left open.
+func _apply_plan(src: Dictionary) -> Dictionary:
+	var d := src.duplicate(true)
+	var pl: Dictionary = d["plan"]
+	plan = (game.get_meta("fight_plan", {}) as Dictionary).duplicate() if game else {}
+	var hour: String = plan.get("hour", str(pl["hours"][0]["id"]))
+	var entry: String = plan.get("entry", str(pl["entries"][0]["id"]))
+	plan = {"hour": hour, "entry": entry}
+	for key in ["enemies", "civilians"]:
+		var keep: Array = []
+		for it in d.get(key, []):
+			var hs: Array = it.get("hours", [])
+			if not hs.is_empty() and not hs.has(hour):
+				continue
+			var at: Dictionary = it.get("at", {}).get(hour, {})
+			for k in at:
+				it[k] = at[k]
+			keep.append(it)
+		d[key] = keep
+	for en_ in pl["entries"]:
+		if en_["id"] == entry:
+			d["start"] = {"pos": en_["pos"], "facing": 0.0}
+			for dr in d["doors"]:
+				if (en_.get("unlock", []) as Array).has(dr["id"]):
+					dr["locked"] = false
+	return d

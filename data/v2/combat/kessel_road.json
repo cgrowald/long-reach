@@ -1,0 +1,103 @@
+{
+	"_note": "M4 V2, the first mission (docs/M4_VARIETY.md): a shabby roadblock on Kessel Road right next to the Copper Kettle bar. A deputy we knew would come through; when it goes loud he runs into the bar. Pick the hour and the way in on the plan. Names and brief text are PLACEHOLDERS for the user to rewrite (docs/WRITING_GUIDE.md). Godot floor plan: x right, z forward is -z.",
+	"name": "Kessel Road",
+	"daylight": true,
+	"doctrine": false,
+	"objective": {"kind": "capture", "who": "vip", "text": "Take Deputy Vass alive (or not)", "room": "back", "pos": [9.0, -25.0]},
+	"plan": {
+		"title": "KESSEL ROAD",
+		"brief": "PLACEHOLDER: Deputy Aurel Vass comes through the Kessel Road roadblock today. Five conscripts, one bodyguard, a bar full of people right beside it. We want him alive. Dead works too, but then the whole town hears about it.",
+		"hours": [
+			{"id": "morning", "title": "10:00  HE COMES THROUGH", "line": "Vass is at the barrier showing papers. All five conscripts are out on the road. A few early drinkers in the Kettle."},
+			{"id": "lunch", "title": "13:00  LUNCH", "line": "Vass sits down in the Kettle for lunch. Two conscripts eat inside with him, three stay on the road. The bar is full."}
+		],
+		"entries": [
+			{"id": "front", "title": "UP THE ROAD", "line": "From the south, straight up Kessel Road. Cars and crates to bound between. They see you coming.", "pos": [0.0, 4.5]},
+			{"id": "alley", "title": "THE ALLEY", "line": "Round the back, to the Kettle's kitchen door. Closest to Vass's hiding place; the road is behind a wall.", "pos": [17.0, -13.0]},
+			{"id": "shop", "title": "THROUGH THE SHOP", "line": "A friend's shuttered shop across the road. You start inside, eight metres off their flank.", "pos": [-11.0, -5.0], "unlock": ["d2"]}
+		]
+	},
+	"rooms": [
+		{"id": "street", "name": "KESSEL ROAD", "rect": [-7.0, -34.0, 7.0, 7.0], "outdoor": true, "lamps": 0},
+		{"id": "passage", "name": "SIDE PASSAGE", "rect": [7.0, -31.0, 19.0, -27.0], "outdoor": true, "lamps": 0},
+		{"id": "alley", "name": "THE ALLEY", "rect": [15.0, -27.0, 19.0, -11.0], "outdoor": true, "lamps": 0},
+		{"id": "bar", "name": "THE COPPER KETTLE", "rect": [7.0, -22.0, 15.0, -14.0], "lamp_energy": 2.6,
+			"dress": [{"kit": "break_table", "center": true, "turn": 90}, {"kit": "shelf", "wall": "e", "at": 0.45}, {"kit": "fridge", "wall": "e", "at": 0.85}, {"kit": "chair", "wall": "s", "at": 0.3}, {"kit": "chair", "wall": "s", "at": 0.7}, {"kit": "bin", "wall": "w", "at": 0.15}]},
+		{"id": "back", "name": "BACK ROOM", "rect": [7.0, -27.0, 11.0, -22.0], "lamp_energy": 1.6,
+			"dress": [{"kit": "crate_stack", "wall": "n", "at": 0.5}, {"kit": "crate", "wall": "w", "at": 0.3}, {"kit": "shelf", "wall": "e", "at": 0.6}]},
+		{"id": "kitchen", "name": "KITCHEN", "rect": [11.0, -27.0, 15.0, -22.0], "lamp_energy": 2.0,
+			"dress": [{"kit": "fridge", "wall": "n", "at": 0.25}, {"kit": "cabinet", "wall": "n", "at": 0.6}, {"kit": "desk", "wall": "w", "at": 0.5}]},
+		{"id": "shop", "name": "SHUTTERED SHOP", "rect": [-15.0, -12.0, -7.0, -2.0], "lamp_energy": 0.8,
+			"dress": [{"kit": "shelf", "wall": "w", "at": 0.3}, {"kit": "shelf", "wall": "w", "at": 0.75}, {"kit": "crate", "wall": "n", "at": 0.4}]}
+	],
+	"doors": [
+		{"id": "d1", "name": "KETTLE FRONT DOOR", "pos": [7.0, -18.0], "axis": "x", "a": "street", "b": "bar", "locked": false},
+		{"id": "d3", "name": "BACK ROOM DOOR", "pos": [9.0, -22.0], "axis": "z", "a": "bar", "b": "back", "locked": false},
+		{"id": "d4", "name": "KITCHEN DOOR", "pos": [13.0, -22.0], "axis": "z", "a": "bar", "b": "kitchen", "locked": false},
+		{"id": "d5", "name": "KITCHEN BACK DOOR", "pos": [15.0, -24.5], "axis": "x", "a": "alley", "b": "kitchen", "locked": false},
+		{"id": "d2", "name": "SHOP DOOR", "pos": [-7.0, -7.0], "axis": "x", "a": "street", "b": "shop", "locked": true}
+	],
+	"lights": [],
+	"cctv": [],
+	"cover": [
+		{"kind": "low_wall", "pos": [-5.6, -1.0], "turn": 90, "len": 3.0},
+		{"kind": "car", "pos": [2.6, -5.0], "turn": 75},
+		{"kind": "crate", "pos": [-3.0, -9.5]},
+		{"kind": "crate", "pos": [-2.2, -9.9], "turn": 20},
+		{"kind": "barrel", "pos": [4.6, -11.5]},
+		{"kind": "barrel", "pos": [5.2, -12.1]},
+		{"kind": "car", "pos": [-4.2, -14.0], "turn": 95},
+		{"kind": "crate", "pos": [1.2, -15.0], "turn": 10},
+		{"kind": "sandbags", "pos": [-4.6, -20.0]},
+		{"kind": "sandbags", "pos": [-2.6, -20.2], "turn": 5},
+		{"kind": "barrier", "pos": [1.6, -20.6]},
+		{"kind": "sandbags", "pos": [4.6, -20.0], "turn": -4},
+		{"kind": "booth", "pos": [5.4, -25.0]},
+		{"kind": "car", "pos": [-1.6, -24.6], "turn": 0},
+		{"kind": "barrier", "pos": [2.4, -30.0], "turn": 0},
+		{"kind": "barrel", "pos": [17.8, -20.0]},
+		{"kind": "crate", "pos": [16.0, -17.0], "turn": 15},
+		{"kind": "crate", "pos": [10.0, -29.2], "turn": 5}
+	],
+	"squad": [
+		{"name": "JONAS BRENN", "role": "point", "trait": "steady", "camo": "multicam", "head": "helmet", "back": "",
+			"gear": {"weapon": "bench_rifle", "round": "fmj", "attach": ["optic", "grip"], "plate": 2, "mags": 4, "meds": 1, "flash": 1}},
+		{"name": "ADA LIND", "role": "breacher", "trait": "cocky", "camo": "multicam", "head": "helmet", "mask": true, "back": "hydration",
+			"gear": {"weapon": "bench_rifle", "round": "fmj", "attach": [], "plate": 2, "mags": 3, "meds": 1, "flash": 2}},
+		{"name": "MIRA KOVAC", "role": "medic", "trait": "careful", "camo": "multicam", "head": "helmet", "back": "medbag",
+			"gear": {"weapon": "bench_rifle", "round": "fmj", "attach": [], "plate": 1, "mags": 3, "meds": 5, "flash": 0}},
+		{"name": "IVO PETRAK", "role": "rear", "trait": "jumpy", "camo": "multicam", "head": "helmet", "back": "pack",
+			"gear": {"weapon": "bench_rifle", "round": "fmj", "attach": ["optic"], "plate": 1, "mags": 4, "meds": 1, "flash": 1}}
+	],
+	"start": {"pos": [0.0, 4.5], "facing": 0.0},
+	"enemies": [
+		{"id": "vip", "name": "Deputy Aurel Vass", "kind": "vip", "vip": true, "pos": [-0.2, -22.6], "yaw": 3.0, "state": "idle", "camo": "navy", "head": "none", "rig_mesh": "", "weapon_mesh": "", "knees": false,
+			"hide": [9.6, -25.6], "at": {"lunch": {"pos": [12.6, -16.6], "yaw": 1.6}},
+			"gear": {"weapon": "pistol", "round": "fmj", "attach": [], "plate": 0, "mags": 0, "meds": 0}},
+		{"id": "bg", "name": "bodyguard", "kind": "guard", "pos": [-2.9, -22.4], "yaw": 3.0, "state": "idle", "camo": "black", "head": "none", "acc_mult": 0.55,
+			"at": {"lunch": {"pos": [11.4, -15.4], "yaw": 2.2}},
+			"gear": {"weapon": "pistol", "round": "fmj", "attach": [], "plate": 1, "mags": 3, "meds": 1}},
+		{"id": "c1", "name": "conscript (bags left)", "kind": "guard", "pos": [-3.6, -21.4], "yaw": 3.14, "state": "idle", "camo": "woodland", "head": "cap", "acc_mult": 0.36, "slow": 0.25,
+			"gear": {"weapon": "bolt_rifle", "round": "fmj", "attach": [], "plate": 0, "mags": 4, "meds": 0}},
+		{"id": "c2", "name": "conscript (barrier)", "kind": "guard", "pos": [1.0, -22.0], "yaw": 2.8, "state": "idle", "camo": "woodland", "head": "cap", "acc_mult": 0.36, "slow": 0.25,
+			"at": {"lunch": {"pos": [9.2, -20.6], "yaw": 0.4}},
+			"gear": {"weapon": "smg", "round": "fmj", "attach": [], "plate": 0, "mags": 3, "meds": 0}},
+		{"id": "c3", "name": "conscript (bags right)", "kind": "guard", "pos": [3.6, -21.5], "yaw": 3.4, "state": "idle", "camo": "woodland", "head": "cap", "acc_mult": 0.36, "slow": 0.25,
+			"at": {"lunch": {"pos": [10.0, -16.0], "yaw": -2.4}},
+			"gear": {"weapon": "smg", "round": "fmj", "attach": [], "plate": 0, "mags": 3, "meds": 0}},
+		{"id": "c4", "name": "conscript (booth)", "kind": "guard", "pos": [3.9, -26.4], "yaw": 1.2, "state": "idle", "camo": "woodland", "head": "cap", "acc_mult": 0.32, "slow": 0.3, "timid": true,
+			"gear": {"weapon": "pistol", "round": "fmj", "attach": [], "plate": 0, "mags": 2, "meds": 0}},
+		{"id": "c5", "name": "sergeant (car)", "kind": "guard", "pos": [-1.0, -27.4], "yaw": 3.0, "state": "idle", "camo": "woodland", "head": "helmet", "acc_mult": 0.48, "slow": 0.1,
+			"gear": {"weapon": "smg", "round": "fmj", "attach": [], "plate": 1, "mags": 3, "meds": 1}}
+	],
+	"civilians": [
+		{"id": "p0", "name": "the barman", "pos": [14.2, -19.0], "yaw": 1.57, "camo": "street"},
+		{"id": "p1", "name": "a drinker", "pos": [10.2, -18.6], "yaw": -1.0, "camo": "denim"},
+		{"id": "p2", "name": "a drinker", "pos": [12.0, -20.6], "yaw": 0.3, "camo": "street"},
+		{"id": "p3", "name": "an old man", "pos": [8.0, -15.0], "yaw": 2.6, "camo": "regime_low"},
+		{"id": "p4", "name": "a waitress", "pos": [13.4, -17.0], "yaw": 2.0, "camo": "denim", "hours": ["lunch"]},
+		{"id": "p5", "name": "a drinker", "pos": [11.6, -15.2], "yaw": 3.0, "camo": "street", "hours": ["lunch"]},
+		{"id": "p6", "name": "a drinker", "pos": [8.4, -21.0], "yaw": -0.6, "camo": "navy", "hours": ["lunch"]},
+		{"id": "p7", "name": "a passer-by", "pos": [-5.4, -12.0], "yaw": 0.0, "camo": "denim", "hours": ["morning"]}
+	]
+}
