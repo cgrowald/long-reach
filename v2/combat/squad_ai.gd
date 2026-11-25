@@ -47,6 +47,9 @@ func setup(p_fighters: Array, p_enemies: Array, p_level: Node3D, p_enemy_ai: Ref
 	if not level.data.get("doctrine", true):
 		auto = false             # an open place (M4): nothing to clear room by room until you say
 		return
+	for r in level.rooms:
+		if r["outdoor"]:
+			cleared[r["id"]] = true     # a building raid (M4 V3): the street and the yard aren't rooms to clear
 	_next_doctrine()
 
 
@@ -328,6 +331,8 @@ func _next_doctrine() -> void:
 			if d[side[0]] != here and not cleared.get(d[side[0]], false) and d[side[0]] != "hall":
 				continue
 			var dist: float = level.door_world(d).distance_to(lead.global_position)
+			if level.room(d[side[0]]).get("outdoor", false) and not level.room(here).get("outdoor", false):
+				dist += 40.0           # inside already: don't walk out and round to a back door
 			if into == obj_room:
 				dist += 100.0          # the objective last
 			if dist < bd:
@@ -461,14 +466,33 @@ func _route(f, to: Vector3) -> Array:
 	var b: String = level.room_near(to)
 	var pts: Array = []
 	var rooms: Array = level.room_path(a, b)
+	var cur: Vector3 = f.global_position
+	var open_hop := false        # across open ground (street to yard): no door, walk the grid round the building
 	for i in range(rooms.size() - 1):
 		var d: Dictionary = level.door_between(rooms[i], rooms[i + 1])
-		if not d.is_empty():
-			var n: Vector3 = level.door_normal(d, rooms[i + 1])
-			pts.append(level.door_world(d) - n * 0.4)
-			pts.append(level.door_world(d) + n * 0.5)
+		if d.is_empty():
+			open_hop = true
+			continue
+		var n: Vector3 = level.door_normal(d, rooms[i + 1])
+		var p1: Vector3 = level.door_world(d) - n * 0.4
+		if open_hop:
+			pts.append_array(_grid_leg(cur, p1))
+			open_hop = false
+		pts.append(p1)
+		cur = level.door_world(d) + n * 0.5
+		pts.append(cur)
+	if open_hop:
+		pts.append_array(_grid_leg(cur, to))
 	pts.append(to)
 	return pts
+
+
+## The walking grid's way from a to b, without b itself.
+func _grid_leg(a: Vector3, b: Vector3) -> Array:
+	var p: Array = level.path(a, b)
+	if p.size() > 0:
+		p.pop_back()
+	return p
 
 
 func _door_toward(room_id: String) -> Dictionary:
@@ -777,7 +801,7 @@ func _tick_clear(delta: float) -> void:
 		return
 	# the objective: pick it up
 	var obj: Dictionary = level.data.get("objective", {})
-	if obj.get("room", "") == room_id and not have_objective:
+	if obj.get("room", "") == room_id and not have_objective and obj.get("kind", "") != "capture":     # a capture ends when he is cuffed (_capture_check)
 		task = {"type": "grab", "t": 0.0}
 		var g = stick_carrier()
 		if g == null:
@@ -907,7 +931,7 @@ func _cuff() -> void:
 		var best = null
 		var bd2 := 1e9
 		for f in alive_fighters():
-			if f.role == "medic" or f.has_meta("grabbing"):
+			if f.role == "medic" or (f.has_meta("grabbing") and task.get("type") == "grab"):
 				continue
 			var d: float = f.global_position.distance_to(e.global_position)
 			if d < bd2 and level.clear_line(f.eye(), e.chest_pos()):

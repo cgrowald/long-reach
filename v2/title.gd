@@ -7,6 +7,7 @@ const Menus := preload("res://v2/ui/menus.gd")
 const PixelView := preload("res://v2/ui/pixel_view.gd")
 const GarageWorld := preload("res://v2/world/garage_world.gd")
 const SaveStore := preload("res://v2/sim/save_store.gd")
+const BuildingGenT := preload("res://v2/sim/building_gen.gd")
 
 var game: Node
 var view
@@ -67,6 +68,12 @@ func _build() -> void:
 		game.goto("res://v2/combat/fight.tscn"), game))
 	v.add_child(Kit.button("Combat: Kessel Road (first mission)", func() -> void:
 		game.set_meta("fight_level", "combat/kessel_road")
+		game.goto("res://v2/combat/plan_screen.tscn"), game))
+	v.add_child(Kit.button("Combat: generated building", func() -> void:
+		var ts := BuildingGenT.types()
+		game.set_meta("fight_level", "gen:%s:%d" % [ts[randi() % ts.size()], randi() % 100000])
+		if game.has_meta("fight_plan"):
+			game.remove_meta("fight_plan")
 		game.goto("res://v2/combat/plan_screen.tscn"), game))
 	v.add_child(Kit.button("Combat: roadblock (cover test)", func() -> void:
 		game.set_meta("fight_level", "combat/roadblock_test")

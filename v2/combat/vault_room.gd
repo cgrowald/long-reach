@@ -19,18 +19,20 @@ var loot_nodes: Array = []
 var _swing := {}                 # door index -> t
 
 
-## wall_z: the room's back wall; pc: where the control PC sits (on the left wall).
-func build(p_level: Node3D, p_wall_z: float, pc: Vector3, contents: Array) -> void:
+## rc: the secure store (doors on its back wall, z min, centred); pc: where the control PC sits (on its left wall).
+func build(p_level: Node3D, rc: Rect2, pc: Vector3, contents: Array) -> void:
 	level = p_level
-	wall_z = p_wall_z
+	wall_z = rc.position.y
+	var cx := rc.get_center().x
+	xs = [cx - 1.55, cx, cx + 1.55]
 	var steel: Material = level.flat(Color(0.2, 0.21, 0.22))
 	var steel_d: Material = level.flat(Color(0.12, 0.12, 0.13))
 	var navy: Material = level.flat(Color(0.1, 0.14, 0.28))
 	var cable: Material = level.flat(Color(0.08, 0.08, 0.08))
 	var inside: Material = level.flat(Color(0.05, 0.05, 0.05))
-	var span := 5.0
+	var span := rc.size.x
 	# the navy band along the bottom of the wall (Dobrev Freight's colours)
-	level.box(Vector3(span, 0.85, 0.02), Vector3(0, 0.43, wall_z + 0.012), navy, Vector3.ZERO, false, self)
+	level.box(Vector3(span, 0.85, 0.02), Vector3(cx, 0.43, wall_z + 0.012), navy, Vector3.ZERO, false, self)
 	for i in 3:
 		var x: float = xs[i]
 		var front := wall_z + DEPTH
@@ -81,7 +83,7 @@ func build(p_level: Node3D, p_wall_z: float, pc: Vector3, contents: Array) -> vo
 		level.box(Vector3(0.05, 2.62 - HGT, 0.05), Vector3(x, (2.62 + HGT) * 0.5, wall_z + 0.2), cable, Vector3.ZERO, false, self)
 		level.box(Vector3(0.12, 0.08, 0.1), Vector3(x, 2.62, wall_z + 0.2), steel_d, Vector3.ZERO, false, self)
 	# the cable run: along the back wall, along the left wall to the PC, down to the desk
-	var lx := -2.5 + 0.06
+	var lx := rc.position.x + 0.06
 	level.box(Vector3(xs[2] - lx + 0.1, 0.06, 0.06), Vector3((xs[2] + lx) * 0.5, 2.62, wall_z + 0.2), cable, Vector3.ZERO, false, self)
 	level.box(Vector3(0.06, 0.06, pc.z - wall_z - 0.2), Vector3(lx, 2.62, (pc.z + wall_z + 0.2) * 0.5), cable, Vector3.ZERO, false, self)
 	level.box(Vector3(0.06, 2.62 - 0.85, 0.06), Vector3(lx, (2.62 + 0.85) * 0.5, pc.z), cable, Vector3.ZERO, false, self)

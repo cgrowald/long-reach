@@ -209,11 +209,28 @@ func _route(e, to: Vector3) -> Array:
 	var b: String = level.room_near(to)
 	var pts: Array = []
 	var rooms: Array = level.room_path(a, b)
+	var cur: Vector3 = e.global_position
+	var open_hop := false
 	for i in range(rooms.size() - 1):
 		var d: Dictionary = level.door_between(rooms[i], rooms[i + 1])
+		if d.is_empty() and level.open_links(rooms[i]).has(rooms[i + 1]):
+			open_hop = true         # open ground: walk the grid round the building
+			continue
 		if d.is_empty() or d["state"] == "closed":
 			return pts
-		pts.append(level.door_world(d))
+		if open_hop:
+			var leg: Array = level.path(cur, level.door_world(d))
+			if leg.size() > 0:
+				leg.pop_back()
+			pts.append_array(leg)
+			open_hop = false
+		cur = level.door_world(d)
+		pts.append(cur)
+	if open_hop:
+		var leg2: Array = level.path(cur, to)
+		if leg2.size() > 0:
+			leg2.pop_back()
+		pts.append_array(leg2)
 	pts.append(to)
 	return pts
 

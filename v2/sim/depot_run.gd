@@ -10,6 +10,7 @@ const People := preload("res://v2/sim/people_gen.gd")
 const Materials := preload("res://v2/sim/materials.gd")
 const Loadout := preload("res://v2/sim/loadout.gd")
 const Crafting := preload("res://v2/sim/crafting.gd")
+const BuildingGen := preload("res://v2/sim/building_gen.gd")
 
 const FAMILY := {"electronics": ["board", "chips"], "weapons": ["alu", "pins"], "meds": ["shirt", "alcohol", "tape"], "armor": ["bag", "strap", "buckle"]}
 
@@ -48,7 +49,7 @@ static func create(state: RefCounted, p_seed: int) -> Dictionary:
 	var base: Array = g.get("base", [3, 4])
 	var n := rng.randi_range(int(base[0]), int(base[1])) + int(float(state.attention) / float(g.get("per_attention", 30)))
 	n = mini(n, int(g.get("max", 6)))
-	var posts: Array = (D.get("posts", []) as Array).duplicate()
+	var posts: Array = (layout_seed(p_seed).get("posts", D.get("posts", [])) as Array).duplicate()     # M4 V3: the generated depot's posts
 	for i in range(posts.size() - 1, 0, -1):
 		var j := rng.randi_range(0, i)
 		var t = posts[i]
@@ -67,6 +68,7 @@ static func create(state: RefCounted, p_seed: int) -> Dictionary:
 			e["patrol"] = post["patrol"]
 		if post.get("timid", false):
 			e["timid"] = true
+		e["room"] = str(post.get("room", ""))
 		run["guards"].append(e)
 	# the stores (what you came for)
 	var stores := {}
@@ -144,6 +146,15 @@ static func _roll_door(state: RefCounted, rng: RandomNumberGenerator, run: Dicti
 
 
 ## Tonight's depot seed: the raid and the plan file roll the same depot (so the paper tells the truth).
+## The depot's floor plan for a raid (M4 V3): the building generator's depot, the same one for the same seed.
+static func layout_seed(p_seed: int) -> Dictionary:
+	return BuildingGen.generate("depot", p_seed)
+
+
+static func layout(run: Dictionary) -> Dictionary:
+	return layout_seed(int(run["seed"]))
+
+
 static func seed_for(state: RefCounted) -> int:
 	return hash(str(state.world_seed) + "depot" + str(state.day) + str(int(_d(state)["raids"])))
 
@@ -158,29 +169,24 @@ static func plan_files(state: RefCounted) -> Array:
 
 
 ## What the Bureau SERVICE FORM shows (v2/ui/paper.gd): tonight's layout, guard rotation, vault doors.
-## Rooms and doors come from the fight's level file; guards from the same roll as the raid.
+## Rooms and doors come from this raid's generated depot (M4 V3); guards from the same roll as the raid.
 static func plan_sheet(state: RefCounted, item: Dictionary) -> Dictionary:
 	var run := create(state, seed_for(state))
 	apply_hints(state, run)
-	var lvl: Dictionary = Content.get_file("combat/depot")
+	var lvl: Dictionary = layout(run)
+	var mk: Dictionary = lvl.get("marks", {})
 	var rooms: Array = []
 	for r in lvl.get("rooms", []):
-		var rr: Dictionary = r.duplicate(true)
-		if rr["id"] == "office":
-			rr["name"] = "SECURE STORE"
-		rooms.append(rr)
+		if not r.get("outdoor", false):
+			rooms.append(r.duplicate(true))
 	var rng := RandomNumberGenerator.new()
 	rng.seed = int(run["seed"]) ^ 0x5f3
 	var guards: Array = []
 	var post_names := {}
 	for r in rooms:
 		post_names[r["id"]] = r["name"]
-	var posts: Array = data().get("posts", [])
 	for g in run["guards"]:
-		var post_room := "hall"
-		for p in posts:
-			if Vector2(p["pos"][0], p["pos"][1]).distance_to(Vector2(g["pos"][0], g["pos"][1])) < 0.01:
-				post_room = str(p.get("room", "hall"))
+		var post_room: String = str(g.get("room", ""))
 		var start_h: int = [18, 20, 22][rng.randi() % 3]
 		guards.append({"name": str(g["person"]["first"]).substr(0, 1) + ". " + str(g["person"]["last"]).to_upper(),
 			"rank": str(g["person"].get("rank", "Guard")), "post": post_names.get(post_room, post_room),
@@ -189,10 +195,15 @@ static func plan_sheet(state: RefCounted, item: Dictionary) -> Dictionary:
 	var doors: Array = []
 	for i in 3:
 		doors.append(door_hint(run, i))
+	var entry: Array = []
+	for d in lvl.get("doors", []):
+		if d["id"] == "front":
+			entry = d["pos"]
+	var inside_doors: Array = (lvl.get("doors", []) as Array).filter(func(d: Dictionary) -> bool: return post_names.has(d["a"]) or post_names.has(d["b"]))
 	return {"site": "DOBREV FREIGHT", "kind": str(run["kind_name"]).to_upper(), "form_no": "S-14/%04d" % ((int(run["seed"]) & 0x7fff) % 10000),
-		"day": int(state.day), "rooms": rooms, "doors": lvl.get("doors", []), "guards": guards, "vault": doors,
+		"day": int(state.day), "rooms": rooms, "doors": inside_doors, "guards": guards, "vault": doors,
 		"source": str(item.get("name", "")), "note": str(item.get("worth", "")), "got_day": int(item.get("day", state.day)), "locked": locked_for(state),
-		"alarm": [4.6, -13.6], "pc": [-1.9, -23.3]}     # same spots as v2/combat/depot_op.gd ALARM_BOX / PC_POS
+		"alarm": mk.get("alarm", []), "pc": mk.get("pc", []), "vault_room": str(mk.get("vault", "")), "entry": entry}
 
 
 ## Intel before the raid: each depot "plan" file you hold reveals one door's tier (up to all three).

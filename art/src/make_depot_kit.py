@@ -212,8 +212,115 @@ def lamp():
 	S.ball("Lamp_Hang_Bulb", (0, 0, 2.03), 0.045, "plain_bulb", sub=2, emission=7.0)
 
 
+# ------------------------------------------------------------------ M4 V3: pieces for generated buildings
+# (bar, shop, office, clinic, gun shop, police post)
+
+def counter():
+	"""A long serving counter (bar, shop, front desk), 2.4 x 0.62 x 1.05, a till and a few things on top."""
+	piece("counter")
+	w, d, top = 2.4, 0.62, 1.05
+	S.box("Counter_Body", (0, 0.03, top / 2 - 0.02), (w, d - 0.06, top - 0.04), "wood_table", bevel=0.01)
+	S.box("Counter_Kick", (0, -0.25, 0.06), (w - 0.04, 0.04, 0.12), "metal_dark", bevel=0)
+	S.box("Counter_Top", (0, 0, top - 0.02), (w + 0.06, d + 0.04, 0.05), "wood_crate_d", bevel=0.008)
+	for k in range(4):
+		S.box("Counter_Panel_%d" % k, (-0.9 + k * 0.6, -0.27, top / 2), (0.5, 0.01, top - 0.3), "wood_crate", bevel=0)
+	S.box("Counter_Till", (0.7, 0.05, top + 0.1), (0.32, 0.3, 0.16), "metal_dark", rot=(0, 0, 8), bevel=0.01)
+	S.box("Counter_TillTop", (0.7, -0.02, top + 0.2), (0.26, 0.12, 0.04), "plain_screen", bevel=0, emission=0.6)
+	for k in range(3):
+		S.cyl("Counter_Glass_%d" % k, (-0.6 + k * 0.14, -0.05, top + 0.06), 0.035, 0.12, "plain_glass", verts=8)
+	S.box("Counter_Paper", (0.1, 0.0, top + 0.005), (0.22, 0.3, 0.005), "plain_paper", rot=(0, 0, -12), bevel=0)
+
+
+def bottle_shelf():
+	"""A wall of shelves with bottles behind a bar, 2.0 wide, 0.3 deep."""
+	piece("bottle_shelf")
+	w = 2.0
+	S.box("BShelf_Back", (0, 0.13, 1.25), (w, 0.03, 1.5), "wood_crate_d", bevel=0)
+	for k in range(3):
+		z = 0.75 + k * 0.45
+		S.box("BShelf_Board_%d" % k, (0, 0.0, z), (w, 0.28, 0.03), "wood_table", bevel=0.004)
+		x = -w / 2 + 0.1
+		i = 0
+		while x < w / 2 - 0.1:
+			col = random.choice(["plain_glass", "paint_red", "paint_fridge", "metal_copper", "plain_glass", "wood_crate"])
+			h = random.uniform(0.2, 0.32)
+			S.cyl("BShelf_Bottle_%d_%d" % (k, i), (x, random.uniform(-0.05, 0.05), z + 0.015 + h / 2), 0.04, h, col, verts=8)
+			x += random.uniform(0.1, 0.17)
+			i += 1
+
+
+def cafe_table():
+	"""A small square table with two chairs pulled up (bar, waiting room), about 1.6 x 0.7."""
+	piece("cafe_table")
+	S.box("CT_Top", (0, 0, 0.74), (0.7, 0.7, 0.04), "wood_table", bevel=0.008)
+	S.cyl("CT_Post", (0, 0, 0.37), 0.04, 0.72, "metal_dark", verts=8)
+	S.cyl("CT_Foot", (0, 0, 0.02), 0.26, 0.04, "metal_dark", verts=12)
+	for sx in (-1, 1):
+		S.box("CT_Seat_%d" % sx, (sx * 0.58, 0, 0.45), (0.4, 0.4, 0.04), "wood_table", bevel=0.006)
+		S.box("CT_Back_%d" % sx, (sx * 0.78, 0, 0.72), (0.04, 0.38, 0.5), "wood_table", rot=(0, sx * -6, 0), bevel=0.006)
+		for lx in (-1, 1):
+			for ly in (-1, 1):
+				S.box("CT_Leg_%d_%d_%d" % (sx, lx, ly), (sx * 0.58 + lx * 0.17, ly * 0.17, 0.22), (0.03, 0.03, 0.44), "metal_dark", bevel=0)
+	S.cyl("CT_Glass", (0.12, 0.1, 0.81), 0.035, 0.1, "plain_glass", verts=8)
+	S.box("CT_Ashtray", (-0.15, -0.12, 0.77), (0.1, 0.1, 0.02), "metal_tin", bevel=0.01)
+
+
+def bed():
+	"""A steel-frame clinic bed against the wall (head at the wall), 0.9 x 2.0."""
+	piece("bed")
+	S.box("Bed_Mattress", (0, 0.0, 0.56), (0.86, 1.9, 0.14), "paint_fridge", bevel=0.03)
+	S.box("Bed_Sheet", (0, -0.25, 0.64), (0.88, 1.2, 0.04), "fabric_tarp", bevel=0.02)
+	S.box("Bed_Pillow", (0, 0.75, 0.67), (0.6, 0.3, 0.1), "plain_paper", bevel=0.04)
+	S.box("Bed_Frame", (0, 0.0, 0.45), (0.9, 1.96, 0.06), "metal_steel", bevel=0.004)
+	for y in (0.93, -0.95):
+		S.box("Bed_End_%d" % int(y * 10 + 20), (0, y, 0.55), (0.9, 0.04, 0.5), "metal_steel", bevel=0.004)
+	for sx in (-1, 1):
+		for y in (0.9, -0.93):
+			S.cyl("Bed_Leg_%d_%d" % (sx, int(y * 10 + 20)), (sx * 0.42, y, 0.22), 0.02, 0.44, "metal_steel", verts=6)
+	S.box("Bed_Chart", (0.0, -0.98, 0.7), (0.24, 0.01, 0.3), "plain_paper", bevel=0)
+
+
+def gun_rack():
+	"""A wall rack of long guns with a chain through the guards, 1.6 wide."""
+	piece("gun_rack")
+	S.box("GR_Back", (0, 0.1, 1.2), (1.6, 0.04, 1.6), "wood_crate_d", bevel=0.004)
+	S.box("GR_Foot", (0, -0.05, 0.25), (1.6, 0.3, 0.06), "wood_table", bevel=0.004)
+	S.box("GR_Top", (0, 0.0, 1.55), (1.6, 0.18, 0.06), "wood_table", bevel=0.004)
+	for k in range(6):
+		x = -0.62 + k * 0.25
+		S.box("GR_Stock_%d" % k, (x, -0.05, 0.42), (0.06, 0.16, 0.34), "wood_table", rot=(6, 0, 0), bevel=0.008)
+		S.box("GR_Body_%d" % k, (x, -0.04, 0.82), (0.05, 0.08, 0.5), "metal_dark", bevel=0.004)
+		S.cyl("GR_Barrel_%d" % k, (x, -0.04, 1.3), 0.012, 0.5, "metal_dark", verts=6)
+		S.box("GR_Mag_%d" % k, (x, -0.12, 0.9), (0.04, 0.08, 0.16), "metal_dark", rot=(12, 0, 0), bevel=0.003)
+	S.seg("GR_Chain", (-0.75, -0.12, 0.95), (0.75, -0.12, 0.95), 0.012, "metal_steel")
+	S.box("GR_Lock", (0.78, -0.12, 0.92), (0.06, 0.04, 0.08), "metal_copper", bevel=0.004)
+
+
+def bench():
+	"""A waiting-room bench of plastic seats on a rail, 1.8 wide."""
+	piece("bench")
+	S.box("Bench_Rail", (0, 0.0, 0.3), (1.8, 0.06, 0.06), "metal_dark", bevel=0.004)
+	for sx in (-1, 1):
+		S.box("Bench_Leg_%d" % sx, (sx * 0.8, 0.0, 0.15), (0.06, 0.4, 0.3), "metal_dark", bevel=0.004)
+	for k in range(4):
+		x = -0.66 + k * 0.44
+		S.box("Bench_Seat_%d" % k, (x, -0.02, 0.44), (0.4, 0.4, 0.05), "paint_locker", bevel=0.02)
+		S.box("Bench_Back_%d" % k, (x, 0.18, 0.7), (0.4, 0.05, 0.42), "paint_locker", rot=(-8, 0, 0), bevel=0.02)
+
+
+def pallet():
+	"""A loaded pallet: boxes under stretch wrap, 1.2 x 1.0."""
+	piece("pallet")
+	for k in range(3):
+		S.box("Pal_Board_%d" % k, (0, -0.45 + k * 0.45, 0.06), (1.2, 0.12, 0.12), "paint_pallet", bevel=0.004)
+	S.box("Pal_Deck", (0, 0, 0.135), (1.2, 1.0, 0.03), "paint_pallet", bevel=0.004)
+	S.box("Pal_Load", (0, 0, 0.62), (1.1, 0.92, 0.94), "wood_crate", bevel=0.01)
+	S.box("Pal_Wrap", (0, 0, 0.62), (1.13, 0.95, 0.9), "plain_glass", bevel=0.02)
+	S.box("Pal_Label", (0.2, -0.48, 0.8), (0.2, 0.005, 0.14), "plain_paper", bevel=0)
+
+
 for fn in (crate, crate_stack, shelf, desk, desk_pc, chair, lockers, cabinet, fridge, break_table, notice_board,
-		extinguisher, pipes, bin_, lamp):
+		extinguisher, pipes, bin_, lamp, counter, bottle_shelf, cafe_table, bed, gun_rack, bench, pallet):
 	fn()
 S.ROOT = None
 for i, e in enumerate(PIECES):

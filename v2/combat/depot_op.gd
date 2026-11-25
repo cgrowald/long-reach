@@ -25,11 +25,14 @@ const Actor := preload("res://v2/combat/actor.gd")
 
 const NEIGHBOURS_S := 150.0       # from the first shot, someone always calls it in
 const ALARM_S := 75.0             # a pressed alarm brings them sooner
-const ALARM_BOX := Vector3(4.6, 0, -13.6)
+const ALARM_BOX0 := Vector3(4.6, 0, -13.6)     # the hand-made depot (fallback)
 const RUN_SPEED := 1.9
-const PC_POS := Vector3(-1.9, 0, -23.3)
+const PC_POS0 := Vector3(-1.9, 0, -23.3)
 const OPEN_S := 1.7
 
+var alarm_box := ALARM_BOX0       # where the alarm box is (the generated depot's security room)
+var pc_pos := PC_POS0             # the vault control PC
+var vault_id := "office"          # the secure store's room id
 var f: Control                    # the fight
 var state: RefCounted
 var run: Dictionary = {}
@@ -70,15 +73,27 @@ func prepare(p_fight: Control, data: Dictionary) -> Dictionary:
 	state = f.game.state
 	run = DepotRun.create(state, DepotRun.seed_for(state))
 	var hinted := DepotRun.apply_hints(state, run)
-	var d := data.duplicate(true)
+	# a fresh depot every raid (M4 V3): the building generator's depot for this raid's seed
+	var d: Dictionary = DepotRun.layout(run).duplicate(true)
+	if d.is_empty() or not d.has("marks"):
+		d = data.duplicate(true)            # the old hand-made one
+		for r in d.get("rooms", []):
+			if r["id"] == "office":
+				r["name"] = "SECURE STORE"
+	else:
+		var mk: Dictionary = d["marks"]
+		vault_id = str(mk["vault"])
+		pc_pos = Vector3(float(mk["pc"][0]), 0, float(mk["pc"][1]))
+		if mk.has("alarm"):
+			alarm_box = Vector3(float(mk["alarm"][0]), 0, float(mk["alarm"][1]))
+		for dr in d.get("doors", []):
+			dr.erase("at")
+		d.erase("plan")
 	d["name"] = "Dobrev Freight - %s" % run["kind_name"]
 	d["enemies"] = run["guards"]
-	d["objective"] = {"text": "Reach the vault PC (secure store)", "room": "office", "pos": [PC_POS.x, PC_POS.z],
+	d["objective"] = {"text": "Reach the vault PC (secure store)", "room": vault_id, "pos": [pc_pos.x, pc_pos.z],
 		"grab_line": "Boss, I see the PC that runs the vault doors. Want me to hit it?", "grab_log": "At the vault control PC", "hold_after": true}
-	d["bare_rooms"] = ["office"]           # the vault fills it
-	for r in d.get("rooms", []):
-		if r["id"] == "office":
-			r["name"] = "SECURE STORE"
+	d["bare_rooms"] = [vault_id]           # the vault fills it
 	lines.append("%s. %d guards. %s" % [run["kind_name"], run["guards"].size(), ("Your intel marked %d of the vault doors." % hinted) if hinted > 0 else "No intel on the vault."])
 	return d
 
@@ -93,8 +108,7 @@ func start() -> void:
 	f.sq.log_line.connect(_on_log)
 	vault = VaultRoom.new()
 	f.level.add_child(vault)
-	var rc: Rect2 = f.level.room("office")["rect"]
-	vault.build(f.level, rc.position.y, PC_POS, run["doors"])
+	vault.build(f.level, f.level.room(vault_id)["rect"], pc_pos, run["doors"])
 
 
 func _on_fired(_who, _target) -> void:
@@ -108,19 +122,19 @@ func _on_fired(_who, _target) -> void:
 	var bd := 1e9
 	for e in f.enemies:
 		if e.state == "ok":
-			var dd: float = e.global_position.distance_to(ALARM_BOX)
+			var dd: float = e.global_position.distance_to(alarm_box)
 			if dd < bd:
 				bd = dd
 				best = e
 	if best:
 		runner = best
-		runner.go(f.sq._route(runner, ALARM_BOX), RUN_SPEED)
+		runner.go(f.sq._route(runner, alarm_box), RUN_SPEED)
 		runner.bark_custom("The alarm! Hit the alarm!")
 		f._event("A guard is running for the alarm. Stop him.")
 
 
 func _on_log(t: String) -> void:
-	if "STORE ROOM" in t and t.ends_with("cleared") and prisoner.is_empty():
+	if ("STORE ROOM" in t or "STOREROOM" in t) and t.ends_with("cleared") and prisoner.is_empty():
 		var rng := RandomNumberGenerator.new()
 		rng.seed = int(run["seed"]) + 7
 		if rng.randf() < 0.65:
@@ -155,7 +169,7 @@ func tick(delta: float) -> void:
 		if runner.state != "ok":
 			runner = null
 			f._event("The alarm runner is down. No alarm.")
-		elif runner.global_position.distance_to(ALARM_BOX) < 0.9:
+		elif runner.global_position.distance_to(alarm_box) < 0.9:
 			alarm = true
 			runner.bark_custom("Alarm's on! They're coming!")
 			backup = minf(backup if backup > 0.0 else ALARM_S, ALARM_S)
@@ -187,15 +201,15 @@ func _tick_hack(delta: float) -> void:
 		_exfil()
 		return
 	vhack.who = str(c.fighter_name).split(" ")[0].capitalize()
-	if c.global_position.distance_to(PC_POS) > 1.6:
+	if c.global_position.distance_to(pc_pos) > 1.6:
 		if not c.moving():
-			c.go(f.sq._route(c, PC_POS + Vector3(0.6, 0, 0.3)), RUN_SPEED)
+			c.go(f.sq._route(c, pc_pos + Vector3(0.6, 0, 0.3)), RUN_SPEED)
 		return
 	hack_t += delta
 	if vhack.busy():
 		c.busy = maxf(c.busy, 0.2)          # hands on the keyboard, not the gun
 		c.crouch = 0.35
-		c.look_at_point = PC_POS + Vector3(0, 1.0, 0)
+		c.look_at_point = pc_pos + Vector3(0, 1.0, 0)
 	var was_typing: bool = vhack.busy() and not vhack.typing_done()
 	if vhack.tick(delta) and f.game:
 		f.game.sfx.play("switch_002", 1.4, -12.0)
@@ -289,7 +303,7 @@ func _open_term_win() -> void:
 
 ## The vault system's own camera, in its own little window, square on the three doors.
 func _open_door_win() -> void:
-	var rc: Rect2 = f.level.room("office")["rect"]
+	var rc: Rect2 = f.level.room(vault_id)["rect"]
 	door_vp = SubViewport.new()
 	door_vp.size = Vector2i(256, 144)
 	door_vp.world_3d = f.view.vp.find_world_3d()

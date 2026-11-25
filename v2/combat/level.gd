@@ -36,8 +36,10 @@ func build(p_data: Dictionary) -> void:
 			"rect": Rect2(Vector2(minf(rr[0], rr[2]), minf(rr[1], rr[3])), Vector2(absf(rr[2] - rr[0]), absf(rr[3] - rr[1]))), "outdoor": r.get("outdoor", false)})
 	for d in data.get("doors", []):
 		var dp: Array = d["pos"]
+		var arch: bool = d.get("arch", false)       # a wide opening with no door in it (M4 V3: open-plan rooms)
 		doors.append({"id": d["id"], "name": d.get("name", d["id"]), "pos": Vector2(dp[0], dp[1]), "axis": d["axis"],
-			"a": d["a"], "b": d["b"], "locked": d.get("locked", false), "state": "closed"})
+			"a": d["a"], "b": d["b"], "locked": d.get("locked", false) and not arch, "state": "open" if arch else "closed",
+			"w": float(d.get("w", DOOR_W)), "arch": arch})
 	_floor_and_ceiling()
 	_walls()
 	for d in doors:
@@ -89,13 +91,15 @@ func room_path(a: String, b: String) -> Array:
 	var q: Array = [a]
 	while not q.is_empty():
 		var cur: String = q.pop_front()
+		var nexts: Array = []
 		for d in doors:
-			var nxt := ""
 			if d["a"] == cur:
-				nxt = d["b"]
+				nexts.append(d["b"])
 			elif d["b"] == cur:
-				nxt = d["a"]
-			if nxt != "" and not prev.has(nxt):
+				nexts.append(d["a"])
+		nexts.append_array(open_links(cur))
+		for nxt in nexts:
+			if not prev.has(nxt):
 				prev[nxt] = cur
 				if nxt == b:
 					var out: Array = [b]
@@ -106,6 +110,18 @@ func room_path(a: String, b: String) -> Array:
 					return out
 				q.append(nxt)
 	return []
+
+
+## Open ground touching open ground (street, yard, alley): you just walk across, no door.
+func open_links(id: String) -> Array:
+	var out: Array = []
+	var r := room(id)
+	if r.is_empty() or not r["outdoor"]:
+		return out
+	for o in rooms:
+		if o["outdoor"] and o["id"] != id and (r["rect"] as Rect2).grow(0.05).intersects(o["rect"]):
+			out.append(o["id"])
+	return out
 
 
 func door_world(d: Dictionary, y := 0.0) -> Vector3:
@@ -298,7 +314,7 @@ func _walls() -> void:
 		for d in doors:
 			if d["axis"] == axis and absf((d["pos"].x if axis == "x" else d["pos"].y) - at) < 0.05:
 				var c: float = d["pos"].y if axis == "x" else d["pos"].x
-				ivs = _cut(ivs, c - DOOR_W * 0.5, c + DOOR_W * 0.5)
+				ivs = _cut(ivs, c - float(d["w"]) * 0.5, c + float(d["w"]) * 0.5)
 		var paint := Color(0.44, 0.43, 0.35)
 		for iv in ivs:
 			var lo: float = iv[0]
@@ -355,6 +371,12 @@ func _door(d: Dictionary) -> void:
 	var dp := door_world(d)
 	var along := Vector3(0, 0, 1) if d["axis"] == "x" else Vector3(1, 0, 0)
 	var thick := Vector3(0.12, 0, 0) if d["axis"] == "x" else Vector3(0, 0, 0.12)
+	if d["arch"]:
+		# an opening: just the header across the top
+		var w: float = d["w"]
+		var hs0 := Vector3(0.12, H - DOOR_H, w) if d["axis"] == "x" else Vector3(w, H - DOOR_H, 0.12)
+		box(hs0, dp + Vector3(0, DOOR_H + (H - DOOR_H) * 0.5, 0), _mat(0), Vector3.ZERO, true).layers = LAYER_FULL
+		return
 	# header above the gap and a dark frame
 	var hs := Vector3(0.12, H - DOOR_H, DOOR_W) if d["axis"] == "x" else Vector3(DOOR_W, H - DOOR_H, 0.12)
 	box(hs, dp + Vector3(0, DOOR_H + (H - DOOR_H) * 0.5, 0), _mat(0), Vector3.ZERO, true)
@@ -455,11 +477,21 @@ func walkable(p: Vector3, r := 0.28) -> bool:
 	for rm in rooms:
 		if (rm["rect"] as Rect2).grow(-r).has_point(q):
 			return true
+	# open ground (street, yard, alley) runs straight on into the next bit of open ground: only building walls stop you
+	for rm in rooms:
+		if rm["outdoor"] and (rm["rect"] as Rect2).has_point(q):
+			var by_wall := false
+			for o in rooms:
+				if not o["outdoor"] and (o["rect"] as Rect2).grow(r).has_point(q):
+					by_wall = true
+					break
+			if not by_wall:
+				return true
 	for d in doors:
 		if d["state"] == "closed":
 			continue
 		var dp: Vector2 = d["pos"]
-		var half_w := DOOR_W * 0.5 - r * 0.6
+		var half_w := float(d["w"]) * 0.5 - r * 0.6
 		if d["axis"] == "x":
 			if absf(q.y - dp.y) < half_w and absf(q.x - dp.x) < r + 0.35:
 				return true
@@ -517,10 +549,12 @@ func near_door(p: Vector3, r := 0.9) -> bool:
 ## Depth of each kit piece (m), to stand it against a wall. Pieces face into the room.
 const KIT_DEPTH := {"crate": 0.6, "crate_stack": 1.0, "shelf": 0.5, "desk": 0.7, "desk_pc": 0.7, "chair": 1.5,
 	"lockers": 0.5, "cabinet": 0.62, "fridge": 0.62, "break_table": 2.6, "notice_board": 0.06, "extinguisher": 0.2,
-	"pipes": 0.24, "bin": 0.36}
+	"pipes": 0.24, "bin": 0.36, "counter": 0.66, "bottle_shelf": 0.3, "cafe_table": 0.7, "bed": 1.96, "gun_rack": 0.32,
+	"bench": 0.45, "pallet": 1.0}
 const KIT_WIDTH := {"crate": 0.6, "crate_stack": 1.2, "shelf": 1.4, "desk": 1.3, "desk_pc": 1.3, "chair": 0.5,
 	"lockers": 1.5, "cabinet": 0.5, "fridge": 0.65, "break_table": 1.3, "notice_board": 1.0, "extinguisher": 0.2,
-	"pipes": 3.0, "bin": 0.35}
+	"pipes": 3.0, "bin": 0.35, "counter": 2.46, "bottle_shelf": 2.0, "cafe_table": 1.6, "bed": 0.9, "gun_rack": 1.6,
+	"bench": 1.8, "pallet": 1.2}
 
 var _kit: Node3D
 
@@ -571,6 +605,9 @@ func _dress() -> void:
 					yaw = -PI * 0.5
 			if it.get("center", false):
 				p = Vector3(rc.get_center().x, 0, rc.get_center().y)
+			if it.has("spot"):            # free-standing, at a fraction across the room (generated buildings)
+				var sp: Array = it["spot"]
+				p = Vector3(rc.position.x + float(sp[0]) * rc.size.x, 0, rc.position.y + float(sp[1]) * rc.size.y)
 			var n := _kit_piece(kit)
 			if n == null:
 				continue
@@ -605,8 +642,9 @@ func _off_doors(rc: Rect2, wall: String, along: float, half_w: float) -> float:
 			_:
 				on_wall = d["axis"] == "x" and absf(dp.x - rc.end.x) < 0.05
 				c = dp.y - rc.position.y
-		if on_wall and absf(along - c) < half_w + DOOR_W * 0.5 + 0.35:
-			along = c + (1.0 if along >= c else -1.0) * (half_w + DOOR_W * 0.5 + 0.4)
+		var dw := float(d["w"]) * 0.5
+		if on_wall and absf(along - c) < half_w + dw + 0.35:
+			along = c + (1.0 if along >= c else -1.0) * (half_w + dw + 0.4)
 	return along
 
 

@@ -277,11 +277,11 @@ func _plan_drawing(c: Control, box: Rect2) -> void:
 		var a: Vector2 = to.call(float(rc[0]), float(rc[3]))
 		var b: Vector2 = to.call(float(rc[2]), float(rc[1]))
 		var rr := Rect2(a, b - a).abs()
-		if r["id"] == "office":
+		if r["id"] == str(data.get("vault_room", "office")):
 			c.draw_rect(rr, Color(NAVY, 0.1))
 		c.draw_rect(rr, FORM_INK, false, 1.5)
 		var nm := _short_room(str(r["name"]))
-		if not r["id"] in ["hall", "office"]:
+		if not r["id"] in ["hall", str(data.get("vault_room", "office"))]:
 			Pal.text(c, rr.position + Vector2(2, 1), nm, 5, Color(FORM_INK, 0.8), HORIZONTAL_ALIGNMENT_LEFT, rr.size.x - 3)
 		else:
 			Pal.text(c, Vector2(rr.position.x + 3, rr.end.y - 7), nm, 5, Color(FORM_INK, 0.8))
@@ -292,13 +292,14 @@ func _plan_drawing(c: Control, box: Rect2) -> void:
 		if d.get("locked", false):
 			c.draw_line(p - along * 0.5 * s, p + along * 0.5 * s, STAMP, 1.5)
 	# entry arrow
-	var ent: Vector2 = to.call(0.0, zmax)
+	var ep: Array = data.get("entry", [0.0, zmax])
+	var ent: Vector2 = to.call(float(ep[0]), float(ep[1]))
 	c.draw_line(ent - Vector2(12, 0), ent, FORM_INK, 1.0)
 	c.draw_colored_polygon(PackedVector2Array([ent, ent + Vector2(-4, -2.5), ent + Vector2(-4, 2.5)]), FORM_INK)
 	Pal.text(c, ent + Vector2(-14, 3), "IN", 5, FORM_INK)
 	# vault doors 01-03 along the far wall, the PC, the alarm box
 	for rm in rooms:
-		if rm["id"] == "office":
+		if rm["id"] == str(data.get("vault_room", "office")):
 			var rc: Array = rm["rect"]
 			for i in 3:
 				var x := lerpf(float(rc[0]) + 0.8, float(rc[2]) - 0.8, i / 2.0)

@@ -18,6 +18,7 @@ const FEED := preload("res://v2/combat/feedcam.gdshader")
 const Loadout := preload("res://v2/sim/loadout.gd")
 const DepotOp := preload("res://v2/combat/depot_op.gd")
 const CivAI := preload("res://v2/combat/civ_ai.gd")
+const BuildingGen := preload("res://v2/sim/building_gen.gd")
 
 const SHOUTS := [
 	{"id": "stack", "label": "STACK", "needs": "door", "say": "Stack up on that door."},
@@ -90,7 +91,7 @@ func _ready() -> void:
 	var lv_id := "combat/depot"
 	if game and not game.has_meta("op_team"):
 		lv_id = str(game.get_meta("fight_level", lv_id))
-	data = Content.get_file(lv_id)
+	data = BuildingGen.level(lv_id)         # a data file, or "gen:<type>:<seed>" (M4 V3)
 	if data.has("plan"):
 		data = _apply_plan(data)
 	if game and game.state != null and game.has_meta("op_team"):
@@ -1380,6 +1381,13 @@ func _apply_plan(src: Dictionary) -> Dictionary:
 				it[k] = at[k]
 			keep.append(it)
 		d[key] = keep
+	for dr in d.get("doors", []):
+		var dat: Dictionary = dr.get("at", {}).get(hour, {})
+		for k in dat:
+			dr[k] = dat[k]          # e.g. the front door is locked at night
+	for h in pl["hours"]:
+		if h["id"] == hour and h.has("daylight"):
+			d["daylight"] = h["daylight"]
 	for en_ in pl["entries"]:
 		if en_["id"] == entry:
 			d["start"] = {"pos": en_["pos"], "facing": 0.0}
