@@ -80,7 +80,9 @@ func open_menu(mp: Vector2) -> void:
 			_add("MOVE", "Clear through", func() -> void: _give("push", "PUSH", "Push through there.", beyond))
 	elif rid != "":
 		menu_title = str(lv.room(rid).get("name", rid)).to_upper()
-		_add("MOVE", "Move here", func() -> void: _give("move", "MOVE", "Move up to there.", rid))
+		var outside: bool = lv.room(rid).get("outdoor", false)
+		var mv = Vector3(g.x, 0, g.z) if outside else rid      # outside: to that spot, bounding cover to cover under fire
+		_add("MOVE", "Move here", func() -> void: _give("move", "MOVE", "Move up to there.", mv))
 		_add("MOVE", "Clear through to here", func() -> void: _give("push", "PUSH", "Push through to there.", rid))
 		_add("INTERACT", "Watch this spot", func() -> void: _give("cover", "WATCH", "Eyes on that.", g + Vector3(0, 1.2, 0)))
 	else:

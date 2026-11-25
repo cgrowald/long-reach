@@ -43,6 +43,10 @@ func setup(p_fighters: Array, p_enemies: Array, p_level: Node3D, p_enemy_ai: Ref
 	start_pos = p_start
 	rng.seed = 5
 	cleared["hall"] = true        # they start in it
+	cleared[level.room_at(p_start)] = true
+	if not level.data.get("doctrine", true):
+		auto = false             # an open place (M4): nothing to clear room by room until you say
+		return
 	_next_doctrine()
 
 
@@ -112,7 +116,7 @@ func order(kind: String, target = null, who: Array = [], skip_check := false) ->
 		_shake_team()
 		objection.clear()
 		skip_check = true
-	elif kind in RISKY and not skip_check:
+	elif kind in RISKY and not skip_check and not (target is Vector3):     # a point outside: they bound cover to cover
 		var dz := danger(kind, target)
 		var by = dz["by"]
 		if by != null and float(dz["risk"]) > threshold(by):
@@ -139,6 +143,9 @@ func order(kind: String, target = null, who: Array = [], skip_check := false) ->
 			_ack({"open": "breach", "bang_wait": "bang"}.get(kind, kind))
 		"move":
 			auto = false
+			if target is Vector3:
+				_move_to_point(target)
+				return
 			var rid := str(target)
 			var lead = by_role("point")
 			var rooms: Array = level.room_path(level.room_near(lead.global_position), rid) if lead else []
@@ -491,6 +498,7 @@ func tick(delta: float) -> void:
 	_cuff()
 	_gun_swap()
 	_kneel_calls()
+	_cover_tick(delta)
 	match task.get("type", "idle"):
 		"stack":
 			_tick_stack(delta)
@@ -507,12 +515,16 @@ func tick(delta: float) -> void:
 		"clear":
 			_tick_clear(delta)
 		"move":
-			if alive_fighters().all(func(f) -> bool: return not f.moving()):
+			if task.has("goal") and in_contact and level.cover != null and not level.cover.spots.is_empty():
+				_move_to_point(task["goal"])          # shot at on the way: bound the rest
+			elif alive_fighters().all(func(f) -> bool: return not f.moving()):
 				task = {"type": "hold"}
 		"grab":
 			_tick_grab(delta)
 		"bound":
 			_tick_bound(delta)
+		"advance":
+			_tick_advance(delta)
 		"fallback":
 			if alive_fighters().all(func(f) -> bool: return not f.moving()):
 				task = {"type": "hold"}
@@ -529,8 +541,8 @@ func _perceive(delta: float) -> void:
 		var bd := 1e9
 		var fwd := Vector3(-sin(f.face_yaw), 0, -cos(f.face_yaw))
 		for e in enemies:
-			if e.state != "ok":
-				continue
+			if e.state != "ok" or e.ducked:
+				continue              # down behind cover: nothing to see
 			var d: float = f.global_position.distance_to(e.global_position)
 			if d > 24.0:
 				continue
@@ -541,7 +553,7 @@ func _perceive(delta: float) -> void:
 			var in_beam: bool = f.light != null and f.light.visible and to.dot(fwd) > 0.96 and d < 22.0
 			var their_light: bool = e.light != null and e.light.visible
 			# what the cams can see, they can see: ~15 m in the dark, further when a light is on him
-			if d > 15.0 and not in_beam and not their_light and not e.flashing() and not (level.lit(e.global_position) and d < 22.0):
+			if d > 15.0 and not level.data.get("daylight", false) and not in_beam and not their_light and not e.flashing() and not (level.lit(e.global_position) and d < 22.0):
 				continue
 			if not level.clear_line(f.eye(), e.chest_pos()):
 				continue
@@ -1280,3 +1292,159 @@ func _tick_bound(delta: float) -> void:
 				c.weapons_free = true
 		task = {"type": "done", "abort": task["abort"]}
 		exfil_done.emit()
+
+
+# ------------------------------------------------------------------ cover and bounding anywhere (M4 V1)
+# The usual fire-and-move: in contact, anyone not busy with the doctrine gets the nearest cover with the
+# object between them and the shooter, peeks to shoot, ducks to reload or when rounds keep snapping past.
+# A MOVE to a point under fire becomes bounding: one half runs to the next cover forward while the other
+# half shoots; then "Set!" and they swap. Out of contact it's a plain walk round the cover.
+
+const FREE_TASKS := ["idle", "hold", "move", "done", "advance"]
+
+
+## Where the shooting comes from for this fighter: their target, else the nearest enemy seen lately.
+func _threat_for(f) -> Variant:
+	if f.target != null and is_instance_valid(f.target) and f.target.alive():
+		return f.target.global_position
+	var best = null
+	var bd := 1e9
+	for e in enemies:
+		if e.state != "ok" or not e.has_meta("seen_t") or _t - float(e.get_meta("seen_t")) > 8.0:
+			continue
+		var p: Vector3 = e.get_meta("seen_pos")
+		var d: float = p.distance_to(f.global_position)
+		if d < bd and d < 30.0:
+			bd = d
+			best = p
+	return best
+
+
+func _cover_tick(delta: float) -> void:
+	var cv = level.cover
+	if cv == null or cv.spots.is_empty():
+		return
+	var tt: String = task.get("type", "idle")
+	for f in alive_fighters():
+		if f.busy > 0.0 or f.stunned > 0.0:
+			f.ducked = false
+			continue
+		var threat = _threat_for(f)
+		if threat == null or not tt in FREE_TASKS:
+			f.ducked = false
+			if threat == null and cv.spot_of(f).size() > 0 and not in_contact:
+				cv.release(f)
+			continue
+		if tt == "advance" and _moving_group().has(f):
+			f.ducked = false
+			continue
+		if f.moving():
+			continue
+		var s: Dictionary = cv.spot_of(f)
+		if s.is_empty() or not cv.good_against(s, threat) or (s["pos"] as Vector3).distance_to(f.global_position) > 0.6:
+			var reach := 2.5 if tt == "hold" else 7.0
+			var ns: Dictionary = cv.best(f, threat, reach)
+			if not ns.is_empty() and (ns["pos"] as Vector3).distance_to(f.global_position) > 0.3:
+				cv.claim(ns, f)
+				f.ducked = false
+				f.go(level.path(f.global_position, ns["pos"]), RUN)
+				if rng.randf() < 0.5:
+					f.say(["Getting to cover!", "Cover!", "Moving to cover!"][rng.randi() % 3])
+				continue
+		_peek_or_duck(f, delta)
+
+
+## Ours are better at it than theirs: short ducks, quick peeks back up.
+func _peek_or_duck(f, delta: float) -> void:
+	var t := float(f.get_meta("duck_t", 0.0)) - delta
+	if f.ducked:
+		if t <= 0.0 and f.reloading <= 0.0 and f.suppress < 0.55:
+			f.ducked = false
+			f.preaim = (float(f.st["ads"]) + float(f.st.get("react", 0.5))) * 0.7
+			f.crouch = 0.6
+			t = 0.0
+	elif f.reloading > 0.0 or (f.suppress > 0.8 and t <= 0.0):
+		f.ducked = true
+		t = rng.randf_range(0.8, 1.6)
+	else:
+		f.crouch = 0.6 if f.target != null else 0.8
+	f.set_meta("duck_t", t)
+
+
+func _move_to_point(p: Vector3) -> void:
+	if level.cover != null and not level.cover.spots.is_empty() and in_contact:
+		var fs := alive_fighters()
+		var groups: Array = [[], []]
+		for i in fs.size():
+			groups[i % 2].append(fs[i])
+		task = {"type": "advance", "goal": p, "mover": 0, "groups": groups, "t": 0.0, "legs": 0}
+		groups[0][0].say("Bounding! Cover me!", true)
+		if groups[1].size() > 0:
+			groups[1][0].say("Covering!", true)
+		_send_movers()
+		return
+	var k := 0
+	for f in alive_fighters():
+		if level.cover:
+			level.cover.release(f)
+		f.ducked = false
+		var at := p + Vector3((k % 2) * 0.9 - 0.45, 0, int(k / 2) * 0.9 - 0.45)
+		f.go(level.path(f.global_position, at), WALK)
+		k += 1
+	task = {"type": "move", "room": level.room_near(p), "goal": p}
+	_ack("push", {"room": _room_name(level.room_near(p))})
+
+
+func _moving_group() -> Array:
+	if task.get("type") != "advance":
+		return []
+	return task["groups"][int(task["mover"])]
+
+
+## The movers each take the next cover forward (or the goal itself once it's close).
+func _send_movers() -> void:
+	var goal: Vector3 = task["goal"]
+	var cv = level.cover
+	var k := 0
+	for f in _moving_group():
+		if not f.alive():
+			continue
+		f.ducked = false
+		var threat = _threat_for(f)
+		var s: Dictionary = {} if threat == null else cv.best(f, threat, 9.0, goal)
+		var to: Vector3
+		if s.is_empty() or f.global_position.distance_to(goal) < 4.0:
+			to = goal + Vector3((k % 2) * 0.9 - 0.45, 0, int(k / 2) * 0.9 - 0.45)
+			cv.release(f)
+		else:
+			cv.claim(s, f)
+			to = s["pos"]
+		f.go(level.path(f.global_position, to), RUN)
+		k += 1
+
+
+func _tick_advance(delta: float) -> void:
+	task["t"] = float(task["t"]) + delta
+	var goal: Vector3 = task["goal"]
+	var movers: Array = _moving_group().filter(func(f) -> bool: return f.alive())
+	# out of contact for a while: just walk the rest
+	if not in_contact:
+		_move_to_point(goal)
+		return
+	if movers.is_empty() or movers.all(func(f) -> bool: return not f.moving()):
+		var all_there := alive_fighters().all(func(f) -> bool: return f.global_position.distance_to(goal) < 3.0)
+		if all_there or int(task["legs"]) > 12:
+			task = {"type": "hold"}
+			if not alive_fighters().is_empty():
+				alive_fighters()[0].say("We're there. Holding.", true)
+			return
+		if not movers.is_empty():
+			movers[0].say("Set!", true)
+		task["mover"] = 1 - int(task["mover"])
+		task["legs"] = int(task["legs"]) + 1
+		var nxt: Array = _moving_group().filter(func(f) -> bool: return f.alive())
+		if nxt.is_empty():
+			task["mover"] = 1 - int(task["mover"])
+		elif not nxt.is_empty():
+			nxt[0].say("Moving!", true)
+		_send_movers()

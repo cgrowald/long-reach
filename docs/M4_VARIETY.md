@@ -48,3 +48,19 @@ Each step ends with bot tests + screenshots, then commit and push. No playtest u
 | **V6** | **More op types on the same engine**: rescue (holding cells -> recruits), sabotage (radio mast, transformer), convoy ambush, propaganda (film it for Nod). | Each reuses V1-V5. |
 | **V7** | **The character generator** (could move earlier, see question G2). | Many fresh faces for civilians, guards, recruits. |
 | later | Enemy that learns (Q6 d), multi-storey (Q3b). | User: later. |
+
+### Picks for the plan questions (user 2026-11-25: "Yes, your picks")
+- **G1:** the order above (V1 cover first, then the roadblock + bar, the generator, targets, the map, more op types, the character generator).
+- **G2:** portraits become renders of each person's 3D head (one face everywhere).
+- **G3:** download Millennium Junction Character Creator (MIT) to borrow its mix-and-match code; our parts are modeled from GPT's faces.
+- **G4:** outdoor fights are in now.
+
+## 5. Built: V1, cover and bounding anywhere (2026-11-25)
+- **v2/combat/cover.gd** (new): cover pieces from level data `cover: [{kind, pos, turn, len}]` (sandbags, barrier, car, crate, barrel, low_wall, booth). Each blocks walking, stops rounds (low pieces on physics layer 2: eyes see over, rounds stop; the booth on layer 1 like a wall) and makes cover spots round itself. `best(who, threat, reach, toward)` = the usual cover-shooter pick (the piece between you and the threat, near, not crowded, forward when bounding). Walking grid = Godot's stock **AStarGrid2D** with string-pulling, so people route round cover outside.
+- **level.gd:** rooms can be `outdoor` (no walls of their own, no roof, a road floor, an apron of ground); `path(a, b)`, `is_outdoor`; doors refresh the grid when they open.
+- **actor.gd:** `suppress` (rounds at you; you shoot worse and keep your head down), `ducked` (behind cover: unseen, can't shoot), `preaim` (up from cover already pointed where they last saw you), misses into cover puff on it, poorer troops via `acc_mult` / `slow` in the enemy data.
+- **enemy_ai.gd:** in contact each one runs to cover, peeks and ducks (longer down than ours), hears gunfire 45 m outside, sees 30 m in daylight; **never moves up while your people are shooting**: only after 7 s of quiet, one at a time. A hit in cover shakes them half as much.
+- **squad_ai.gd:** in contact anyone not busy with the doctrine takes cover and peeks/ducks; a MOVE to a point outside under fire (or a walk that gets shot at) becomes **bounding**: half runs to the next cover forward ("Moving!"), half shoots, "Set!", swap. A level can turn the room-by-room doctrine off (`doctrine: false`).
+- **fight.gd / orders.gd / title:** the fight loads any level (`Game` meta `fight_level`); daylight levels get a sun and sky light; right-click "Move here" outside = that spot. Title: **Combat: roadblock (cover test)** (data/v2/combat/roadblock_test.json: Kessel Road, 5 conscripts, the bar's wall).
+- Bot test (scratchpad bot_v1.gd): contact, both sides in cover, ducking, no enemy advance under fire, bounding swaps halves, fight over in ~40 s. Indoor depot tests re-run unchanged.
+- Not done here (V2): the real first mission (politician, the bar chase, civilians, pick the way in and the hour), real models for the cover pieces, tuning.

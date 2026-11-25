@@ -4,6 +4,7 @@ extends RefCounted
 ## Bureau escorts never surrender and hunt you instead.
 
 const SIGHT := 20.0
+const SIGHT_DAY := 30.0          # outside in daylight (M4)
 const LINES := {
 	"alert": ["Who's there?", "Hey! HEY!", "Somebody's in the building!"],
 	"bureau_alert": ["Bureau! Drop your weapons!", "Contact! Hold them here!"],
@@ -16,6 +17,9 @@ var fighters: Array = []
 var level: Node3D
 var rng := RandomNumberGenerator.new()
 var noises: Array = []          # {pos, r}
+var _t := 0.0
+var us_fired_t := -100.0         # when one of ours last fired (M4 V1: they never push into live fire)
+var advancing = null              # the one enemy moving up right now (they bound one at a time)
 
 
 func setup(p_enemies: Array, p_fighters: Array, p_level: Node3D) -> void:
@@ -38,6 +42,13 @@ func noise(at: Vector3, radius: float) -> void:
 
 
 func tick(delta: float) -> void:
+	_t += delta
+	for f in fighters:
+		if f.shots != int(f.get_meta("seen_shots", 0)):
+			f.set_meta("seen_shots", f.shots)
+			us_fired_t = _t
+	if advancing != null and (not is_instance_valid(advancing) or advancing.state != "ok" or not advancing.moving()):
+		advancing = null
 	for e in enemies:
 		if e.state != "ok":
 			continue
@@ -66,15 +77,18 @@ func tick(delta: float) -> void:
 					ai["mode"] = "combat"
 			if ai["mode"] == "combat":
 				e.target = seen
-				e.crouch = 0.45
-				e.stop()
+				if not _has_cover():
+					e.crouch = 0.45
+					e.stop()
 		else:
 			e.target = null
 			if ai["mode"] == "combat":
 				ai["lost"] = float(ai["lost"]) + delta
 				e.look_at_point = (ai["last_seen"] as Vector3) + Vector3(0, 1.2, 0) if ai["last_seen"] != null else null
-				if e.kind == "bureau" and float(ai["lost"]) > 3.0 and not e.moving() and ai["last_seen"] != null:
+				if e.kind == "bureau" and float(ai["lost"]) > 3.0 and quiet() > 4.0 and not e.moving() and ai["last_seen"] != null and not _has_cover():
 					e.go(_route(e, ai["last_seen"]), e.WALK)        # hunt
+		if _has_cover() and ai["mode"] in ["combat", "alert"]:
+			_cover_fight(e, ai, delta, seen)
 		match ai["mode"]:
 			"patrol":
 				_patrol(e, ai)
@@ -94,6 +108,9 @@ func tick(delta: float) -> void:
 
 
 func _spot(e, ai: Dictionary):
+	if e.ducked:
+		return null
+	var day: bool = level.data.get("daylight", false)
 	var best = null
 	var bd := 1e9
 	var fwd := Vector3(-sin(e.face_yaw), 0, -cos(e.face_yaw))
@@ -101,13 +118,15 @@ func _spot(e, ai: Dictionary):
 		if f.state != "ok":
 			continue
 		var d: float = e.global_position.distance_to(f.global_position)
-		if d > SIGHT:
+		if d > (SIGHT_DAY if day else SIGHT):
 			continue
 		var to: Vector3 = (f.global_position - e.global_position).normalized()
 		var in_view: bool = to.dot(fwd) > 0.2 or d < 2.5 or ai["mode"] in ["combat", "alert", "react"]
 		# in the dark, a fighter with no weapon light on is hard to see past a few metres
 		var lit: bool = f.light != null and f.light.visible
-		if not in_view or (not lit and d > 6.0 and ai["mode"] in ["idle", "patrol"]) or d > 14.0:
+		if f.ducked:
+			continue
+		if not in_view or (not lit and not day and d > 6.0 and ai["mode"] in ["idle", "patrol"]) or d > (SIGHT_DAY if day else 14.0):
 			continue
 		if not level.clear_line(e.eye(), f.chest_pos()):
 			continue
@@ -134,6 +153,8 @@ func shaken(e, amount: float) -> void:
 	if not e.has_meta("ai"):
 		return
 	var ai: Dictionary = e.get_meta("ai")
+	if level.cover and level.cover.in_cover(e):
+		amount *= 0.5
 	ai["morale"] = float(ai["morale"]) - amount
 	if ai["mode"] in ["idle", "patrol"]:
 		ai["mode"] = "alert"
@@ -196,3 +217,80 @@ func _route(e, to: Vector3) -> Array:
 func _line(key: String) -> String:
 	var l: Array = LINES[key]
 	return l[rng.randi() % l.size()]
+
+
+# ------------------------------------------------------------------ cover (M4 V1)
+# They're worse than us but there are more of them (user 2026-11-25). Each one runs to the nearest cover with
+# the object between it and you, then peeks and ducks; slow to come back up when rounds snap past. They never
+# push forward while your people are alive and shooting: only after it's been quiet a while, and one at a time.
+
+const QUIET_TO_ADVANCE := 7.0
+
+
+func _has_cover() -> bool:
+	return level.cover != null and not level.cover.spots.is_empty()
+
+
+## Seconds since one of ours last fired.
+func quiet() -> float:
+	return _t - us_fired_t
+
+
+func _cover_fight(e, ai: Dictionary, delta: float, seen) -> void:
+	var cv = level.cover
+	var threat = seen.global_position if seen != null else ai["last_seen"]
+	if threat == null:
+		threat = _nearest_fighter(e)
+		ai["last_seen"] = threat
+	if threat == null or e.busy > 0.0 or e.stunned > 0.0:
+		return
+	if e.moving():
+		return
+	var s: Dictionary = cv.spot_of(e)
+	var at_spot: bool = not s.is_empty() and (s["pos"] as Vector3).distance_to(e.global_position) < 0.6
+	if s.is_empty() or not cv.good_against(s, threat) or not at_spot:
+		var ns: Dictionary = cv.best(e, threat, 11.0)
+		if not ns.is_empty() and (ns["pos"] as Vector3).distance_to(e.global_position) > 0.3:
+			cv.claim(ns, e)
+			e.ducked = false
+			e.go(level.path(e.global_position, ns["pos"]), e.RUN)
+			if rng.randf() < 0.4:
+				e.bark_custom(["Cover! Get to cover!", "Behind the bags!", "Get down!"][rng.randi() % 3])
+			return
+	# move up: only when it's gone quiet, one man at a time, and never the timid
+	if quiet() > QUIET_TO_ADVANCE and advancing == null and not e.get_meta("def").get("timid", false) and e.reloading <= 0.0:
+		var fwd: Dictionary = cv.best(e, threat, 9.0, threat)
+		if not fwd.is_empty():
+			cv.claim(fwd, e)
+			e.ducked = false
+			advancing = e
+			e.go(level.path(e.global_position, fwd["pos"]), e.RUN)
+			e.bark_custom(["Moving up!", "Go, go!", "I'm moving!"][rng.randi() % 3])
+			return
+	# peek and duck: worse than ours (longer down, slower up when shot at)
+	var t := float(ai.get("duck_t", 0.0)) - delta
+	if e.ducked:
+		if t <= 0.0 and e.reloading <= 0.0:
+			e.ducked = false
+			e.crouch = 0.55
+			e.preaim = (float(e.st["ads"]) + float(e.st.get("react", 0.5))) * 0.5
+			t = rng.randf_range(1.5, 3.2) * (1.0 - e.suppress * 0.5)
+	else:
+		e.crouch = 0.55
+		if e.reloading > 0.0 or t <= 0.0 or (e.suppress > 0.85 and e.target == null):
+			e.ducked = true
+			e.target = null
+			t = rng.randf_range(1.2, 2.6) + e.suppress * 3.0
+	ai["duck_t"] = t
+
+
+func _nearest_fighter(e) -> Variant:
+	var best = null
+	var bd := 1e9
+	for f in fighters:
+		if f.state == "ok":
+			var d: float = f.global_position.distance_to(e.global_position)
+			if d < bd:
+				bd = d
+				best = f.global_position
+	return best

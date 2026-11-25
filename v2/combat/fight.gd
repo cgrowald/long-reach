@@ -83,7 +83,10 @@ var _pan_last := Vector2.ZERO
 func _ready() -> void:
 	game = get_node_or_null("/root/Game")
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	data = Content.get_file("combat/depot")
+	var lv_id := "combat/depot"
+	if game and not game.has_meta("op_team"):
+		lv_id = str(game.get_meta("fight_level", lv_id))
+	data = Content.get_file(lv_id)
 	if game and game.state != null and game.has_meta("op_team"):
 		op = DepotOp.new()
 		data = op.prepare(self, data)
@@ -144,6 +147,19 @@ func _environment() -> void:
 	we.environment = e
 	_env = e
 	world.add_child(we)
+	if data.get("daylight", false):
+		# outside in the day (M4): a low grey sun, sky light, thin haze
+		e.background_color = Color(0.55, 0.58, 0.6)
+		e.ambient_light_color = Color(0.62, 0.64, 0.66)
+		e.ambient_light_energy = 0.9
+		e.tonemap_exposure = 1.0
+		e.volumetric_fog_density = 0.006
+		var sun := DirectionalLight3D.new()
+		sun.rotation = Vector3(-0.75, 0.6, 0)
+		sun.light_color = Color(1.0, 0.93, 0.82)
+		sun.light_energy = 1.4
+		sun.shadow_enabled = true
+		world.add_child(sun)
 
 
 func _spawn() -> void:
@@ -203,7 +219,7 @@ func _wire(a: Node3D) -> void:
 		else:
 			_event("%s dead" % who.fighter_name))
 	a.fired.connect(func(who, _t) -> void:
-		en.noise(who.global_position, 13.0))
+		en.noise(who.global_position, 45.0 if level.is_outdoor(who.global_position) else 13.0))     # gunfire carries outside
 
 
 # ------------------------------------------------------------------ cameras and feeds

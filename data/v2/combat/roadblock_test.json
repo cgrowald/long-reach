@@ -1,0 +1,59 @@
+{
+	"_note": "M4 V1 test ground (docs/M4_VARIETY.md): cover and bounding outdoors. A street in the day, a shabby roadblock of five conscripts (worse aim, slower, more of them), the bar's wall beside it. Our side starts at the south end (+z). Not the real first mission (that's V2). Godot floor plan: x right, z forward is -z.",
+	"name": "Kessel Road roadblock (cover test)",
+	"daylight": true,
+	"doctrine": false,
+	"objective": {"text": "Clear the roadblock", "room": "street", "pos": [0.0, -24.0]},
+	"rooms": [
+		{"id": "street", "name": "KESSEL ROAD", "rect": [-7.0, -34.0, 7.0, 7.0], "outdoor": true, "lamps": 0},
+		{"id": "bar", "name": "THE COPPER KETTLE", "rect": [7.0, -27.0, 15.0, -15.0], "lamps": 1,
+			"dress": [{"kit": "break_table", "center": true, "turn": 90}, {"kit": "shelf", "wall": "e", "at": 0.5}, {"kit": "fridge", "wall": "n", "at": 0.2}]},
+		{"id": "shop", "name": "SHUTTERED SHOP", "rect": [-15.0, -12.0, -7.0, -2.0], "lamps": 0}
+	],
+	"doors": [
+		{"id": "d1", "name": "BAR DOOR", "pos": [7.0, -18.0], "axis": "x", "a": "street", "b": "bar", "locked": false},
+		{"id": "d2", "name": "SHOP DOOR", "pos": [-7.0, -7.0], "axis": "x", "a": "street", "b": "shop", "locked": true}
+	],
+	"lights": [],
+	"cctv": [],
+	"cover": [
+		{"kind": "low_wall", "pos": [-5.6, -1.0], "turn": 90, "len": 3.0},
+		{"kind": "car", "pos": [2.6, -5.0], "turn": 75},
+		{"kind": "crate", "pos": [-3.0, -9.5]},
+		{"kind": "crate", "pos": [-2.2, -9.9], "turn": 20},
+		{"kind": "barrel", "pos": [4.6, -11.5]},
+		{"kind": "barrel", "pos": [5.2, -12.1]},
+		{"kind": "car", "pos": [-4.2, -14.0], "turn": 95},
+		{"kind": "crate", "pos": [1.2, -15.0], "turn": 10},
+		{"kind": "sandbags", "pos": [-4.6, -20.0]},
+		{"kind": "sandbags", "pos": [-2.6, -20.2], "turn": 5},
+		{"kind": "barrier", "pos": [1.6, -20.6]},
+		{"kind": "sandbags", "pos": [4.6, -20.0], "turn": -4},
+		{"kind": "booth", "pos": [5.4, -24.5]},
+		{"kind": "car", "pos": [-2.0, -26.5], "turn": 0},
+		{"kind": "barrier", "pos": [2.4, -29.5], "turn": 0}
+	],
+	"squad": [
+		{"name": "JONAS BRENN", "role": "point", "trait": "steady", "camo": "multicam", "head": "helmet", "back": "",
+			"gear": {"weapon": "bench_rifle", "round": "fmj", "attach": ["optic", "grip"], "plate": 2, "mags": 4, "meds": 1, "flash": 1}},
+		{"name": "ADA LIND", "role": "breacher", "trait": "cocky", "camo": "multicam", "head": "helmet", "mask": true, "back": "hydration",
+			"gear": {"weapon": "bench_rifle", "round": "fmj", "attach": [], "plate": 2, "mags": 3, "meds": 1, "flash": 2}},
+		{"name": "MIRA KOVAC", "role": "medic", "trait": "careful", "camo": "multicam", "head": "helmet", "back": "medbag",
+			"gear": {"weapon": "bench_rifle", "round": "fmj", "attach": [], "plate": 1, "mags": 3, "meds": 5, "flash": 0}},
+		{"name": "IVO PETRAK", "role": "rear", "trait": "jumpy", "camo": "multicam", "head": "helmet", "back": "pack",
+			"gear": {"weapon": "bench_rifle", "round": "fmj", "attach": ["optic"], "plate": 1, "mags": 4, "meds": 1, "flash": 1}}
+	],
+	"start": {"pos": [0.0, 4.5], "facing": 0.0},
+	"enemies": [
+		{"id": "c1", "name": "conscript (bags left)", "kind": "guard", "pos": [-3.6, -21.4], "yaw": 3.14, "state": "idle", "camo": "woodland", "head": "cap", "acc_mult": 0.5, "slow": 0.25,
+			"gear": {"weapon": "bolt_rifle", "round": "fmj", "attach": [], "plate": 0, "mags": 4, "meds": 0}},
+		{"id": "c2", "name": "conscript (barrier)", "kind": "guard", "pos": [1.0, -22.0], "yaw": 2.8, "state": "idle", "camo": "woodland", "head": "cap", "acc_mult": 0.5, "slow": 0.25,
+			"gear": {"weapon": "smg", "round": "fmj", "attach": [], "plate": 0, "mags": 3, "meds": 0}},
+		{"id": "c3", "name": "conscript (bags right)", "kind": "guard", "pos": [3.6, -21.5], "yaw": 3.4, "state": "idle", "camo": "woodland", "head": "cap", "acc_mult": 0.5, "slow": 0.25,
+			"gear": {"weapon": "smg", "round": "fmj", "attach": [], "plate": 0, "mags": 3, "meds": 0}},
+		{"id": "c4", "name": "conscript (booth)", "kind": "guard", "pos": [3.9, -25.6], "yaw": 1.2, "state": "idle", "camo": "woodland", "head": "cap", "acc_mult": 0.45, "slow": 0.3, "timid": true,
+			"gear": {"weapon": "pistol", "round": "fmj", "attach": [], "plate": 0, "mags": 2, "meds": 0}},
+		{"id": "c5", "name": "sergeant (car)", "kind": "guard", "pos": [-2.0, -28.4], "yaw": 3.0, "state": "idle", "camo": "woodland", "head": "helmet", "acc_mult": 0.65, "slow": 0.1,
+			"gear": {"weapon": "smg", "round": "fmj", "attach": [], "plate": 1, "mags": 3, "meds": 1}}
+	]
+}

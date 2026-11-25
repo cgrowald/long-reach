@@ -6,6 +6,7 @@ extends Node3D
 
 const KindLook := preload("res://v2/world/kind_look.gd")
 const KIT := "res://art/depot_kit.glb"
+const Cover := preload("res://v2/combat/cover.gd")
 const LOW_H := 1.1                # wall height the overview camera sees (the roof and the top of the walls cut away)
 const LAYER_FULL := 8            # render layer 4: whole walls and the ceiling (helmet cams, CCTV)
 const LAYER_CUT := 16            # render layer 5: the low cut walls and the fog (the overview only)
@@ -21,6 +22,7 @@ var doors: Array = []           # {id, name, pos: Vector2, axis, a, b, locked, s
 var lights: Array = []          # {light, mesh, base, flicker}
 var objective_pos := Vector3.ZERO
 var pcs: Array = []              # desk PCs your people can exploit: {room, stand, screen, done}
+var cover: Node3D                # cover pieces, cover spots and the walking grid (v2/combat/cover.gd, M4 V1)
 var _mats := {}
 var _t := 0.0
 
@@ -30,7 +32,7 @@ func build(p_data: Dictionary) -> void:
 	for r in data.get("rooms", []):
 		var rr: Array = r["rect"]
 		rooms.append({"id": r["id"], "name": r.get("name", r["id"]),
-			"rect": Rect2(Vector2(minf(rr[0], rr[2]), minf(rr[1], rr[3])), Vector2(absf(rr[2] - rr[0]), absf(rr[3] - rr[1])))})
+			"rect": Rect2(Vector2(minf(rr[0], rr[2]), minf(rr[1], rr[3])), Vector2(absf(rr[2] - rr[0]), absf(rr[3] - rr[1]))), "outdoor": r.get("outdoor", false)})
 	for d in data.get("doors", []):
 		var dp: Array = d["pos"]
 		doors.append({"id": d["id"], "name": d.get("name", d["id"]), "pos": Vector2(dp[0], dp[1]), "axis": d["axis"],
@@ -41,6 +43,10 @@ func build(p_data: Dictionary) -> void:
 		_door(d)
 	_lights()
 	_props()
+	cover = Cover.new()
+	add_child(cover)
+	cover.build(self, data.get("cover", []))
+	cover.build_grid(_bounds().grow(0.5))
 
 
 # ------------------------------------------------------------------ queries
@@ -156,6 +162,7 @@ func open_door(d: Dictionary, how: String) -> void:
 	var pivot: Node3D = d["pivot"]
 	var body: StaticBody3D = d["body"]
 	body.collision_layer = 0
+	_door_changed(d)
 	match how:
 		"charge":
 			d["state"] = "broken"
@@ -254,16 +261,30 @@ func _bounds() -> Rect2:
 
 
 func _floor_and_ceiling() -> void:
-	var b := _bounds().grow(0.3)
-	var c := b.get_center()
-	box(Vector3(b.size.x, 0.1, b.size.y), Vector3(c.x, -0.05, c.y), _mat(1))
-	box(Vector3(b.size.x, 0.1, b.size.y), Vector3(c.x, H + 0.05, c.y), _mat(2)).layers = LAYER_FULL    # no roof on the overview
+	var any_out := rooms.any(func(r) -> bool: return r["outdoor"])
+	if not any_out:
+		var b := _bounds().grow(0.3)
+		var c := b.get_center()
+		box(Vector3(b.size.x, 0.1, b.size.y), Vector3(c.x, -0.05, c.y), _mat(1))
+		box(Vector3(b.size.x, 0.1, b.size.y), Vector3(c.x, H + 0.05, c.y), _mat(2)).layers = LAYER_FULL    # no roof on the overview
+		return
+	# a street or a yard: a floor per room, a roof only over the indoor ones, and a wide apron of ground around
+	var ob := _bounds().grow(14.0)
+	box(Vector3(ob.size.x, 0.1, ob.size.y), Vector3(ob.get_center().x, -0.07, ob.get_center().y), flat(Color(0.24, 0.23, 0.2)))
+	for r in rooms:
+		var rc: Rect2 = (r["rect"] as Rect2).grow(0.06)
+		var cc := rc.get_center()
+		box(Vector3(rc.size.x, 0.1, rc.size.y), Vector3(cc.x, -0.05, cc.y), flat(Color(0.2, 0.2, 0.21)) if r["outdoor"] else _mat(1))
+		if not r["outdoor"]:
+			box(Vector3(rc.size.x, 0.1, rc.size.y), Vector3(cc.x, H + 0.05, cc.y), _mat(2)).layers = LAYER_FULL
 
 
 ## Every room edge, merged into lines, with door gaps cut out.
 func _walls() -> void:
 	var lines := {}     # "x:1.25" -> [ [lo, hi], ... ]
 	for r in rooms:
+		if r["outdoor"]:
+			continue           # a street or a yard: open, no walls of its own
 		var rc: Rect2 = r["rect"]
 		_add_iv(lines, "x:%.2f" % rc.position.x, rc.position.y, rc.end.y)
 		_add_iv(lines, "x:%.2f" % rc.end.x, rc.position.y, rc.end.y)
@@ -428,6 +449,8 @@ func lit(p: Vector3) -> bool:
 ## Where a person can stand: inside a room (off the walls), or in the gap of an open door.
 func walkable(p: Vector3, r := 0.28) -> bool:
 	var q := Vector2(p.x, p.z)
+	if cover and cover.blocked(p, r):
+		return false
 	for rm in rooms:
 		if (rm["rect"] as Rect2).grow(-r).has_point(q):
 			return true
@@ -625,6 +648,7 @@ func crack_door(d: Dictionary) -> void:
 	var pivot: Node3D = d["pivot"]
 	(d["body"] as StaticBody3D).collision_layer = 0
 	d["state"] = "open"
+	_door_changed(d)
 	d["rot0"] = pivot.rotation.y
 	pivot.create_tween().tween_property(pivot, "rotation:y", pivot.rotation.y + float(d["swing"]) * 0.22, 0.6).set_trans(Tween.TRANS_SINE)
 
@@ -636,3 +660,21 @@ func finish_open(d: Dictionary) -> void:
 	var pivot: Node3D = d["pivot"]
 	pivot.create_tween().tween_property(pivot, "rotation:y", float(d["rot0"]) + float(d["swing"]), 0.5).set_trans(Tween.TRANS_SINE)
 	d.erase("rot0")
+
+
+# ------------------------------------------------------------------ cover and routes (M4 V1)
+
+func _door_changed(d: Dictionary) -> void:
+	if cover:
+		var p: Vector2 = d["pos"]
+		cover.call_deferred("refresh", Rect2(p - Vector2(1.5, 1.5), Vector2(3, 3)))
+
+
+## A walking route around walls and cover (the grid). Indoor doctrine still uses rooms and doors.
+func path(a: Vector3, b: Vector3) -> Array:
+	return cover.path(a, b) if cover else [b]
+
+
+func is_outdoor(p: Vector3) -> bool:
+	var r := room(room_near(p))
+	return not r.is_empty() and r["outdoor"]

@@ -65,6 +65,9 @@ var treated: Array = []            # {part, by, item}: what was used on them thi
 var med_names: Array = []          # what their meds are, in rig order ("your dressing (3 stars)"); generic when empty
 var arm_hits := 0                  # a bad arm shoots worse
 var leg_hits := 0                  # a bad leg slows them
+var suppress := 0.0               # rounds snapping past (M4 V1): 0-1; high = they keep their head down and shoot worse
+var ducked := false               # down behind cover: can't be seen or hit over it, can't shoot (peek to shoot)
+var preaim := 0.0                # coming up from cover already pointed where they last saw you: a head start on the aim
 var rng := RandomNumberGenerator.new()
 var _say_cd := 0.0
 
@@ -84,6 +87,9 @@ func setup_actor(def: Dictionary, p_team: String, p_level: Node3D) -> void:
 	if not armed:
 		weapons_free = false        # nothing to shoot with: they follow, patch, zip-tie
 	st = Rules.stats(def.get("gear", {}), trait_name)
+	# poorer troops (M4: the enemy is worse than us but many): a roadblock conscript aims worse and reacts slower
+	st["acc"] = float(st["acc"]) * float(def.get("acc_mult", 1.0))
+	st["react"] = float(st.get("react", 0.5)) + float(def.get("slow", 0.0))
 	plate_dur = float(st["plate_dur"])
 	mag_rounds = int(st["mag"])
 	mags = maxi(0, int(st["mags"]) - 1)
@@ -157,6 +163,9 @@ func tick(delta: float) -> void:
 		pose_mode = "hands_up"
 		return
 	stunned = maxf(0.0, stunned - delta)
+	suppress = maxf(0.0, suppress - delta * 0.22)
+	if ducked:
+		crouch = move_toward(crouch, 1.0, delta * 4.0)
 	busy = maxf(0.0, busy - delta)
 	# how they carry themselves: hunched when hurt, a limp on a bad leg, the reload on the body (soldier.gd)
 	hurt = move_toward(hurt, 1.0 if (hp < 55.0 or wounds > 0) else 0.0, delta * 2.0)
@@ -250,7 +259,7 @@ func _weapon(delta: float) -> void:
 		if reloading <= 0.0:
 			mag_rounds = int(st["mag"])
 		return
-	if target == null or not is_instance_valid(target) or not target.alive() or not weapons_free or stunned > 0.0 or busy > 0.0:
+	if target == null or not is_instance_valid(target) or not target.alive() or not weapons_free or stunned > 0.0 or busy > 0.0 or ducked:
 		aim_time = 0.0
 		burst_left = 0
 		if target != null and (not is_instance_valid(target) or not target.alive()):
@@ -262,6 +271,9 @@ func _weapon(delta: float) -> void:
 	if not level.clear_line(eye(), target.chest_pos()):
 		aim_time = maxf(0.0, aim_time - delta * 2.0)
 		return
+	if preaim > 0.0:
+		aim_time = maxf(aim_time, preaim)
+		preaim = 0.0
 	aim_time += delta
 	var ready_at := float(st["ads"]) + float(st.get("react", 0.5))
 	if aim_time < ready_at:
@@ -347,8 +359,12 @@ func _shoot() -> void:
 	Audio.play_at(self, snd, eye(), -2.0)
 	var t = target
 	var dist := eye().distance_to(t.chest_pos())
-	var cover := 0.25 if t.crouch > 0.5 else 0.0
-	var p := Rules.hit_chance(st, dist, moving(), t.moving(), cover, shot_i)
+	var low: bool = t.crouch > 0.5
+	var cover := 0.25 if low else 0.0
+	if level.cover:
+		cover = maxf(cover, level.cover.between(eye(), t.chest_pos(), low))
+	var p := Rules.hit_chance(st, dist, moving(), t.moving(), cover, shot_i) * (1.0 - suppress * 0.45)
+	t.suppress = minf(1.0, t.suppress + (0.12 if t.team == "us" else 0.2))
 	var hit := rng.randf() < p
 	var end: Vector3 = t.chest_pos() + (Vector3.ZERO if hit else Vector3(rng.randf_range(-0.7, 0.7), rng.randf_range(-0.5, 0.6), rng.randf_range(-0.7, 0.7)))
 	var muzzle: Vector3 = rifle.to_global(Vector3(0, 0, -0.95))
@@ -358,7 +374,7 @@ func _shoot() -> void:
 		hits += 1
 		t.take_hit(self)
 	else:
-		_stray(muzzle, end)
+		_miss(muzzle, end, cover)
 
 
 func take_hit(from) -> void:
@@ -575,3 +591,13 @@ func use_med() -> String:
 	if not med_names.is_empty():
 		return str(med_names.pop_front())
 	return "a bandage"
+
+
+## A round that missed: into the cover they're behind (a puff on it, M4 V1), else past them into the room.
+func _miss(muzzle: Vector3, end: Vector3, cover: float) -> void:
+	if cover > 0.3 and level.cover:
+		var hit = level.cover.impact(muzzle, end - Vector3(0, 0.5, 0))
+		if hit != null:
+			Impacts.wall(level, hit["position"], hit["normal"], false)
+			return
+	_stray(muzzle, end)
