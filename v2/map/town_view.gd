@@ -315,6 +315,65 @@ func _pins() -> void:
 	for b in L["buildings"]:
 		if b["kind"] == "citadel":
 			_pin("citadel", null, b["rect"], "THE CITADEL", Color(1.0, 0.3, 0.25))
+		elif str(b["place"]).begins_with("key:") and Town.held(state, str(b["district"])):
+			var did := str(b["district"])
+			_pin("post", did, b["rect"], "OUR POST\n%d holding, %d armed" % [Town.garrison(state, did), mini(Town.garrison(state, did), Town.arms(state, did))], Color(1.0, 0.45, 0.4))
+
+
+# ------------------------------------------------------------------ garrisons (V5 part 2)
+
+var _gar_rows: Array = []
+
+
+func _garrison_button(id: String) -> void:
+	if id == "close":
+		phase = "map"
+		_pins()
+		return
+	var parts := id.split(":")
+	var did := parts[1]
+	match parts[0]:
+		"add":
+			if Town.post(state, did, int(parts[2])) == 0:
+				_say("No free militia. Held districts send walk-ins each night.", 4.0)
+				game.deny()
+		"take":
+			Town.post(state, did, -int(parts[2]))
+		"arm":
+			var r := Town.arm(state, did)
+			_say(r, 4.0)
+			if r.begins_with("No"):
+				game.deny()
+
+
+func _draw_garrisons(s: Vector2) -> void:
+	hud.draw_rect(Rect2(Vector2.ZERO, s), Color(0.03, 0.03, 0.045, 0.88))
+	var r := Rect2(30, 40, s.x - 60, s.y - 90)
+	Pal.plate(hud, r)
+	Pal.tag(hud, r.position + Vector2(12, -8), "GARRISONS", 9)
+	Pal.text(hud, r.position + Vector2(14, 10), "Free militia: %d        Spare guns on the shelves: %d" % [Town.militia(state), Town.spare_guns(state).size()], 9, Pal.TEXT)
+	Pal.wrap(hud, r.position + Vector2(14, 24), "Every held district needs people or it slips back, and they may come for it any night (an auto battle against its garrison). An armed militiaman counts twice an unarmed one. Don't spread yourself thin.", 7, Pal.DIM, r.size.x - 28, 3)
+	var y := r.position.y + 52
+	var any := false
+	for d in L["districts"]:
+		var did: String = d["id"]
+		if not Town.held(state, did):
+			continue
+		any = true
+		var row := Rect2(r.position.x + 10, y, r.size.x - 20, 26)
+		hud.draw_rect(row, Color(0.12, 0.1, 0.09))
+		var bar := int(Town.dstate(state, did)["bar"])
+		Pal.text(hud, row.position + Vector2(8, 3), str(d["name"]), 9, Color.html(str(d["colours"][1])).lightened(0.3))
+		Pal.text(hud, row.position + Vector2(8, 14), "%d holding (%d armed)   strength %.1f   hold %d%%" % [Town.garrison(state, did), mini(Town.garrison(state, did), Town.arms(state, did)), Town.strength(state, did), bar], 7, Pal.TEXT)
+		var bx := row.end.x - 250
+		_btn(Rect2(bx, row.position.y + 5, 44, 16), "-1", "take:%s:1" % did, Town.garrison(state, did) > 0)
+		_btn(Rect2(bx + 48, row.position.y + 5, 44, 16), "+1", "add:%s:1" % did, Town.militia(state) > 0)
+		_btn(Rect2(bx + 96, row.position.y + 5, 44, 16), "+5", "add:%s:5" % did, Town.militia(state) > 0)
+		_btn(Rect2(bx + 144, row.position.y + 5, 100, 16), "GIVE A GUN", "arm:%s" % did, not Town.spare_guns(state).is_empty())
+		y += 30
+	if not any:
+		Pal.wrap(hud, Vector2(r.position.x + 14, y), "You hold nothing yet. Take a district's KEY (its police post) on the front and it's yours to defend.", 8, Pal.TEXT, r.size.x - 28, 3)
+	_btn(Rect2(r.end.x - 110, r.end.y - 28, 98, 20), "DONE (G)", "close")
 
 
 func _pin(kind: String, ref, r: Rect2, text: String, col: Color) -> void:
@@ -343,6 +402,9 @@ func _use(pin: Dictionary) -> void:
 	match str(pin["kind"]):
 		"home":
 			_go_home()
+		"post":
+			phase = "garrison"
+			game.click()
 		"citadel":
 			_say("The citadel. Granite and red cloth. Not yet: you'll need everyone.", 5.0)
 			game.deny()
@@ -550,10 +612,15 @@ func _unhandled_key_input(e: InputEvent) -> void:
 		KEY_E, KEY_ENTER:
 			if phase == "map" and not near.is_empty():
 				_use(near)
+		KEY_G:
+			if phase == "map":
+				phase = "garrison"
+			elif phase == "garrison":
+				phase = "map"
 		KEY_TAB, KEY_M:
 			overview = not overview
 		KEY_ESCAPE:
-			if phase == "yard":
+			if phase in ["yard", "garrison"]:
 				phase = "map"
 			elif mode == "plan":
 				_go_home()
@@ -582,6 +649,9 @@ func _hud_input(e: InputEvent) -> void:
 
 
 func _button(id: String) -> void:
+	if phase == "garrison":
+		_garrison_button(id)
+		return
 	if phase == "caught":
 		_caught_choice(id)
 		return
@@ -619,7 +689,7 @@ func _draw_hud() -> void:
 	hud.draw_rect(top, Color(0.05, 0.04, 0.05, 0.85))
 	Pal.text(hud, top.position + Vector2(8, 4), "DAY %d   %s   %s" % [int(state.day), state.clock_text(), "OUT AFTER CURFEW" if mode == "walk" else "PLANNING"], 8, Pal.TEXT)
 	if not d.is_empty():
-		var st := "OURS  %d%%" % int(Town.dstate(state, d["id"])["bar"]) if Town.held(state, d["id"]) else ("HOME" if d["role"] == "home" else ("ON THE FRONT" if Town.on_front(state, d["id"]) else "THEIR GROUND"))
+		var st := "OURS  %d%%  -  %d holding it" % [int(Town.dstate(state, d["id"])["bar"]), Town.garrison(state, d["id"])] if Town.held(state, d["id"]) else ("HOME" if d["role"] == "home" else ("ON THE FRONT" if Town.on_front(state, d["id"]) else "THEIR GROUND"))
 		Pal.text(hud, top.position + Vector2(8, 18), "%s  -  %s" % [d["name"], st], 8, Color.html(str(d["colours"][1])).lightened(0.3))
 	Pal.text(hud, Vector2(s.x - 140, 10), "%d cr" % int(state.money), 10, Pal.BRASS, HORIZONTAL_ALIGNMENT_RIGHT, 130)
 	# being seen
@@ -643,6 +713,8 @@ func _draw_hud() -> void:
 					label = "%s: behind their lines" % t["name"]
 			"citadel":
 				label = "The citadel"
+			"post":
+				label = "E: the garrisons"
 		var pr := Rect2(s.x * 0.5 - 150, s.y - 58, 300, 18)
 		hud.draw_rect(pr, Color(0.05, 0.04, 0.05, 0.85))
 		Pal.text(hud, pr.position + Vector2(0, 4), label, 9, Pal.AMBER, HORIZONTAL_ALIGNMENT_CENTER, pr.size.x)
@@ -651,9 +723,11 @@ func _draw_hud() -> void:
 		var mr := Rect2(s.x * 0.5 - 230, s.y - 92, 460, 28)
 		hud.draw_rect(mr, Color(0.05, 0.04, 0.05, 0.85 * a))
 		Pal.wrap(hud, mr.position + Vector2(8, 4), _msg, 8, Color(Pal.TEXT, a), mr.size.x - 16, 2)
-	Pal.text(hud, Vector2(0, s.y - 16), "WASD walk    Shift run    E use    Tab whole map    Esc %s" % ("home" if mode == "plan" else "cut home"), 7, Pal.DIM, HORIZONTAL_ALIGNMENT_CENTER, s.x)
+	Pal.text(hud, Vector2(0, s.y - 16), "WASD walk    Shift run    E use    G garrisons    Tab whole map    Esc %s" % ("home" if mode == "plan" else "cut home"), 7, Pal.DIM, HORIZONTAL_ALIGNMENT_CENTER, s.x)
 	if phase == "caught":
 		_draw_caught(s)
+	elif phase == "garrison":
+		_draw_garrisons(s)
 	elif phase == "yard":
 		_draw_yard(s)
 

@@ -573,6 +573,7 @@ static func night(state: RefCounted) -> Array:
 		lines.append("Word on the street: %s, on %s." % [wt["name"], wt["street"]])
 	lines.append_array(_meet_groups(state))
 	lines.append_array(_lent_home(state, tomorrow))
+	lines.append_array(Town.night(state))          # M4 V5: walk-ins, reprisals, counterattacks on what you hold
 	return lines
 
 

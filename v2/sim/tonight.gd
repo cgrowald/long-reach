@@ -161,6 +161,22 @@ static func board(state) -> Array:
 		cards.append({"title": "TARGETS", "line": "Job: %s" % str(jobs[0]["name"]).capitalize(), "go": "pc", "ok": true})
 	elif not open.is_empty():
 		cards.append({"title": "TARGETS", "line": "%d place%s to hit (PC)" % [open.size(), "" if open.size() == 1 else "s"], "go": "pc", "ok": true})
+	# DISTRICTS (M4 V5): what you hold, and anyone free to post
+	var Town = load("res://v2/sim/town.gd")
+	var held_n := 0
+	var thin := ""
+	for d in Town.layout(state)["districts"]:
+		if Town.held(state, d["id"]):
+			held_n += 1
+			if Town.garrison(state, d["id"]) < int(Town.H().get("enough", 4)) and thin == "":
+				thin = str(d["name"]).capitalize()
+	if held_n > 0:
+		var line := "%d held" % held_n
+		if Town.militia(state) > 0:
+			line += ", %d militia to post" % Town.militia(state)
+		elif thin != "":
+			line += ", %s is thin" % thin
+		cards.append({"title": "DISTRICTS", "line": line + " (map: G)", "go": "roller_door", "ok": thin == "" and Town.militia(state) == 0})
 	if state.flags.has("contacts_new"):
 		cards.append({"title": "CONTACTS", "line": "Someone new wants to meet (PC)", "go": "pc", "ok": true})
 	# ARRIVING, PRISONER

@@ -261,6 +261,9 @@ static func reachable(state: RefCounted, t: Dictionary) -> bool:
 ## A win at a target: a key opens its district; any win in a held district pushes its bar up.
 static func on_hit(state: RefCounted, t: Dictionary, outcome: String) -> Array:
 	var did := str(t.get("district", ""))
+	if did != "" and outcome != "":
+		ms(state)["recent"] = ms(state).get("recent", {})
+		ms(state)["recent"][did] = int(state.day)          # they answer hits with reprisals
 	if did == "" or outcome != "success":
 		return []
 	var ds := dstate(state, did)
@@ -269,8 +272,9 @@ static func on_hit(state: RefCounted, t: Dictionary, outcome: String) -> Array:
 	if t.has("key") and not ds["held"]:
 		ds["held"] = true
 		ds["bar"] = 60
+		ds["garrison"] = int(H().get("start_garrison", 2))          # a few locals stand up straight away
 		t["status"] = "gone"           # the post is ours now
-		return ["%s is ours. Hold it: it needs people to defend it, and the street to stay with us." % nm]
+		return ["%s is ours. %d locals stand up to hold it. Post more there (the map, at the post) or it slips back." % [nm, garrison(state, did)]]
 	if ds["held"]:
 		ds["bar"] = mini(100, int(ds["bar"]) + 10)
 	return []
@@ -354,3 +358,174 @@ static func ensure_keys(state: RefCounted) -> void:
 		t["district"] = d["id"]
 	for t in Targets.ts(state)["list"]:
 		place_target(state, t)
+
+
+# ------------------------------------------------------------------ holding (V5 part 2)
+## User 2026-11-26: "you have to leave troops to defend, but it's an auto battle; this is where thinking
+## strategically matters so you don't stretch yourself thin." Held districts send walk-in MILITIA (a free
+## pool, ms.militia); you post them as a garrison in a district and give them spare guns from the stash
+## (an armed militiaman counts fully, an unarmed one a third). Every night the regime may counterattack a
+## held district: their strength against your garrison, settled as an auto battle (rounds of losses). Hits
+## bring reprisals on the street. A district's bar slips without a garrison; at 0 it's theirs again.
+
+static func H() -> Dictionary:
+	return data().get("holding", {})
+
+
+static func militia(state: RefCounted) -> int:
+	return int(ms(state).get("militia", 0))
+
+
+static func garrison(state: RefCounted, did: String) -> int:
+	return int(dstate(state, did).get("garrison", 0))
+
+
+static func arms(state: RefCounted, did: String) -> int:
+	return int(dstate(state, did).get("arms", 0))
+
+
+static func strength(state: RefCounted, did: String) -> float:
+	var g := garrison(state, did)
+	var a := mini(g, arms(state, did))
+	return a * 1.0 + (g - a) * float(H().get("unarmed", 0.34))
+
+
+## Move militia between the free pool and a district (n < 0 takes them back).
+static func post(state: RefCounted, did: String, n: int) -> int:
+	if not held(state, did) and n > 0:
+		return 0
+	var M := ms(state)
+	var ds := dstate(state, did)
+	if n > 0:
+		n = mini(n, militia(state))
+	else:
+		n = -mini(-n, garrison(state, did))
+	M["militia"] = militia(state) - n
+	ds["garrison"] = garrison(state, did) + n
+	return n
+
+
+## Spare guns in the stash (not worn by anyone): what you can hand to a garrison.
+static func spare_guns(state: RefCounted) -> Array:
+	var out: Array = []
+	var Loadout = load("res://v2/sim/loadout.gd")
+	for it in state.items:
+		if it.get("type", "") == "gear" and not it.has("on") and str(Loadout.gdef(str(it.get("gear", ""))).get("slot", "")) in ["primary", "sidearm"] and str(it.get("gear", "")) != "pipe":
+			out.append(it)
+	return out
+
+
+## Hand one spare gun to a district's garrison (it leaves the stash for good).
+static func arm(state: RefCounted, did: String) -> String:
+	var guns := spare_guns(state)
+	if guns.is_empty():
+		return "No spare guns on the shelves."
+	var it: Dictionary = guns[0]
+	state.items.erase(it)
+	dstate(state, did)["arms"] = arms(state, did) + 1
+	return "%s went to the garrison." % it.get("name", "A gun")
+
+
+## Their attack on a district tonight: how strong (the deeper toward the citadel and the hotter you are, the
+## stronger), or 0 if they don't come. More of their districts next door = likelier.
+static func attack_for(state: RefCounted, did: String, rng: RandomNumberGenerator) -> float:
+	var L := layout(state)
+	var d := district(L, did)
+	var theirs := 0
+	for o in L["districts"]:
+		if not held(state, o["id"]) and o["role"] != "home" and adjacent(L, o, d):
+			theirs += 1
+	var chance := float(H().get("attack_base", 0.1)) + float(state.attention) / 300.0 + 0.05 * theirs
+	if rng.randf() > chance:
+		return 0.0
+	return float(H().get("attack_min", 3.0)) + int(d.get("row", 1)) * float(H().get("attack_per_row", 2.5)) + float(state.attention) / 12.0 + rng.randf_range(0.0, 4.0)
+
+
+## The auto battle: both sides lose people round by round until one breaks. Returns {held, lost}.
+static func battle(state: RefCounted, did: String, attack: float, rng: RandomNumberGenerator) -> Dictionary:
+	var start := strength(state, did)
+	var ours := start
+	var them := attack * float(H().get("enemy_per_head", 0.6))      # worse than us, but many
+	var rounds := 0
+	while ours > 0.5 and them > 0.5 and rounds < 12:
+		rounds += 1
+		var hit_us := them * rng.randf_range(0.08, 0.2)
+		var hit_them := ours * rng.randf_range(0.12, 0.26)       # they're worse than us, but many
+		them -= hit_them
+		ours -= hit_us
+		if them < attack * float(H().get("enemy_per_head", 0.6)) * 0.4:
+			break                    # they pull back when it goes badly
+		if ours < start * 0.35:
+			break                    # we fall back
+	var frac := clampf(1.0 - ours / maxf(0.01, start), 0.0, 1.0)
+	var lost := mini(garrison(state, did), int(round(garrison(state, did) * frac)))
+	var won := ours > 0.5 and (them < attack * float(H().get("enemy_per_head", 0.6)) * 0.4 or ours >= them)
+	return {"held": won, "lost": lost}
+
+
+## Overnight on the map: walk-ins, the bar, reprisals, their counterattacks. Returns ledger lines.
+static func night(state: RefCounted) -> Array:
+	var lines: Array = []
+	var L := layout(state)
+	var M := ms(state)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash("%d:townnight:%d" % [int(state.world_seed), int(state.day)])
+	var T = load("res://v2/sim/targets.gd")
+	var recent: Dictionary = M.get("recent", {})
+	for d in L["districts"]:
+		var did: String = d["id"]
+		var nm := str(d["name"]).capitalize()
+		# reprisals: the night after a hit they come down on the street
+		if recent.has(did) and int(recent[did]) >= int(state.day) - 1 and rng.randf() < float(H().get("reprisal", 0.6)):
+			T._mood(state, {"district": did}, -int(H().get("reprisal_mood", 4)))
+			if held(state, did):
+				var took := mini(garrison(state, did), rng.randi_range(0, 2))
+				dstate(state, did)["garrison"] = garrison(state, did) - took
+				dstate(state, did)["bar"] = maxi(0, int(dstate(state, did)["bar"]) - 6)
+				lines.append("Reprisals in %s: doors kicked in, %d of ours taken." % [nm, took])
+			else:
+				lines.append("Reprisals in %s after the hit. People are angry; at whom depends on you." % nm)
+		if not held(state, did):
+			continue
+		var ds := dstate(state, did)
+		# walk-ins: people who want in, from a district that's ours
+		var mood := int(T.ts(state)["mood"].get(did, 0))
+		var walk := maxi(0, int(round(float(H().get("walk_ins", 1.5)) + mood / 15.0 + int(ds["bar"]) / 50.0 + rng.randf_range(-0.6, 0.6))))
+		if walk > 0:
+			M["militia"] = militia(state) + walk
+			lines.append("%d walked in from %s wanting to fight (militia: %d free)." % [walk, nm, militia(state)])
+		# the bar: a garrison holds it, an empty district slips
+		var g := garrison(state, did)
+		ds["bar"] = clampi(int(ds["bar"]) + (2 if g >= int(H().get("enough", 4)) else (-3 if g > 0 else -9)), 0, 100)
+		# their counterattack: an auto battle against the garrison
+		var atk := attack_for(state, did, rng)
+		if atk > 0.0:
+			var r := battle(state, did, atk, rng)
+			ds["garrison"] = garrison(state, did) - int(r["lost"])
+			if r["held"]:
+				ds["bar"] = mini(100, int(ds["bar"]) + 5)
+				lines.append("They came for %s in the night (about %d). The garrison held, %d lost." % [nm, int(atk), int(r["lost"])])
+			else:
+				lines.append("They took %s back in the night (about %d of them). %d of ours lost, the rest scattered home." % [nm, int(atk), int(r["lost"])])
+				_lose(state, did)
+				continue
+		if int(ds["bar"]) <= 0:
+			lines.append("%s slipped away: nobody was there to hold it." % nm)
+			_lose(state, did)
+	return lines
+
+
+## A district is theirs again: half the survivors come back to the pool, the guns are gone, its key reopens.
+static func _lose(state: RefCounted, did: String) -> void:
+	var ds := dstate(state, did)
+	ms(state)["militia"] = militia(state) + int(garrison(state, did) / 2)
+	ds["held"] = false
+	ds["garrison"] = 0
+	ds["arms"] = 0
+	ds["bar"] = 0
+	var T = load("res://v2/sim/targets.gd")
+	for t in T.ts(state)["list"]:
+		if str(t.get("key", "")) == did:
+			t["status"] = "open"
+			t["reinforce"] = mini(3, int(t.get("reinforce", 0)) + 1)
+			t["know"] = mini(int(t["know"]), 1)

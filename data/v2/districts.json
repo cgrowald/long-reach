@@ -1,6 +1,8 @@
 {
 	"_note": "M4 V5: the town's districts (docs/M4_VARIETY.md section 10). Each run lays out the town from these: your home district at the bottom, the citadel at the top, Ministry Row always just below it, the rest mixed in between. 'name' is a PLACEHOLDER until the user names it (user 2026-11-26: Claude gives the vibe, the user names it, lore written together). 'vibe' = what it has and who lives there; 'colours' from art bible 16 where it has them; 'key' = the building type you take to open the district; 'places' = what kinds of targets turn up there.",
 	"home": "canal",
+	"holding": {"_note": "V5 part 2 numbers, first guesses. unarmed = how much an unarmed militiaman counts; enough = garrison size that keeps the bar rising; attack_* = their counterattack.",
+		"walk_ins": 1.5, "unarmed": 0.5, "enough": 4, "attack_base": 0.1, "attack_min": 3.0, "attack_per_row": 2.0, "enemy_per_head": 0.6, "reprisal": 0.6, "reprisal_mood": 4, "start_garrison": 2},
 	"rows": [["home"], ["mid", "mid"], ["mid", "mid", "mid"], ["ministry"], ["citadel"]],
 	"districts": {
 		"canal": {"name": "CANAL ESTATE", "role": "home", "colours": ["#6b4a32", "#a07a52"], "patch": "brown wool",
