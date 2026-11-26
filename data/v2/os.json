@@ -30,6 +30,8 @@
 		{"name": "Files", "icon": "folder", "app": "files", "arg": "/home/citizen"},
 		{"name": "Mail", "icon": "mail", "app": "mail"},
 		{"name": "Jobs", "icon": "target", "app": "jobs"},
+		{"name": "Targets", "icon": "target", "app": "targets"},
+		{"name": "Contacts", "icon": "user", "app": "contacts"},
 		{"name": "Drop", "icon": "drop", "app": "drop"},
 		{"name": "Shop", "icon": "package", "app": "shop"},
 		{"name": "Lantern", "icon": "globe", "app": "lantern"},
@@ -47,6 +49,8 @@
 		{"id": "settings", "name": "Preferences", "icon": "gear", "size": [270, 170], "keys": "settings control panel wallpaper appearance"},
 		{"id": "jobs", "name": "Patchbay", "icon": "target", "size": [600, 300], "keys": "hack hacking targets missions box jobs patchbay"},
 		{"id": "drop", "name": "Dead Drop", "icon": "drop", "size": [420, 240], "keys": "sell post fixer nod intel files followers"},
+		{"id": "targets", "name": "Targets", "icon": "target", "size": [560, 290], "keys": "targets raid hit places scout watch plan nod"},
+		{"id": "contacts", "name": "Contacts", "icon": "user", "size": [560, 300], "keys": "contacts groups buyers jobs trust favours reporters fixer"},
 		{"id": "shop", "name": "ShopNet", "icon": "package", "size": [440, 250], "keys": "shop buy market store order parts"},
 		{"id": "lantern", "name": "Lantern", "icon": "globe", "size": [440, 250], "keys": "black market lantern buy guns ammo"},
 		{"id": "war", "name": "War room", "icon": "war", "locked": true, "keys": "map squads"}

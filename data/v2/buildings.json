@@ -92,6 +92,60 @@
 				{"id": "night", "title": "04:00  NIGHT SHIFT", "line": "Skeleton shift. Still armed, still awake.", "daylight": false}
 			]
 		},
+		"refinery": {
+			"name": "Refinery", "names": ["STATE METALWORKS 2", "THE KESSEL SMELTER", "NORTH ALLOY WORKS"],
+			"brief": "PLACEHOLDER: {name} on {street}. Furnaces day and night. The alloy store at the back holds the rare stock the army waits on.",
+			"w": [20, 26], "d": [18, 22], "front": [0.2, 0.26], "wing": 0.45, "yard": 0.7, "loops": [1, 2],
+			"corridor": {"cross": 0.6, "none": 0.4},
+			"front_rooms": [{"kind": "gatehouse", "w": 1.0, "must": true, "entry": true}, {"kind": "works_office", "w": 1.2, "must": true}, {"kind": "lockers_room", "w": 0.8}],
+			"back_rooms": [{"kind": "furnace_hall", "w": 3.2, "must": true}, {"kind": "casting", "w": 1.8}, {"kind": "assay", "w": 0.9, "chance": 0.7}, {"kind": "alloy_store", "w": 1.0, "must": true}, {"kind": "loading", "w": 1.2}],
+			"wing_rooms": [{"kind": "ore_store", "w": 1.0}, {"kind": "loading", "w": 0.8, "chance": 0.5}],
+			"filler": "ore_store",
+			"guards": [5, 8], "night_guards": [4, 6], "civilians": [2, 5], "cctv": 2,
+			"camo": ["regime_low", "navy"], "head": ["helmet", "cap"], "weapons": {"pistol": 2, "smg": 2, "carbine": 1}, "acc": [0.55, 0.75],
+			"guard_title": ["works guard", "guard", "foreman"],
+			"objective": {"kinds": ["alloy_store"], "text": "Open the alloy store"},
+			"hours": [
+				{"id": "day", "title": "13:00  DAY SHIFT", "line": "Furnaces roaring, workers everywhere, the whole guard detail on.", "daylight": true},
+				{"id": "night", "title": "03:00  BANKED", "line": "Furnaces banked low. A skeleton crew and the night guard.", "daylight": false}
+			]
+		},
+		"radio": {
+			"name": "Radio mast", "names": ["STATE RADIO RELAY 3", "THE HILL TRANSMITTER", "BROADCAST STATION EAST"],
+			"brief": "PLACEHOLDER: {name} on {street}. The mast that carries the state broadcast. The codebook for the relay sits in the signal room.",
+			"w": [12, 16], "d": [10, 14], "front": [0.3, 0.4], "wing": 0.5, "yard": 1.0, "loops": [0, 1],
+			"corridor": {"cross": 0.5, "none": 0.5},
+			"front_rooms": [{"kind": "guard_room", "w": 1.0, "must": true, "entry": true}, {"kind": "works_office", "w": 1.0}],
+			"back_rooms": [{"kind": "transmitter", "w": 2.0, "must": true}, {"kind": "signal_room", "w": 1.0, "must": true}, {"kind": "generator", "w": 1.0}, {"kind": "wc", "w": 0.4, "chance": 0.5}],
+			"wing_rooms": [{"kind": "generator", "w": 1.0}, {"kind": "storeroom", "w": 0.8, "chance": 0.5}],
+			"filler": "storeroom",
+			"guards": [4, 6], "night_guards": [3, 5], "civilians": [1, 2], "cctv": 2,
+			"camo": ["woodland", "regime_low"], "head": ["helmet"], "weapons": {"smg": 2, "carbine": 2, "pistol": 1}, "acc": [0.6, 0.8],
+			"guard_title": ["soldier", "corporal", "signaller"],
+			"objective": {"kinds": ["signal_room"], "text": "Take the relay codebook from the signal room"},
+			"hours": [
+				{"id": "day", "title": "10:00  BROADCAST", "line": "On air. Engineers at the desks, the full guard detail.", "daylight": true},
+				{"id": "night", "title": "02:00  OFF AIR", "line": "Off air. A night watch in the guard room.", "daylight": false}
+			]
+		},
+		"library": {
+			"name": "Library", "names": ["THE PEOPLE'S READING ROOM", "DISTRICT LIBRARY 2", "THE OLD ATHENAEUM"],
+			"brief": "PLACEHOLDER: {name} on {street}. Nobody guards books. The rare books room has the one we want.",
+			"w": [12, 16], "d": [10, 14], "front": [0.45, 0.6], "wing": 0.3, "yard": 0.3, "loops": [0, 1],
+			"corridor": {"none": 0.7, "cross": 0.3},
+			"front_rooms": [{"kind": "reading_room", "w": 2.0, "must": true, "entry": true}],
+			"back_rooms": [{"kind": "stacks", "w": 2.0}, {"kind": "rare_books", "w": 1.0, "must": true}, {"kind": "librarian", "w": 0.8}, {"kind": "wc", "w": 0.4, "chance": 0.6}],
+			"wing_rooms": [{"kind": "stacks", "w": 1.0}],
+			"filler": "stacks",
+			"guards": [0, 0], "night_guards": [0, 0], "civilians": [2, 4],
+			"camo": ["street"], "head": ["none"], "weapons": {"pistol": 1}, "acc": [0.4, 0.5],
+			"guard_title": ["porter"],
+			"objective": {"kinds": ["rare_books"], "text": "Find the book in the rare books room"},
+			"hours": [
+				{"id": "day", "title": "16:00  OPEN", "line": "A few readers and the librarian. Walk in like you belong.", "daylight": true},
+				{"id": "night", "title": "23:00  CLOSED", "line": "Locked and dark. Nobody at all.", "daylight": false}
+			]
+		},
 		"depot": {
 			"name": "Depot", "names": ["DOBREV FREIGHT"],
 			"brief": "PLACEHOLDER: {name}. The secure store at the back, cabled to a PC.",
@@ -168,6 +222,36 @@
 			"dress": [{"kit": "pallet", "spot": true, "n": [2, 4]}, {"kit": "shelf", "n": [2, 3]}, {"kit": "crate_stack", "n": [1, 2]}]},
 		"loading": {"name": "LOADING BAY", "open": true, "links": ["warehouse", "corridor", "storeroom"], "back_door": true, "roller": true, "lamp_energy": 2.4, "guard": 1.2,
 			"dress": [{"kit": "pallet", "spot": true, "n": [1, 3]}, {"kit": "crate", "n": [1, 3]}]},
+		"gatehouse": {"name": "GATEHOUSE", "lamp_energy": 2.2, "guard": 2, "alarm": true,
+			"dress": [{"kit": "desk_pc", "n": [1, 1]}, {"kit": "chair", "n": [1, 1]}, {"kit": "lockers", "n": [0, 1]}, {"kit": "notice_board", "n": [0, 1]}]},
+		"works_office": {"name": "WORKS OFFICE", "links": ["gatehouse", "guard_room", "corridor", "furnace_hall", "transmitter"], "lamp_energy": 2.2, "guard": 0.6, "civ": 1, "civ_name": ["a clerk", "the shift manager"],
+			"dress": [{"kit": "desk_pc", "n": [1, 2]}, {"kit": "cabinet", "n": [1, 2]}, {"kit": "notice_board", "n": [0, 1]}]},
+		"furnace_hall": {"name": "FURNACE HALL", "open": true, "links": ["corridor", "casting", "loading", "ore_store", "lockers_room"], "lamp_energy": 3.0, "guard": 2, "patrol": true, "long_ok": true, "civ": 2, "civ_name": ["a furnace man", "a worker"],
+			"dress": [{"kit": "pipes", "n": [1, 2]}, {"kit": "crate_stack", "n": [1, 2]}, {"kit": "pallet", "spot": true, "n": [1, 3]}]},
+		"casting": {"name": "CASTING FLOOR", "open": true, "links": ["furnace_hall", "corridor", "assay", "alloy_store"], "lamp_energy": 2.6, "guard": 1, "civ": 1, "civ_name": ["a worker"], "long_ok": true,
+			"dress": [{"kit": "pallet", "spot": true, "n": [1, 2]}, {"kit": "shelf", "n": [1, 2]}, {"kit": "pipes", "n": [0, 1]}]},
+		"assay": {"name": "ASSAY LAB", "links": ["casting", "corridor", "works_office"], "lamp_energy": 2.4, "civ": 1, "civ_name": ["a chemist"],
+			"dress": [{"kit": "desk", "n": [1, 2]}, {"kit": "cabinet", "n": [1, 1]}, {"kit": "shelf", "n": [0, 1]}]},
+		"alloy_store": {"name": "ALLOY STORE", "links": ["casting", "corridor", "furnace_hall"], "deadend": true, "locked": 0.9, "lamp_energy": 1.6, "guard": 0.6,
+			"dress": [{"kit": "shelf", "n": [2, 3]}, {"kit": "crate", "n": [1, 3]}]},
+		"ore_store": {"name": "ORE STORE", "links": ["furnace_hall", "loading", "corridor"], "back_door": true, "lamp_energy": 1.6, "guard": 0.4,
+			"dress": [{"kit": "crate_stack", "n": [1, 3]}, {"kit": "pallet", "spot": true, "n": [0, 2]}]},
+		"guard_room": {"name": "GUARD ROOM", "lamp_energy": 2.2, "guard": 2.5, "alarm": true,
+			"dress": [{"kit": "desk", "n": [1, 1]}, {"kit": "chair", "n": [1, 1]}, {"kit": "lockers", "n": [1, 1]}, {"kit": "bench", "n": [0, 1]}]},
+		"transmitter": {"name": "TRANSMITTER HALL", "open": true, "links": ["corridor", "guard_room", "signal_room", "generator"], "lamp_energy": 2.4, "guard": 1.5, "patrol": true, "civ": 1, "civ_name": ["an engineer"],
+			"dress": [{"kit": "cabinet", "n": [2, 4]}, {"kit": "lockers", "n": [1, 2]}, {"kit": "pipes", "n": [0, 1]}]},
+		"signal_room": {"name": "SIGNAL ROOM", "links": ["transmitter", "corridor"], "deadend": true, "locked": 0.7, "lamp_energy": 1.8, "guard": 0.8, "civ": 1, "civ_name": ["a signaller"],
+			"dress": [{"kit": "desk_pc", "n": [1, 2]}, {"kit": "cabinet", "n": [1, 2]}]},
+		"generator": {"name": "GENERATOR ROOM", "links": ["transmitter", "corridor", "storeroom"], "back_door": true, "lamp_energy": 1.4, "guard": 0.5,
+			"dress": [{"kit": "pipes", "n": [1, 1]}, {"kit": "crate", "n": [1, 2]}]},
+		"reading_room": {"name": "READING ROOM", "open": true, "lamp_energy": 2.2, "civ": 3, "civ_name": ["a reader", "a student", "an old man asleep"],
+			"dress": [{"kit": "cafe_table", "spot": true, "n": [2, 3]}, {"kit": "shelf", "n": [1, 3]}, {"kit": "counter", "n": [0, 1]}]},
+		"stacks": {"name": "THE STACKS", "open": true, "links": ["reading_room", "corridor", "rare_books", "librarian"], "lamp_energy": 1.6, "civ": 1, "civ_name": ["a reader"], "long_ok": true,
+			"dress": [{"kit": "shelf", "n": [3, 5]}, {"kit": "shelf", "spot": true, "n": [1, 2]}]},
+		"rare_books": {"name": "RARE BOOKS", "links": ["stacks", "librarian", "corridor"], "deadend": true, "locked": 0.6, "lamp_energy": 1.4,
+			"dress": [{"kit": "shelf", "n": [2, 3]}, {"kit": "cabinet", "n": [1, 2]}, {"kit": "desk", "n": [0, 1]}]},
+		"librarian": {"name": "LIBRARIAN'S OFFICE", "links": ["reading_room", "stacks", "corridor"], "lamp_energy": 1.8, "civ": 1, "civ_always": false, "civ_name": ["the librarian"],
+			"dress": [{"kit": "desk_pc", "n": [1, 1]}, {"kit": "chair", "n": [0, 1]}, {"kit": "cabinet", "n": [1, 1]}]},
 		"vault": {"name": "SECURE STORE", "deadend": true, "door_walls": ["s", "e"], "lamp_energy": 1.6, "guard": 0.6, "timid": true,
 			"dress": []}
 	}

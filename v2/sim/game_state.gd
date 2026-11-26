@@ -37,6 +37,7 @@ var actions := 2                       # night actions left (only big things cos
 var actions_max := 2
 var steal_done := false                # this morning's steal choice made
 var unlocked_recipes: Array = []       # recipes a perk unlocked outright
+var targets: Dictionary = {}           # M4 V4: places to hit, the groups, district mood (v2/sim/targets.gd)
 
 
 static func new_game(p_seed: int) -> RefCounted:
@@ -108,6 +109,7 @@ func end_day() -> Array:
 	lines.append_array(load("res://v2/sim/hack.gd").deliver_drops(self))
 	lines.append_array(load("res://v2/sim/markets.gd").deliver(self))
 	lines.append_array(load("res://v2/sim/loadout.gd").heal_night(self))
+	lines.append_array(load("res://v2/sim/targets.gd").night(self))
 	ledger.append({"day": day, "lines": lines})
 	if ledger.size() > 30:
 		ledger.pop_front()
@@ -127,7 +129,7 @@ func to_dict() -> Dictionary:
 		"materials": materials, "tools": tools, "items": items, "mastery": mastery, "next_item_id": next_item_id,
 		"os": os, "people": people, "supplies": supplies, "mat_grades": mat_grades, "job": job, "job_grades": job_grades,
 		"job_offers": job_offers, "suspicion": suspicion, "actions": actions, "actions_max": actions_max, "steal_done": steal_done,
-		"unlocked_recipes": unlocked_recipes,
+		"unlocked_recipes": unlocked_recipes, "targets": targets,
 	}
 
 
@@ -187,6 +189,7 @@ static func from_dict(d: Dictionary) -> RefCounted:
 	s.actions_max = int(d.get("actions_max", 2))
 	s.steal_done = bool(d.get("steal_done", false))
 	s.unlocked_recipes = d.get("unlocked_recipes", [])
+	s.targets = d.get("targets", {})
 	var sup: Dictionary = d.get("supplies", {})
 	for k in sup:
 		s.supplies[k] = int(sup[k])

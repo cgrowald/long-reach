@@ -153,6 +153,16 @@ static func board(state) -> Array:
 		cards.append({"title": "DEPOT", "line": "Plan file found", "go": "roller_door", "ok": true})
 	else:
 		cards.append({"title": "DEPOT", "line": "No plan file: hack it on the PC", "go": "pc", "ok": true})
+	# TARGETS (M4 V4): places to hit, on the PC
+	var Targets = load("res://v2/sim/targets.gd")
+	var open: Array = Targets.list(state).filter(func(t: Dictionary) -> bool: return Targets.can_hit(state, t))
+	var jobs: Array = open.filter(func(t: Dictionary) -> bool: return t.has("job"))
+	if not jobs.is_empty():
+		cards.append({"title": "TARGETS", "line": "Job: %s" % str(jobs[0]["name"]).capitalize(), "go": "pc", "ok": true})
+	elif not open.is_empty():
+		cards.append({"title": "TARGETS", "line": "%d place%s to hit (PC)" % [open.size(), "" if open.size() == 1 else "s"], "go": "pc", "ok": true})
+	if state.flags.has("contacts_new"):
+		cards.append({"title": "CONTACTS", "line": "Someone new wants to meet (PC)", "go": "pc", "ok": true})
 	# ARRIVING, PRISONER
 	var arr := arrivals(state)
 	if not arr.is_empty():

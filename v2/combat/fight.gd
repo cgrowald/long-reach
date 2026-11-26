@@ -19,6 +19,7 @@ const Loadout := preload("res://v2/sim/loadout.gd")
 const DepotOp := preload("res://v2/combat/depot_op.gd")
 const CivAI := preload("res://v2/combat/civ_ai.gd")
 const BuildingGen := preload("res://v2/sim/building_gen.gd")
+const Targets := preload("res://v2/sim/targets.gd")
 
 const SHOUTS := [
 	{"id": "stack", "label": "STACK", "needs": "door", "say": "Stack up on that door."},
@@ -72,6 +73,9 @@ var _env: Environment
 var _look_drag := false
 var board: Control
 var op: RefCounted = null          # the depot raid layer (v2/combat/depot_op.gd) when sent from the garage
+var target: Dictionary = {}       # M4 V4: the place you hit, when sent from the Targets app (v2/sim/targets.gd)
+var burn := false                 # burn it on the way out (a door charge)
+var cuffs0 := 99
 const OpsBoard := preload("res://v2/combat/ops_board.gd")
 const Overview := preload("res://v2/combat/overview.gd")
 const Orders := preload("res://v2/combat/orders.gd")
@@ -91,10 +95,16 @@ func _ready() -> void:
 	var lv_id := "combat/depot"
 	if game and not game.has_meta("op_team"):
 		lv_id = str(game.get_meta("fight_level", lv_id))
-	data = BuildingGen.level(lv_id)         # a data file, or "gen:<type>:<seed>" (M4 V3)
+	if game and game.state != null and game.has_meta("op_team") and game.has_meta("fight_target"):
+		target = Targets.find(game.state, str(game.get_meta("fight_target")))
+	if not target.is_empty():
+		data = Targets.level_for(game.state, target)          # M4 V4: a target from the Targets app
+		burn = bool((game.get_meta("fight_plan", {}) as Dictionary).get("burn", false))
+	else:
+		data = BuildingGen.level(lv_id)         # a data file, or "gen:<type>:<seed>" (M4 V3)
 	if data.has("plan"):
 		data = _apply_plan(data)
-	if game and game.state != null and game.has_meta("op_team"):
+	if game and game.state != null and game.has_meta("op_team") and target.is_empty():
 		op = DepotOp.new()
 		data = op.prepare(self, data)
 	view = PixelView.new()
@@ -116,6 +126,11 @@ func _ready() -> void:
 	sq = SquadAI.new()
 	var sp: Array = data["start"]["pos"]
 	sq.setup(squad, enemies, level, en, Vector3(sp[0], 0, sp[1]))
+	if game and game.state != null and game.has_meta("op_team"):
+		cuffs0 = int(game.state.supplies.get("cuffs", 0))         # zip cuffs are rare: only what's in the stash
+		sq.cuffs = cuffs0
+		for a in squad:
+			a.set_meta("carry", _carry_of(a))
 	sq.log_line.connect(func(t: String) -> void:
 		_event(t)
 		if t.begins_with("YOU overruled"):
@@ -1231,6 +1246,61 @@ func _squad_defs() -> Array:
 	return data.get("squad", [])
 
 
+## Free rig cells (plus hands and pockets): what this fighter can carry out.
+func _carry_of(a) -> int:
+	var p := Loadout.person(game.state, a.id)
+	if p.is_empty():
+		return 4
+	var gs := Loadout.grid_size(game.state, p)
+	var used := 0
+	for e in p["grid"]:
+		var c := Loadout.cells(e["gear"])
+		used += c.x * c.y
+	return maxi(0, gs.x * gs.y - used) + 2
+
+
+## M4 V4: what a target hit brings home: the crates your people carried out, the people you cuffed, and what
+## happens to the place (shut, more guards, burned), the street's mood, the group who wanted it.
+func _target_results() -> Array:
+	var st = game.state
+	var notes: Array = []
+	var got: Array = []
+	for a in squad:
+		if a.state == "dead":
+			continue           # what the dead carried stays behind
+		for c in a.get_meta("crates", []):
+			for it in c["items"]:
+				got.append(Targets.grant(st, it, str(target.get("name", ""))))
+	if not got.is_empty():
+		notes.append("Looted: " + ", ".join(PackedStringArray(got)) + ".")
+	for c in level.loots:
+		if c.get("good", false) and not c["done"] and int(target.get("know", 0)) >= 3:
+			notes.append("The good crate (%s) stayed behind." % c["label"])
+	# the people you cuffed, walked out (one per fighter still standing)
+	var walkers := squad.filter(func(a) -> bool: return a.state == "ok").size()
+	var prisoners: Array = []
+	if outcome != "failed":
+		for e in enemies:
+			if e.state != "cuffed" or prisoners.size() >= walkers:
+				continue
+			var d: Dictionary = e.get_meta("def")
+			var p: Dictionary = load("res://v2/sim/people_gen.gd").make(hash(str(d.get("name", "")) + str(target.get("id", ""))), "guard")
+			p["name"] = str(d.get("name", p.get("name", "?"))).to_upper()
+			p["kind"] = "official" if d.get("vip", false) else "guard"
+			p["offense"] = "Worked at %s" % str(target.get("name", "")).capitalize()
+			p["from_target"] = str(target.get("id", ""))
+			prisoners.append(p)
+	notes.append_array(Targets.bring_prisoners(st, prisoners))
+	# burn it on the way out
+	var burned := false
+	if burn and outcome == "success" and int(st.supplies.get("charge", 0)) > 0:
+		st.supplies["charge"] = int(st.supplies["charge"]) - 1
+		burned = true
+	var hurt := civilians.filter(func(c) -> bool: return c.state in ["dead", "down"]).size()
+	notes.append_array(Targets.after_hit(st, target, {"outcome": outcome, "burned": burned, "civ_hurt": hurt}))
+	return notes
+
+
 ## Back to the garage with what happened: the dead, what got used, the loot, the night spent.
 func _return_home() -> void:
 	var st = game.state
@@ -1263,6 +1333,8 @@ func _return_home() -> void:
 	var notes := Loadout.apply_op(st, results, loot)
 	if op:
 		notes.append_array(op.results(outcome))
+	if not target.is_empty():
+		notes.append_array(_target_results())
 	# coming home (D): who your meds helped, the files off the PCs, and the haul waiting under a garage lamp
 	for a in squad:
 		for t in a.treated:
@@ -1279,14 +1351,21 @@ func _return_home() -> void:
 		st.next_item_id += 1
 		haul.append("Files off the %s (on the stick)." % pf)
 	if not haul.is_empty() and outcome != "failed":
-		st.flags["haul"] = {"title": "THE DOBREV CARTON", "lines": haul, "day": st.day}
-	if sq.have_objective and op == null:
+		st.flags["haul"] = {"title": "THE DOBREV CARTON" if target.is_empty() else "FROM %s" % str(target.get("name", "")).to_upper(), "lines": haul, "day": st.day}
+	if sq.have_objective and op == null and target.is_empty():
 		st.items.append({"id": st.next_item_id, "name": "Shipping manifests", "type": "intel", "tag": "plan",
 			"worth": "Which trucks carry what, and when.", "source": data.get("name", ""), "day": st.day, "stars": 0, "quality": 0.0, "hand": true, "perks": []})
 		st.next_item_id += 1
-	st.minute = st.end_minute          # an op takes the night
-	st.actions = 0
+	if not target.is_empty() and str(Targets.kind(str(target["type"])).get("time", "night")) == "action":
+		st.actions = maxi(0, int(st.actions) - 1)          # a small job: one night action, three hours
+		st.minute = mini(st.end_minute, st.minute + 180)
+	else:
+		st.minute = st.end_minute          # an op takes the night
+		st.actions = 0
+	if cuffs0 < 99:
+		st.supplies["cuffs"] = maxi(0, int(st.supplies.get("cuffs", 0)) - maxi(0, cuffs0 - sq.cuffs))
 	game.remove_meta("op_team")
+	game.remove_meta("fight_target")
 	game.set_meta("op_notes", notes)
 	game.autosave()
 	game.goto("res://v2/garage.tscn")
@@ -1356,6 +1435,8 @@ func _leave_headline() -> String:
 		_:
 			if sq.vip_outcome != "":
 				return ("WE HAVE THE DEPUTY" if sq.vip_outcome == "taken" else "THE DEPUTY IS DEAD") + ("" if outcome == "success" else "  (but we didn't get out clean)")
+			if not target.is_empty():
+				return "WE GOT WHAT WE CAME FOR" if outcome == "success" else "WE GOT OUT"
 			return "OUT WITH THE FREIGHT" if op else ("THE MANIFESTS ARE OURS" if outcome == "success" else "WE GOT OUT")
 
 

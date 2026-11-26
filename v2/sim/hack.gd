@@ -688,6 +688,7 @@ func finish(state: RefCounted) -> Dictionary:
 	if not done.has(target["id"]) and not (cut and target.get("tutorial", false)):
 		done.append(target["id"])
 	state.os["jobs_done"] = done
+	lines.append_array(load("res://v2/sim/targets.gd").on_hack(state, target, ran, cut))
 	if lines.is_empty():
 		lines.append("You got out with nothing.")
 	return {"lines": lines, "ran": ran.duplicate(), "cut": cut}

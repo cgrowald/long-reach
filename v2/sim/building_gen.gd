@@ -157,6 +157,15 @@ static func _try(type: String, p_seed: int, attempt: int) -> Dictionary:
 	_cctv(rng, lv, T, rooms)
 	_outside_dress(rng, lv, rooms, doors)
 	_people(rng, lv, T, K, rooms, doors, occ, p_seed)
+	# a free spot per room for things to find (v2/sim/targets.gd puts the loot there); its own dice, so
+	# adding it changed no existing layout
+	var srng := RandomNumberGenerator.new()
+	srng.seed = hash("%s:%d:spots" % [type, p_seed])
+	lv["spots"] = {}
+	for r in rooms:
+		if not r["outdoor"]:
+			var sp := _spot(srng, r["rect"], occ[r["id"]], 0.9)
+			lv["spots"][r["id"]] = [snappedf(sp.x, 0.05), snappedf(sp.y, 0.05)]
 	_plan(lv, T, rooms, doors, bname, street_name)
 	return lv
 
@@ -777,8 +786,6 @@ static func _people(rng: RandomNumberGenerator, lv: Dictionary, T: Dictionary, K
 	var ng := mini(rng.randi_range(int(gr[0]), int(gr[1])), posts.size())
 	var nr: Array = T.get("night_guards", [1, 2])
 	var n_night := mini(rng.randi_range(int(nr[0]), int(nr[1])), ng)
-	var ar: Array = T.get("acc", [0.6, 0.8])
-	var titles: Array = T.get("guard_title", ["guard"])
 	var hours: Array = T.get("hours", [])
 	var has_day := hours.any(func(h: Dictionary) -> bool: return h["id"] == "day")
 	var shotguns := 0
@@ -790,15 +797,7 @@ static func _people(rng: RandomNumberGenerator, lv: Dictionary, T: Dictionary, K
 			if shotguns > 1:
 				wpn = "pistol"      # one shotgun a building: a room of them is a wipe through the only door
 
-		var person := People.make(hash("%d:%s:g%d" % [p_seed, str(T.get("name", "")), i]), "guard")
-		var e := {"id": "g%d" % i, "name": "%s %s" % [titles[rng.randi() % titles.size()], person["last"]], "kind": "guard",
-			"pos": post["pos"], "yaw": post["yaw"], "state": post["state"], "camo": _one(rng, T.get("camo", ["black"])), "head": _one(rng, T.get("head", ["cap"])),
-			"acc_mult": snappedf(rng.randf_range(float(ar[0]), float(ar[1])), 0.01),
-			"gear": {"weapon": wpn, "round": "fmj", "attach": [], "plate": 1 if rng.randf() < 0.25 else 0, "mags": 4, "meds": 0}}
-		if post.has("patrol"):
-			e["patrol"] = post["patrol"]
-		if post.get("timid", false):
-			e["timid"] = true
+		var e := make_guard(rng, T, post, i, p_seed, wpn)
 		if has_day and i >= n_night:
 			e["hours"] = ["day"]
 		lv["enemies"] = lv.get("enemies", [])
@@ -819,6 +818,22 @@ static func _people(rng: RandomNumberGenerator, lv: Dictionary, T: Dictionary, K
 			c["hours"] = ["day"]
 		civs.append(c)
 	lv["civilians"] = civs
+
+
+## One guard at a post (also used by v2/sim/targets.gd for the extra guards a hard target gets).
+static func make_guard(rng: RandomNumberGenerator, T: Dictionary, post: Dictionary, i: int, p_seed: int, wpn: String) -> Dictionary:
+	var ar: Array = T.get("acc", [0.6, 0.8])
+	var titles: Array = T.get("guard_title", ["guard"])
+	var person := People.make(hash("%d:%s:g%d" % [p_seed, str(T.get("name", "")), i]), "guard")
+	var e := {"id": "g%d" % i, "name": "%s %s" % [titles[rng.randi() % titles.size()], person["last"]], "kind": "guard",
+		"pos": post["pos"], "yaw": post["yaw"], "state": post["state"], "camo": _one(rng, T.get("camo", ["black"])), "head": _one(rng, T.get("head", ["cap"])),
+		"acc_mult": snappedf(rng.randf_range(float(ar[0]), float(ar[1])), 0.01),
+		"gear": {"weapon": wpn, "round": "fmj", "attach": [], "plate": 1 if rng.randf() < 0.25 else 0, "mags": 4, "meds": 0}}
+	if post.has("patrol"):
+		e["patrol"] = post["patrol"]
+	if post.get("timid", false):
+		e["timid"] = true
+	return e
 
 
 ## The point where a room's first door is (guards face the way in).

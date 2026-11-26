@@ -533,6 +533,8 @@ func tick(delta: float) -> void:
 			_tick_breach(delta)
 		"slice":
 			_tick_slice(delta)
+		"loot":
+			_tick_loot(delta)
 		"exploit":
 			_tick_exploit(delta)
 		"flow":
@@ -796,8 +798,16 @@ func _tick_clear(delta: float) -> void:
 		if other and other != f0:
 			other.say("Room's clear, moving.", true)
 	log_line.emit("%s cleared" % _room_name(room_id))
+	_room_done(room_id)
+
+
+## A room is clear: its PCs, then its loot crates, then the objective if it's here, then on.
+func _room_done(room_id: String) -> void:
+	var f0 = by_role("point")
 	var obj_room: String = level.data.get("objective", {}).get("room", "")
 	if room_id != obj_room and _exploit_pc(room_id):
+		return
+	if _loot_crate(room_id):
 		return
 	# the objective: pick it up
 	var obj: Dictionary = level.data.get("objective", {})
@@ -919,14 +929,27 @@ func _cuff() -> void:
 			var c = e.get_meta("cuffer")
 			if not is_instance_valid(c) or not c.alive():
 				e.remove_meta("cuffer")
-			elif not c.moving() and c.busy <= 0.0:
-				if c.global_position.distance_to(e.global_position) < 1.0:
-					c.busy = 2.5
-					c.crouch = 0.8
+			elif e.has_meta("cuff_until"):
+				if _t >= float(e.get_meta("cuff_until")):         # cuffing takes a while (user 2026-11-26)
 					e.state = "cuffed"
 					e.pose_mode = "down"
+					cuffs -= 1
 					log_line.emit("%s zip-tied" % e.fighter_name)
 					e.remove_meta("cuffer")
+					e.remove_meta("cuff_until")
+			elif not c.moving() and c.busy <= 0.0:
+				if c.global_position.distance_to(e.global_position) < 1.0:
+					c.busy = CUFF_S + 0.2
+					c.crouch = 0.8
+					e.set_meta("cuff_until", _t + CUFF_S)
+			continue
+		if cuffs <= 0:
+			if not e.has_meta("nocuff"):
+				e.set_meta("nocuff", true)
+				var anyone = alive_fighters()[0] if not alive_fighters().is_empty() else null
+				if anyone:
+					anyone.say("No cuffs left. Stay on the floor!", true)
+				log_line.emit("No zip cuffs left: %s stays on the floor" % e.fighter_name)
 			continue
 		var best = null
 		var bd2 := 1e9
@@ -1174,12 +1197,70 @@ func _tick_exploit(delta: float) -> void:
 	pc_files.append(pc_name)
 	g.say("Got it. Files are on the stick.", true)
 	log_line.emit("Pulled the files off the %s PC" % _room_name(pc["room"]))
-	if _exploit_pc(str(task["into"])):
-		return
-	if auto:
-		_next_doctrine()
-	else:
+	_room_done(str(task["into"]))
+
+
+# ------------------------------------------------------------------ loot crates (M4 V4)
+
+var cuffs := 99                     # zip cuffs the crew carries (the fight sets it from the stash); 0 = can't cuff
+const CUFF_S := 6.0                 # seconds to cuff someone: that fighter is out of the fight meanwhile
+
+
+## A crate in this cleared room: the nearest fighter with room in their rig goes and takes it (it takes a few
+## seconds, hands busy, paused while there's shooting). Returns true if someone went.
+func _loot_crate(room_id: String) -> bool:
+	for c in level.loots:
+		if c["done"] or c.get("left", false) or c["room"] != room_id:
+			continue
+		var best = null
+		var bd := 1e9
+		for f in alive_fighters():
+			if int(f.get_meta("carry", 99)) < int(c["cells"]):
+				continue
+			var dd: float = f.global_position.distance_to(c["pos"])
+			if dd < bd:
+				bd = dd
+				best = f
+		if best == null:
+			c["left"] = true
+			var anyone = alive_fighters()[0] if not alive_fighters().is_empty() else null
+			if anyone:
+				anyone.say("There's %s here. No room in our rigs. Leaving it." % c["label"], true)
+			log_line.emit("Left %s behind: no room to carry it" % c["label"])
+			continue
+		best.say("%s in here. Grabbing it." % str(c["label"]).capitalize(), true)
+		var to: Vector3 = c["pos"] + (best.global_position - c["pos"]).normalized() * 0.7
+		best.go(_route(best, to), WALK)
+		task = {"type": "loot", "crate": c, "who": best, "t": 0.0, "into": room_id}
+		return true
+	return false
+
+
+func _tick_loot(delta: float) -> void:
+	var g = task.get("who")
+	var c: Dictionary = task["crate"]
+	if g == null or not is_instance_valid(g) or not g.alive():
 		task = {"type": "hold"}
+		return
+	if g.moving() or in_contact:
+		return
+	g.look_at_point = c["pos"] + Vector3(0, 0.3, 0)
+	g.busy = 0.2
+	g.crouch = 0.7
+	task["t"] = float(task["t"]) + delta
+	if float(task["t"]) < 3.0 + 1.0 * int(c["cells"]):
+		return
+	c["done"] = true
+	c["by"] = g
+	g.set_meta("carry", int(g.get_meta("carry", 99)) - int(c["cells"]))
+	var held: Array = g.get_meta("crates", [])
+	held.append(c)
+	g.set_meta("crates", held)
+	if is_instance_valid(c.get("node")):
+		(c["node"] as Node3D).visible = false
+	g.say("Got %s." % c["label"], true)
+	log_line.emit("%s took %s" % [_first(g), c["label"]])
+	_room_done(str(task["into"]))
 
 
 # ------------------------------------------------------------------ leaving: bounding overwatch (C5)

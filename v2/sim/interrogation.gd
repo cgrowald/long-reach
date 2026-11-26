@@ -118,6 +118,8 @@ static func _talk(state: RefCounted) -> String:
 		var leads := int(state.os["market"].get("leads", 0)) + 1
 		state.os["market"]["leads"] = leads
 		return "\"There are others in those cells. Names. People who'd help you.\" (+1 recruit lead)"
+	if str(p.get("from_target", "")) != "" or hash(str(p.get("name", ""))) % 2 == 0:
+		return load("res://v2/sim/targets.gd").from_chair(state, p) + " (Targets, on the PC)"        # M4 V4: they give up a place
 	Krall.push_back(state, 2.0, "the prisoner told you Krall's patrol schedule")
 	return "\"Krall's men change shifts at four. He's watching the depots.\" (Krall pushed back 2 nights)"
 
@@ -162,6 +164,7 @@ static func decide(state: RefCounted, choice: String, roll: float) -> Array:
 				lines.append("%s laughed at the offer. You let them go; it was that or worse." % p.get("first", "They"))
 				Krall.bump(state, 1.5, "a refused recruit talked")
 	state.flags.erase("prisoner")
+	load("res://v2/sim/targets.gd").next_prisoner(state)          # the next one held in the back sits down
 	return lines
 
 

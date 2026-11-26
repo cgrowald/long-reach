@@ -10,6 +10,7 @@ const PixelView := preload("res://v2/ui/pixel_view.gd")
 const Pal := preload("res://v2/ui/pal.gd")
 const Content := preload("res://v2/sim/content.gd")
 const BuildingGen := preload("res://v2/sim/building_gen.gd")
+const Targets := preload("res://v2/sim/targets.gd")
 const RED := Color(0.72, 0.12, 0.08)
 const PENCIL := Color(0.32, 0.3, 0.28)
 
@@ -22,12 +23,15 @@ var level_id := ""
 var gen_type := ""
 var pick := {"hour": "", "entry": ""}
 var _hits: Array = []           # [Rect2, kind, id]
+var target: Dictionary = {}     # M4 V4: planning a hit on a target from the Targets app (from the garage)
 
 
 func _ready() -> void:
 	game = get_node_or_null("/root/Game")
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	level_id = str(game.get_meta("fight_level", "combat/kessel_road")) if game else "combat/kessel_road"
+	if game and game.state != null and game.has_meta("fight_target"):
+		target = Targets.find(game.state, str(game.get_meta("fight_target")))
 	_load(game.get_meta("fight_plan", {}) if game else {})
 	view = PixelView.new()
 	add_child(view)
@@ -40,9 +44,19 @@ func _ready() -> void:
 
 
 func _load(had: Dictionary) -> void:
-	lv = BuildingGen.level(level_id)
-	plan = lv.get("plan", {})
-	gen_type = level_id.split(":")[1] if level_id.begins_with("gen:") else ""
+	if not target.is_empty():
+		lv = Targets.level_for(game.state, target)
+		plan = (lv.get("plan", {}) as Dictionary).duplicate(true)
+		if int(target["know"]) == 0:
+			plan["entries"] = (plan.get("entries", []) as Array).slice(0, 1)       # you only know the front door
+		var brief := "%s\n%s" % [str(target.get("line", "")), Targets.know_line(target)]
+		plan["brief"] = brief
+		plan["title"] = str(target["name"])
+		gen_type = ""
+	else:
+		lv = BuildingGen.level(level_id)
+		plan = lv.get("plan", {})
+		gen_type = level_id.split(":")[1] if level_id.begins_with("gen:") else ""
 	var hours: Array = plan.get("hours", [])
 	var entries: Array = plan.get("entries", [])
 	pick["hour"] = str(had.get("hour", hours[0]["id"]))
@@ -82,15 +96,30 @@ func _on_input(e: InputEvent) -> void:
 					reroll(str(h[2]))
 				"reroll":
 					reroll()
+				"burn":
+					pick["burn"] = not pick.get("burn", false)
 				"go":
 					go()
 				"back":
 					if game:
-						game.goto("res://v2/title.tscn")
+						if not target.is_empty():
+							game.remove_meta("fight_target")
+							game.goto("res://v2/garage.tscn")
+						else:
+							game.goto("res://v2/title.tscn")
 			return
 
 
 func go() -> void:
+	if game and not target.is_empty():
+		var team := Targets.team(game.state, target)
+		if team.is_empty():
+			game.deny()
+			return
+		game.set_meta("op_team", team)
+		game.set_meta("fight_plan", pick.duplicate())
+		game.goto("res://v2/combat/fight.tscn")
+		return
 	if game:
 		game.set_meta("fight_level", level_id)
 		game.set_meta("fight_plan", pick.duplicate())
@@ -134,6 +163,19 @@ func _draw_sheet() -> void:
 	y = _choices("WHEN", "hour", plan.get("hours", []), x, y, left_w)
 	y += 4
 	y = _choices("WAY IN", "entry", plan.get("entries", []), x, y, left_w)
+	if not target.is_empty():
+		_ready_box(Rect2(Vector2(x, y + 2), Vector2(left_w, r.end.y - 34 - (y + 2))))
+		var K := Targets.kind(str(target["type"]))
+		if K.get("destroy", false):
+			var charges := int(game.state.supplies.get("charge", 0))
+			var br := Rect2(Vector2(x + 80, r.end.y - 28), Vector2(180, 20))
+			var on: bool = pick.get("burn", false)
+			sheet.draw_rect(br, Pal.PAPER.darkened(0.12 if br.has_point(sheet.get_local_mouse_position()) else 0.05))
+			sheet.draw_rect(br, RED if on else Pal.INK.lightened(0.45), false, 2.0 if on else 1.0)
+			Pal.text(sheet, br.position + Vector2(6, 5), ("[X] " if on else "[  ] ") + "BURN IT AFTER" + ("  (%d charge%s)" % [charges, "" if charges == 1 else "s"]), 8,
+				Pal.INK if charges > 0 else Pal.INK.lightened(0.5))
+			if charges > 0:
+				_hits.append([br, "burn", ""])
 	# the sketch on the right
 	var sk := Rect2(Vector2(x + left_w + 12, y_cards - 44), Vector2(r.end.x - 12 - (x + left_w + 12), r.end.y - 40 - (y_cards - 44)))
 	_sketch(sk)
@@ -195,13 +237,33 @@ func _choices(head: String, kind: String, items: Array, x: float, y: float, w: f
 	return y + ch + 4
 
 
-## A pencil sketch of the place, north up: rooms, doors, the ways in, what you came for. No guards: what
-## you know about who's inside comes from scouting (V4).
+## ARE WE READY: what you know against who's going (v2/sim/targets.gd ready_read).
+func _ready_box(box: Rect2) -> void:
+	var rr := Targets.ready_read(game.state, target, lv, str(pick["hour"]))
+	var word := str(rr["word"])
+	var col: Color = {"READY": Color(0.25, 0.45, 0.22), "RISKY": Color(0.65, 0.42, 0.1), "NOT READY": RED}.get(word, Pal.INK.lightened(0.3))
+	Pal.text(sheet, box.position, "WHAT WE KNOW: %s" % Targets.know_name(target), 8, Color(0.5, 0.18, 0.12))
+	Pal.text(sheet, box.position + Vector2(box.size.x - 120, 0), word, 11, col, HORIZONTAL_ALIGNMENT_RIGHT, 120)
+	var yy := box.position.y + 13
+	for l in rr["lines"]:
+		Pal.text(sheet, Vector2(box.position.x, yy), str(l), 7, Pal.INK.lightened(0.15), HORIZONTAL_ALIGNMENT_LEFT, box.size.x)
+		yy += 10
+	if Targets.kind(str(target["type"])).get("solo", false):
+		Pal.text(sheet, Vector2(box.position.x, yy), "A one-person job: only one of you goes.", 7, Pal.INK.lightened(0.15))
+
+
+## A pencil sketch of the place, north up: rooms, doors, the ways in, what you came for. Guards only as far
+## as you've scouted them (M4 V4), and never all of them.
 func _sketch(box: Rect2) -> void:
 	var rooms: Array = lv.get("rooms", [])
 	if rooms.is_empty() or box.size.x < 40 or box.size.y < 40:
 		return
 	sheet.draw_rect(box, Pal.PAPER.darkened(0.04))
+	if not target.is_empty() and int(target["know"]) == 0:
+		Pal.text(sheet, box.position + Vector2(0, box.size.y * 0.4), "?", 28, Color(PENCIL, 0.5), HORIZONTAL_ALIGNMENT_CENTER, box.size.x)
+		Pal.text(sheet, box.position + Vector2(0, box.size.y * 0.4 + 36), "WE DON'T KNOW THE INSIDE.", 8, PENCIL, HORIZONTAL_ALIGNMENT_CENTER, box.size.x)
+		Pal.text(sheet, box.position + Vector2(0, box.size.y * 0.4 + 48), "Watch it or hack it first, or go in blind.", 7, PENCIL, HORIZONTAL_ALIGNMENT_CENTER, box.size.x)
+		return
 	var b := Rect2()
 	var first := true
 	for rm in rooms:
@@ -244,6 +306,18 @@ func _sketch(box: Rect2) -> void:
 		var op: Vector2 = to.call(float(ob[0]), float(ob[1]))
 		sheet.draw_line(op + Vector2(-4, -4), op + Vector2(4, 4), RED, 2.0)
 		sheet.draw_line(op + Vector2(-4, 4), op + Vector2(4, -4), RED, 2.0)
+	# what scouting showed: guards seen at this hour (pencil dots), the good crate (THE INSIDE)
+	if not target.is_empty():
+		for e in Targets.known_guards(target, lv, str(pick["hour"])):
+			var gp: Vector2 = to.call(float(e["pos"][0]), float(e["pos"][1]))
+			sheet.draw_circle(gp, 3.0, Color(0.15, 0.15, 0.2))
+			sheet.draw_circle(gp, 1.4, Pal.PAPER)
+		if int(target["know"]) >= 3:
+			for c in lv.get("loot", []):
+				if c.get("good", false):
+					var cp: Vector2 = to.call(float(c["pos"][0]), float(c["pos"][1]))
+					sheet.draw_rect(Rect2(cp - Vector2(4, 3), Vector2(8, 6)), Color(0.78, 0.45, 0.2))
+					Pal.text(sheet, cp + Vector2(6, -5), str(c["label"]), 6, Color(0.6, 0.3, 0.1))
 	# the ways in, numbered; the picked one ringed
 	var entries: Array = plan.get("entries", [])
 	for i in entries.size():
@@ -252,4 +326,4 @@ func _sketch(box: Rect2) -> void:
 		var on: bool = pick["entry"] == str(e["id"])
 		sheet.draw_circle(ep, 6.0, RED if on else Pal.INK.lightened(0.2))
 		Pal.text(sheet, ep - Vector2(6, 5), str(i + 1), 7, Pal.PAPER, HORIZONTAL_ALIGNMENT_CENTER, 12)
-	Pal.text(sheet, box.position + Vector2(3, box.size.y - 9), "STREET SIDE DOWN.  X = WHAT WE CAME FOR", 5, Color(PENCIL, 0.8))
+	Pal.text(sheet, box.position + Vector2(3, box.size.y - 9), "STREET SIDE DOWN.  X = WHAT WE CAME FOR" + ("   o = A GUARD WE SAW" if not target.is_empty() and int(target["know"]) >= 2 else ""), 5, Color(PENCIL, 0.8))

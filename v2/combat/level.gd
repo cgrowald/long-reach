@@ -22,6 +22,7 @@ var doors: Array = []           # {id, name, pos: Vector2, axis, a, b, locked, s
 var lights: Array = []          # {light, mesh, base, flicker}
 var objective_pos := Vector3.ZERO
 var pcs: Array = []              # desk PCs your people can exploit: {room, stand, screen, done}
+var loots: Array = []            # loot crates (M4 V4, v2/sim/targets.gd): {id, room, pos, label, items, cells, good, rare, done, node}
 var cover: Node3D                # cover pieces, cover spots and the walking grid (v2/combat/cover.gd, M4 V1)
 var civ: RefCounted = null        # the civilians' brain (stray rounds can hit them), when there are any
 var _mats := {}
@@ -46,6 +47,7 @@ func build(p_data: Dictionary) -> void:
 		_door(d)
 	_lights()
 	_props()
+	_loot_crates()
 	cover = Cover.new()
 	add_child(cover)
 	cover.build(self, data.get("cover", []))
@@ -447,6 +449,27 @@ func _props() -> void:
 	var b := _bounds()
 	for i in 90:
 		box(Vector3(0.21, 0.004, 0.29), Vector3(rng.randf_range(b.position.x, b.end.x), 0.004 + i * 0.0001, rng.randf_range(b.position.y, b.end.y)), paper, Vector3(0, rng.randf() * TAU, 0))
+
+
+## Loot crates (M4 V4): a wooden crate with a strap; the best one has a copper tag (you only know where it is
+## if you scouted THE INSIDE).
+func _loot_crates() -> void:
+	var wood := flat(Color(0.36, 0.27, 0.17))
+	var strap := flat(Color(0.12, 0.11, 0.1))
+	var tag := flat(Color(0.78, 0.45, 0.2), 0.6)
+	for c in data.get("loot", []):
+		var cp: Array = c["pos"]
+		var p := Vector3(float(cp[0]), 0.0, float(cp[1]))
+		var n := Node3D.new()
+		add_child(n)
+		n.position = p
+		n.rotation.y = float(hash(str(c["id"])) % 628) / 100.0
+		box(Vector3(0.7, 0.45, 0.5), Vector3(0, 0.225, 0), wood, Vector3.ZERO, false, n)
+		box(Vector3(0.72, 0.06, 0.52), Vector3(0, 0.3, 0), strap, Vector3.ZERO, false, n)
+		if c.get("good", false):
+			box(Vector3(0.12, 0.08, 0.01), Vector3(0.2, 0.36, 0.26), tag, Vector3.ZERO, false, n)
+		loots.append({"id": c["id"], "room": c["room"], "pos": p, "label": str(c.get("label", "a crate")), "items": c.get("items", []),
+			"cells": int(c.get("cells", 1)), "good": c.get("good", false), "rare": c.get("rare", false), "done": false, "node": n})
 
 
 func _process(delta: float) -> void:
