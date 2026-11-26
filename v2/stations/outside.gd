@@ -59,6 +59,11 @@ func _go() -> void:
 	if not garage.spend(float(Markets.mdef("curfew").get("hours", 2.0))):
 		return
 	st.minute = maxi(st.minute, 22 * 60)
+	# M4 V5: going out is the town map now (v2/map/town_view.gd): walk it with WASD
+	game.set_meta("map_mode", "walk")
+	game.goto("res://v2/map/town.tscn")
+	return
+	@warning_ignore("unreachable_code")
 	map = CurfewMap.create(hash(str(st.world_seed) + "curfew" + str(st.day)), float(st.attention))
 	# no patrol starts on your doorstep
 	for p in map.patrols:

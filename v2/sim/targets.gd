@@ -22,6 +22,7 @@ const DepotRun := preload("res://v2/sim/depot_run.gd")
 const Loadout := preload("res://v2/sim/loadout.gd")
 const Crafting := preload("res://v2/sim/crafting.gd")
 const IntelMarket := preload("res://v2/sim/intel_market.gd")
+const Town := preload("res://v2/sim/town.gd")
 
 const WEAPON_SCORE := {"": 0.4, "pipe": 0.4, "pistol": 1.0, "pump_shotgun": 1.4, "bolt_rifle": 1.2, "smg": 1.8, "carbine": 2.2, "bench_rifle": 2.2}
 const ROSTER_TYPE := {"office": "office", "shop": "gun_shop", "clinic": "clinic", "police": "police"}
@@ -68,7 +69,10 @@ static func _rng(state: RefCounted, salt: String) -> RandomNumberGenerator:
 ## Every target you can still hit or watch (not gone), fixed ones first.
 static func list(state: RefCounted) -> Array:
 	var out: Array = []
+	Town.ensure_keys(state)          # M4 V5: every district has its key target, every target a building
 	for t in ts(state)["list"]:
+		if not t.has("bldg"):
+			Town.place_target(state, t)
 		if str(t.get("status", "open")) != "gone":
 			out.append(t)
 	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
@@ -502,6 +506,7 @@ static func after_hit(state: RefCounted, t: Dictionary, res: Dictionary) -> Arra
 		_mood(state, t, int(data().get("burn", {}).get("mood", -2)))
 	if t.get("event", false):
 		t["status"] = "gone"
+	lines.append_array(Town.on_hit(state, t, outcome))         # M4 V5: a key opens its district
 	if heat > 0.0 and outcome != "":
 		Krall.bump(state, heat, "the hit on %s" % t["name"])
 	var hurt := int(res.get("civ_hurt", 0))
@@ -516,7 +521,7 @@ static func after_hit(state: RefCounted, t: Dictionary, res: Dictionary) -> Arra
 
 static func _mood(state: RefCounted, t: Dictionary, d: int) -> void:
 	var m: Dictionary = ts(state)["mood"]
-	var k := str(t.get("street", "town"))
+	var k := str(t.get("district", t.get("street", "town")))          # district mood (V5 map)
 	m[k] = clampi(int(m.get(k, 0)) + d, -100, 100)
 
 

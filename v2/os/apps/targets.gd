@@ -53,7 +53,7 @@ func _gui_input(e: InputEvent) -> void:
 					os.game.click()
 			for b in _btns:
 				if (b[0] as Rect2).has_point(e.position):
-					_press(str(b[1]), L[sel])
+					_press(str(b[1]), L[sel] if not L.is_empty() else {})
 		queue_redraw()
 
 
@@ -66,9 +66,17 @@ func _press(id: String, t: Dictionary) -> void:
 				return
 			os.game.click()
 			_say(Targets.watch(state(), t))
+		"map":
+			os.game.click()
+			os.game.set_meta("map_mode", "plan")
+			os.game.goto("res://v2/map/town.tscn")
 		"plan":
 			if not Targets.can_hit(state(), t):
 				_say("It's shut. Try again in %d night%s." % [Targets.shut_for(state(), t), "" if Targets.shut_for(state(), t) == 1 else "s"])
+				os.game.deny()
+				return
+			if not Targets.Town.reachable(state(), t):
+				_say("Behind their lines. Take the district next to it first: only small jobs work that deep.")
 				os.game.deny()
 				return
 			if Targets.team(state(), t).is_empty():
@@ -127,6 +135,10 @@ func _draw() -> void:
 	sel = clampi(sel, 0, maxi(0, L.size() - 1))
 	P.text(self, Vector2(6, 3), "TARGETS  (%d)" % L.size(), P.INK)
 	P.text(self, Vector2(LIST_W - 120, 3), "%d action%s left tonight" % [int(state().actions), "" if int(state().actions) == 1 else "s"], P.INK_DIM, HORIZONTAL_ALIGNMENT_RIGHT, 116)
+	var mr := Rect2(size.x - 112, 2, 106, 13)
+	draw_rect(mr, P.PETROL_L if mr.has_point(hover) else P.PETROL)
+	P.text(self, mr.position + Vector2(0, 1), "OPEN THE MAP", P.FACE_L, HORIZONTAL_ALIGNMENT_CENTER, mr.size.x)
+	_btns.append([mr, "map"])
 	for i in range(scroll, mini(L.size(), scroll + _visible_rows())):
 		var t: Dictionary = L[i]
 		var r := _row(i)
@@ -164,6 +176,15 @@ func _detail(t: Dictionary, r: Rect2) -> void:
 	P.text(self, Vector2(x, y), P.fit("%s on %s   tier %d   %s" % [str(B.get("name", "Roadblock")), str(t.get("street", "?")), int(t["tier"]), SOURCE.get(str(t["source"]), "")], w), P.INK_DIM)
 	y += 14
 	y = _wrap(str(t.get("line", "")), x, y, w, P.INK, 3)
+	if str(t.get("district", "")) != "":
+		var L := Targets.Town.layout(state())
+		var dn := str(Targets.Town.district(L, str(t["district"])).get("name", t["district"]))
+		var where := "In %s." % dn.capitalize()
+		if t.has("key"):
+			where += " Its KEY: take it and the district is ours."
+		if not Targets.Town.reachable(state(), t):
+			where += " Behind their lines: open the district next to it first."
+		y = _wrap(where, x, y, w, P.PETROL, 2)
 	if t.has("job"):
 		var g := Targets.group_def(str(t["job"]))
 		y = _wrap("Job for %s: %d cr when it's done." % [g.get("name", "?"), int(t.get("pay", 0))], x, y, w, P.COPPER, 1)
@@ -194,7 +215,7 @@ func _detail(t: Dictionary, r: Rect2) -> void:
 	# the buttons
 	var bw := (w - 12) / 3.0
 	var by := r.end.y - 24
-	var can_plan := Targets.can_hit(state(), t)
+	var can_plan := Targets.can_hit(state(), t) and Targets.Town.reachable(state(), t)
 	var bs := [["watch", "WATCH (1 action)", (int(t["know"]) < 2 or t.get("fixed", false)) and str(t.get("level", "")) == ""], ["plan", "PLAN THE HIT", can_plan], ["nod", "POST ON NOD", not t.has("nod_hit") and not t.get("event", false)]]
 	for i in bs.size():
 		var br := Rect2(x + i * (bw + 6), by, bw, 18)
