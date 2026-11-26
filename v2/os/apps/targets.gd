@@ -135,10 +135,10 @@ func _draw() -> void:
 	sel = clampi(sel, 0, maxi(0, L.size() - 1))
 	P.text(self, Vector2(6, 3), "TARGETS  (%d)" % L.size(), P.INK)
 	P.text(self, Vector2(LIST_W - 120, 3), "%d action%s left tonight" % [int(state().actions), "" if int(state().actions) == 1 else "s"], P.INK_DIM, HORIZONTAL_ALIGNMENT_RIGHT, 116)
-	var mr := Rect2(size.x - 112, 2, 106, 13)
-	draw_rect(mr, P.PETROL_L if mr.has_point(hover) else P.PETROL)
-	P.text(self, mr.position + Vector2(0, 1), "OPEN THE MAP", P.FACE_L, HORIZONTAL_ALIGNMENT_CENTER, mr.size.x)
-	_btns.append([mr, "map"])
+	var map_r := Rect2(size.x - 112, 2, 106, 13)
+	draw_rect(map_r, P.PETROL_L if map_r.has_point(hover) else P.PETROL)
+	P.text(self, map_r.position + Vector2(0, 1), "OPEN THE MAP", P.FACE_L, HORIZONTAL_ALIGNMENT_CENTER, map_r.size.x)
+	_btns.append([map_r, "map"])
 	for i in range(scroll, mini(L.size(), scroll + _visible_rows())):
 		var t: Dictionary = L[i]
 		var r := _row(i)
@@ -156,7 +156,7 @@ func _draw() -> void:
 	if L.is_empty():
 		P.text(self, Vector2(8, 24), "Nothing yet. Hack places, listen on Nod.", P.INK_DIM)
 		return
-	_detail(L[sel], Rect2(LIST_W + 6, 4, size.x - LIST_W - 10, size.y - 8))
+	_detail(L[sel], Rect2(LIST_W + 6, 18, size.x - LIST_W - 10, size.y - 22))
 	if _msg_t > 0.0:
 		var a := minf(1.0, _msg_t)
 		var mr := Rect2(4, size.y - 18, size.x - 8, 15)
